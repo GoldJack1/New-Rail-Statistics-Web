@@ -1,6 +1,7 @@
 # Next.js app lives in new-site/ (monorepo). Netlify clones the repo root, so base
-# must point at that subdirectory. Do NOT set publish — @netlify/plugin-nextjs sets
-# the correct output; publishing raw .next as static files causes site-wide 404s.
+# must point at that subdirectory. publish must differ from base (Netlify requirement);
+# @netlify/plugin-nextjs reads .next and wires up SSR/route handlers — it does not
+# serve raw .next as a static site.
 #
 # Netlify UI (Site configuration → Build & deploy → Build settings):
 #   Base directory, Package directory, Build command, Publish directory — all EMPTY.
@@ -8,6 +9,7 @@
 [build]
   base = "new-site"
   command = "npm ci && npm run build"
+  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "20"
