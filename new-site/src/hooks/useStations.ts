@@ -97,8 +97,10 @@ export const useStations = (): UseStationsReturn => {
 
   const refetch = useCallback(() => {
     invalidateStationsCache()
-    void bootstrapStationsData({ isSandbox, networkView, detailLevel: 'list', force: true }).then(() =>
-      loadAllNetworkStationsProgressive({ detailLevel: 'full', force: true })
+    void bootstrapStationsData({ isSandbox, networkView, detailLevel: 'lean', force: true }).then(() =>
+      loadAllNetworkStationsProgressive({ detailLevel: 'list', force: true }).then(() =>
+        loadAllNetworkStationsProgressive({ detailLevel: 'full', force: true })
+      )
     )
   }, [isSandbox, networkView])
 
@@ -160,8 +162,10 @@ export const useStationsMap = (): UseStationsMapReturn => {
 
   const refetch = useCallback(() => {
     invalidateStationsCache()
-    void bootstrapStationsData({ isSandbox, networkView, detailLevel: 'list', force: true }).then(() =>
-      loadAllNetworkStationsProgressive({ detailLevel: 'full', force: true })
+    void bootstrapStationsData({ isSandbox, networkView, detailLevel: 'lean', force: true }).then(() =>
+      loadAllNetworkStationsProgressive({ detailLevel: 'list', force: true }).then(() =>
+        loadAllNetworkStationsProgressive({ detailLevel: 'full', force: true })
+      )
     )
   }, [isSandbox, networkView])
 

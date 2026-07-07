@@ -51,6 +51,14 @@ export async function exportStationSnapshotsToStorage(): Promise<StationsCdnMani
     collectionId: (typeof NETWORK_COLLECTION_IDS)[number]
     stations: ReturnType<typeof mapFirestoreDocsToStations>
   }> = []
+  const fullBatches: Array<{
+    collectionId: (typeof NETWORK_COLLECTION_IDS)[number]
+    stations: ReturnType<typeof mapFirestoreDocsToStations>
+  }> = []
+  const leanBatches: Array<{
+    collectionId: (typeof NETWORK_COLLECTION_IDS)[number]
+    stations: ReturnType<typeof mapFirestoreDocsToStations>
+  }> = []
 
   for (const collectionId of NETWORK_COLLECTION_IDS) {
     const snapshot = await db.collection(collectionId).get()
@@ -67,6 +75,12 @@ export async function exportStationSnapshotsToStorage(): Promise<StationsCdnMani
       if (detailLevel === 'list') {
         listBatches.push({ collectionId, stations })
       }
+      if (detailLevel === 'full') {
+        fullBatches.push({ collectionId, stations })
+      }
+      if (detailLevel === 'lean') {
+        leanBatches.push({ collectionId, stations })
+      }
     }
   }
 
@@ -78,21 +92,14 @@ export async function exportStationSnapshotsToStorage(): Promise<StationsCdnMani
     mergedList
   )
 
-  const mergedLean = mergeNetworkCollections(
-    await Promise.all(
-      NETWORK_COLLECTION_IDS.map(async (collectionId) => {
-        const snapshot = await db.collection(collectionId).get()
-        const docs = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          data: doc.data() as Record<string, unknown>,
-        }))
-        return {
-          collectionId,
-          stations: mapFirestoreDocsToStations(docs, collectionId, 'lean'),
-        }
-      })
-    )
+  const mergedFull = mergeNetworkCollections(fullBatches)
+  manifest.bundles.all.full = await uploadBundle(
+    bucket,
+    `${EXPORT_PREFIX}/all.full.json.gz`,
+    mergedFull
   )
+
+  const mergedLean = mergeNetworkCollections(leanBatches)
   manifest.bundles.all.lean = await uploadBundle(
     bucket,
     `${EXPORT_PREFIX}/all.lean.json.gz`,

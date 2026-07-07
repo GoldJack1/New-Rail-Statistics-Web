@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --webpack",
+    "dev": "next dev --webpack -p 3000",
+    "dev:fresh": "next dev --webpack -p 3010",
+    "start:fresh": "next start -p 3010",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

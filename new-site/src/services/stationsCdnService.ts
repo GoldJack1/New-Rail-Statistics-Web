@@ -17,6 +17,23 @@ const MANIFEST_SESSION_KEY = 'railstats_station_cdn_manifest'
 let cachedManifest: StationsCdnManifest | null = null
 let cachedManifestFetchedAt = 0
 const MANIFEST_MEMORY_TTL_MS = 5 * 60 * 1000
+let manifestFetchPromise: Promise<StationsCdnManifest | null> | null = null
+
+if (typeof window !== 'undefined') {
+  const sessionManifest = (() => {
+    try {
+      const raw = window.sessionStorage.getItem(MANIFEST_SESSION_KEY)
+      if (!raw) return null
+      return JSON.parse(raw) as StationsCdnManifest
+    } catch {
+      return null
+    }
+  })()
+  if (sessionManifest?.version && sessionManifest.bundles) {
+    cachedManifest = sessionManifest
+    cachedManifestFetchedAt = Date.now()
+  }
+}
 
 export function isStationCdnEnabled(): boolean {
   if (process.env.NEXT_PUBLIC_USE_LOCAL_DATA_ONLY === 'true') return false
@@ -80,31 +97,41 @@ export async function fetchStationsCdnManifest(options?: { force?: boolean }): P
     return cachedManifest
   }
 
+  if (!force && manifestFetchPromise) {
+    return manifestFetchPromise
+  }
+
   const manifestUrl = getStationCdnManifestUrl()
   if (!manifestUrl) return null
 
-  try {
-    const response = await fetch(manifestUrl, { cache: force ? 'no-cache' : 'default' })
-    if (!response.ok) {
+  manifestFetchPromise = (async () => {
+    try {
+      const response = await fetch(manifestUrl, { cache: force ? 'no-cache' : 'default' })
+      if (!response.ok) {
+        return readSessionManifest()
+      }
+      const manifest = (await response.json()) as StationsCdnManifest
+      if (!manifest?.version || !manifest.bundles) {
+        return readSessionManifest()
+      }
+      cachedManifest = manifest
+      cachedManifestFetchedAt = Date.now()
+      writeSessionManifest(manifest)
+      if (typeof navigator !== 'undefined' && navigator.serviceWorker?.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'stations-manifest-updated',
+          version: manifest.version,
+        })
+      }
+      return manifest
+    } catch {
       return readSessionManifest()
+    } finally {
+      manifestFetchPromise = null
     }
-    const manifest = (await response.json()) as StationsCdnManifest
-    if (!manifest?.version || !manifest.bundles) {
-      return readSessionManifest()
-    }
-    cachedManifest = manifest
-    cachedManifestFetchedAt = Date.now()
-    writeSessionManifest(manifest)
-    if (typeof navigator !== 'undefined' && navigator.serviceWorker?.controller) {
-      navigator.serviceWorker.controller.postMessage({
-        type: 'stations-manifest-updated',
-        version: manifest.version,
-      })
-    }
-    return manifest
-  } catch {
-    return readSessionManifest()
-  }
+  })()
+
+  return manifestFetchPromise
 }
 
 export function getCachedStationsCdnManifest(): StationsCdnManifest | null {
@@ -112,7 +139,15 @@ export function getCachedStationsCdnManifest(): StationsCdnManifest | null {
 }
 
 async function decodeStationBundle(response: Response, encoding?: 'gzip' | 'identity'): Promise<Station[]> {
-  if (encoding === 'gzip' && typeof DecompressionStream !== 'undefined') {
+  const contentEncoding = response.headers.get('content-encoding')?.toLowerCase() ?? ''
+  const contentType = response.headers.get('content-type')?.toLowerCase() ?? ''
+
+  if (
+    encoding === 'gzip' &&
+    contentEncoding !== 'gzip' &&
+    !contentType.includes('application/json') &&
+    typeof DecompressionStream !== 'undefined'
+  ) {
     const stream = response.body?.pipeThrough(new DecompressionStream('gzip'))
     if (!stream) throw new Error('Failed to decompress gzip station bundle')
     const decompressed = await new Response(stream).text()
@@ -163,9 +198,10 @@ export async function fetchCollectionFromCdn(
 }
 
 export async function fetchMergedNetworkStationsFromCdn(
-  detailLevel: StationFetchDetailLevel
+  detailLevel: StationFetchDetailLevel,
+  manifestOverride?: StationsCdnManifest | null
 ): Promise<Station[]> {
-  const manifest = await fetchStationsCdnManifest()
+  const manifest = manifestOverride ?? (await fetchStationsCdnManifest())
   if (!manifest) {
     throw new Error('Station CDN manifest is unavailable')
   }
@@ -203,6 +239,7 @@ export function splitMergedStationsByCollection(stations: Station[]): Map<Networ
 export function invalidateStationsCdnManifestCache(): void {
   cachedManifest = null
   cachedManifestFetchedAt = 0
+  manifestFetchPromise = null
   if (typeof window !== 'undefined') {
     try {
       window.sessionStorage.removeItem(MANIFEST_SESSION_KEY)

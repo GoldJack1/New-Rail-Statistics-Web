@@ -24,6 +24,7 @@ import {
   readStationsFromIndexedDb,
   writeManifestVersionToIndexedDb,
   writeStationsToIndexedDb,
+  type StationsIndexedDbEntry,
 } from '@/services/stationsIndexedDb'
 import type { Station } from '@/types'
 import { mergeNetworkCollections, toMapLeanStation } from '@/utils/mapLeanStation'
@@ -46,6 +47,7 @@ type Listener = () => void
 const listeners = new Set<Listener>()
 const collectionState = new Map<StationCollectionId, CollectionLoadState>()
 const inflightLoads = new Map<string, Promise<void>>()
+const inflightMergedBundleLoads = new Map<StationFetchDetailLevel, Promise<boolean>>()
 let storeRevision = 0
 
 function createEmptyState(): CollectionLoadState {
@@ -160,28 +162,103 @@ async function getActiveManifestVersion(): Promise<string | null> {
   return manifest?.version ?? null
 }
 
+async function hydrateAllNetworkCollectionsFromIndexedDb(): Promise<void> {
+  await Promise.all(NETWORK_COLLECTION_IDS.map((collectionId) => hydrateFromIndexedDb(collectionId)))
+}
+
+async function refreshCollectionIfStale(
+  collectionId: StationCollectionId,
+  detailLevel: StationFetchDetailLevel,
+  entry: StationsIndexedDbEntry
+): Promise<void> {
+  try {
+    const remoteVersion = await getActiveManifestVersion()
+    const versionChanged = Boolean(
+      remoteVersion && entry.manifestVersion && remoteVersion !== entry.manifestVersion
+    )
+    const ttlExpired = !isIndexedDbEntryFresh(entry, undefined, remoteVersion)
+    if (!versionChanged && !ttlExpired) return
+
+    const stations = await fetchCollectionFromNetwork(collectionId, detailLevel, false)
+    if (stations.length === 0) return
+    await persistCollection(collectionId, stations, detailLevel, remoteVersion)
+  } catch (error) {
+    console.warn(`Background station refresh failed for ${collectionId}:`, error)
+  } finally {
+    patchState(collectionId, { refreshing: false })
+  }
+}
+
 async function loadMergedBundleIntoCollections(detailLevel: StationFetchDetailLevel): Promise<boolean> {
   if (!isStationCdnEnabled()) return false
 
-  try {
-    const manifest = await fetchStationsCdnManifest()
-    if (!manifest?.bundles.all) return false
+  const existing = inflightMergedBundleLoads.get(detailLevel)
+  if (existing) return existing
 
-    const merged = await fetchMergedNetworkStationsFromCdn(detailLevel)
-    const grouped = splitMergedStationsByCollection(merged)
-    const fetchedAt = Date.now()
+  const task = (async () => {
+    try {
+      const manifest = await fetchStationsCdnManifest()
+      if (!manifest?.bundles.all) return false
 
-    for (const collectionId of NETWORK_COLLECTION_IDS) {
-      const stations = grouped.get(collectionId) ?? []
-      if (stations.length === 0) continue
-      await persistCollection(collectionId, stations, detailLevel, manifest.version, fetchedAt)
+      const merged = await fetchMergedNetworkStationsFromCdn(detailLevel, manifest)
+      if (merged.length === 0) return false
+
+      const grouped = splitMergedStationsByCollection(merged)
+      const fetchedAt = Date.now()
+      let loadedCollections = 0
+
+      for (const collectionId of NETWORK_COLLECTION_IDS) {
+        const stations = grouped.get(collectionId) ?? []
+        if (stations.length === 0) continue
+        loadedCollections += 1
+
+        if (detailLevel === 'full') {
+          patchState(collectionId, {
+            full: stations,
+            list: stations,
+            lean: stations.map(toMapLeanStation),
+            fetchedAt,
+            error: null,
+          })
+        } else if (detailLevel === 'list') {
+          patchState(collectionId, {
+            list: stations,
+            lean: stations.map(toMapLeanStation),
+            fetchedAt,
+            error: null,
+          })
+        } else {
+          patchState(collectionId, {
+            lean: stations,
+            fetchedAt,
+            error: null,
+          })
+        }
+      }
+
+      if (loadedCollections === 0) return false
+
+      await Promise.all(
+        NETWORK_COLLECTION_IDS.map(async (collectionId) => {
+          const stations = grouped.get(collectionId) ?? []
+          if (stations.length === 0) return
+          await writeStationsToIndexedDb(collectionId, stations, fetchedAt, manifest.version)
+        })
+      )
+
+      await writeManifestVersionToIndexedDb(manifest.version)
+      return true
+    } catch (error) {
+      console.warn('Failed to load merged CDN station bundle:', error)
+      return false
     }
+  })()
 
-    await writeManifestVersionToIndexedDb(manifest.version)
-    return true
-  } catch (error) {
-    console.warn('Failed to load merged CDN station bundle:', error)
-    return false
+  inflightMergedBundleLoads.set(detailLevel, task)
+  try {
+    return await task
+  } finally {
+    inflightMergedBundleLoads.delete(detailLevel)
   }
 }
 
@@ -296,11 +373,27 @@ export async function ensureCollectionLoaded(
   }
 
   const task = (async () => {
-    const manifestVersion = await getActiveManifestVersion()
     const state = getState(collectionId)
     const hasTargetData = resolveCollectionStations(state, detailLevel).length > 0
     const hasFullData = state.full.length > 0
     const hasListData = state.list.length > 0
+    const hadData = hasTargetData || hasFullData || hasListData
+
+    if (preferCache && !force && !hadData) {
+      const hydrated = await hydrateFromIndexedDb(collectionId)
+      if (hydrated) {
+        patchState(collectionId, { loading: false })
+        const entry = await readStationsFromIndexedDb(collectionId)
+        if (entry && isIndexedDbEntryFresh(entry, undefined, entry.manifestVersion ?? null)) {
+          patchState(collectionId, { refreshing: true })
+          void refreshCollectionIfStale(collectionId, detailLevel, entry)
+          return
+        }
+        patchState(collectionId, { refreshing: true })
+      }
+    }
+
+    const manifestVersion = await getActiveManifestVersion()
 
     if (
       !force &&
@@ -361,26 +454,12 @@ export async function ensureCollectionLoaded(
       return
     }
 
-    const hadData = hasTargetData || hasFullData || hasListData
-  const isRefreshing = hadData && !force
+    const hadDataAfterChecks = hasTargetData || hasFullData || hasListData
 
-    if (!hadData) {
+    if (!hadDataAfterChecks) {
       patchState(collectionId, { loading: true, error: null })
-    } else {
+    } else if (!force) {
       patchState(collectionId, { refreshing: true, error: null })
-    }
-
-    if (preferCache && !hadData) {
-      const hydrated = await hydrateFromIndexedDb(collectionId)
-      if (hydrated) {
-        patchState(collectionId, { loading: false })
-        const entry = await readStationsFromIndexedDb(collectionId)
-        const stale = !isIndexedDbEntryFresh(entry, undefined, manifestVersion)
-        if (!stale && !force) {
-          return
-        }
-        patchState(collectionId, { refreshing: true })
-      }
     }
 
     try {
@@ -390,7 +469,7 @@ export async function ensureCollectionLoaded(
       }
       await persistCollection(collectionId, stations, detailLevel, manifestVersion)
     } catch (err) {
-      if (!hadData) {
+      if (!hadDataAfterChecks) {
         patchState(collectionId, {
           error: `Unable to fetch station data. (${getErrorMessage(err)})`,
         })
@@ -433,6 +512,14 @@ export async function loadAllNetworkStationsProgressive(options?: {
   const detailLevel = options?.detailLevel ?? 'full'
   const force = options?.force ?? false
   const priority = options?.priorityCollectionId ?? DEFAULT_NETWORK_COLLECTION_ID
+
+  if (
+    !force &&
+    detailLevel === 'full' &&
+    NETWORK_COLLECTION_IDS.every((id) => getCollectionStations(id, 'full').length > 0)
+  ) {
+    return
+  }
 
   if (!force && isStationCdnEnabled()) {
     const loadedMerged = await loadMergedBundleIntoCollections(detailLevel)
@@ -482,6 +569,10 @@ export async function bootstrapStationsData(options: {
     return
   }
 
+  if (!isSandbox && !force) {
+    await hydrateAllNetworkCollectionsFromIndexedDb()
+  }
+
   if (isSandbox) {
     await ensureCollectionLoaded(SANDBOX_COLLECTION, { detailLevel, force })
     return
@@ -507,6 +598,7 @@ export async function bootstrapStationsData(options: {
 export function invalidateStationsCache(): void {
   collectionState.clear()
   inflightLoads.clear()
+  inflightMergedBundleLoads.clear()
   invalidateStationsCdnManifestCache()
   notify()
 }
