@@ -1,0 +1,37 @@
+# Monorepo layout: the Next.js app lives in "New Site/". Netlify clones the repo
+# root, so base must point at that subdirectory or builds publish the wrong folder
+# (MIGRATION_PLAN.md only) and every route 404s.
+[build]
+  base = "New Site"
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NODE_ENV = "production"
+  NETLIFY = "true"
+
+# Compiles App Router pages, Route Handlers (app/api/*), and middleware into
+# Netlify Functions/Edge — no manual [[redirects]] for /api/osm-tile etc.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+[[headers]]
+  for = "/media/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
