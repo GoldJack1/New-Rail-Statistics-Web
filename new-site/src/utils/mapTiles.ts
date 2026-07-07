@@ -16,15 +16,14 @@ export interface TileLayerConfig {
 }
 
 const OSM_DIRECT = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-const OSM_PROXY = '/api/osm-tile?s={s}&z={z}&x={x}&y={y}'
-
-const OSM_CONFIG: TileLayerConfig = {
-  url: shouldUseOsmBackendProxy() ? OSM_PROXY : OSM_DIRECT,
-  options: {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-  }
-}
+const OSM_PROXY = '/api/osm-tile/{s}/{z}/{x}/{y}.png'
 
 export function getTileLayersConfig(): { light: TileLayerConfig; dark: TileLayerConfig } {
-  return { light: OSM_CONFIG, dark: OSM_CONFIG }
+  const config: TileLayerConfig = {
+    url: shouldUseOsmBackendProxy() ? OSM_PROXY : OSM_DIRECT,
+    options: {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    },
+  }
+  return { light: config, dark: config }
 }

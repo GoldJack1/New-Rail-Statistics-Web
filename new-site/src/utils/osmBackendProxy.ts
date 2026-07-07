@@ -1,5 +1,5 @@
 /**
- * Use the same-origin `/api/osm-tile` Route Handler (app/api/osm-tile/route.ts)
+ * Use the same-origin `/api/osm-tile/{s}/{z}/{x}/{y}.png` Route Handler
  * instead of hitting tile.openstreetmap.org directly from the browser.
  * Strict CSPs (e.g. img-src 'self' data:) and embedded browsers still allow this.
  *
