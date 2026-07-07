@@ -14,7 +14,7 @@ export const StationsCacheProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const runBootstrap = useCallback(
     (force = false) => {
-      void bootstrapStationsData({ isSandbox, networkView, detailLevel: 'lean', force })
+      void bootstrapStationsData({ isSandbox, networkView, detailLevel: 'list', force })
     },
     [isSandbox, networkView]
   )
@@ -26,7 +26,7 @@ export const StationsCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     const onRefetch = () => {
       invalidateStationsCache()
-      void bootstrapStationsData({ isSandbox, networkView, detailLevel: 'lean', force: true }).then(() =>
+      void bootstrapStationsData({ isSandbox, networkView, detailLevel: 'list', force: true }).then(() =>
         loadAllNetworkStationsProgressive({ detailLevel: 'full', force: true })
       )
     }

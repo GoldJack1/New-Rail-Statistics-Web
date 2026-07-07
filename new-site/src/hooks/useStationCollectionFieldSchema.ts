@@ -31,53 +31,74 @@ export function useStationCollectionFieldSchema(collectionId: StationCollectionI
     let cancelled = false
     setLoading(true)
 
-    void fetchStationCollectionSampleDocs(collectionId)
-      .then((docs) => {
-        if (!cancelled) {
-          setFieldSchema(inferStationCollectionFieldSchema(docs, collectionId))
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          const networkId = isNetworkCollection(collectionId) ? collectionId : undefined
-          const isHeritage = collectionId === 'stations_gbheritage'
-          const isLightRail = collectionId === 'lightrail_GBSHEFFSUPERTRAM'
-          setFieldSchema({
-            ...EMPTY_STATION_COLLECTION_FIELD_SCHEMA,
-            isLightRail,
-            defaultStnarea: networkId ? NETWORK_STNAREA_DEFAULTS[networkId] : '',
-            showUrl: isHeritage,
-            urlFieldKey: getStationUrlFieldKey(collectionId),
-            urlFieldLabel: getStationUrlFieldLabel(collectionId),
-            requireCrsCode: !isHeritage && !isLightRail,
-            requireTiploc: !isHeritage && !isLightRail,
-            showBorough: isHeritage || isLightRail,
-            showFareZone: isLightRail,
-            showLinesServed: isLightRail,
-            showPlatforms: isLightRail,
-            showStepFreeSection: isHeritage || isLightRail,
-            showStepFreeTab: isLightRail,
-            stepFreeTabLabel: 'Step-free & Lift access',
-            showLiftSection: isLightRail,
-            showDateOpened: isLightRail,
-            showLimitedService: isLightRail,
-            showStaffingLevel: isHeritage || isLightRail,
-            showConnectionBus: isLightRail,
-            showConnectionTrain: isLightRail,
-            showNlc: isHeritage,
-            showGauge: isHeritage,
-            showRequestStop: isHeritage,
-            showServiceTab: isHeritage || isLightRail,
-            showStationStatusSection: isHeritage,
-          })
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+    const runFetch = () => {
+      void fetchStationCollectionSampleDocs(collectionId)
+        .then((docs) => {
+          if (!cancelled) {
+            setFieldSchema(inferStationCollectionFieldSchema(docs, collectionId))
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            const networkId = isNetworkCollection(collectionId) ? collectionId : undefined
+            const isHeritage = collectionId === 'stations_gbheritage'
+            const isLightRail = collectionId === 'lightrail_GBSHEFFSUPERTRAM'
+            setFieldSchema({
+              ...EMPTY_STATION_COLLECTION_FIELD_SCHEMA,
+              isLightRail,
+              defaultStnarea: networkId ? NETWORK_STNAREA_DEFAULTS[networkId] : '',
+              showUrl: isHeritage,
+              urlFieldKey: getStationUrlFieldKey(collectionId),
+              urlFieldLabel: getStationUrlFieldLabel(collectionId),
+              requireCrsCode: !isHeritage && !isLightRail,
+              requireTiploc: !isHeritage && !isLightRail,
+              showBorough: isHeritage || isLightRail,
+              showFareZone: isLightRail,
+              showLinesServed: isLightRail,
+              showPlatforms: isLightRail,
+              showStepFreeSection: isHeritage || isLightRail,
+              showStepFreeTab: isLightRail,
+              stepFreeTabLabel: 'Step-free & Lift access',
+              showLiftSection: isLightRail,
+              showDateOpened: isLightRail,
+              showLimitedService: isLightRail,
+              showStaffingLevel: isHeritage || isLightRail,
+              showConnectionBus: isLightRail,
+              showConnectionTrain: isLightRail,
+              showNlc: isHeritage,
+              showGauge: isHeritage,
+              showRequestStop: isHeritage,
+              showServiceTab: isHeritage || isLightRail,
+              showStationStatusSection: isHeritage,
+            })
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false)
+        })
+    }
+
+    let idleId: number | null = null
+    let timeoutId: ReturnType<typeof globalThis.setTimeout> | null = null
+
+    const scheduleDeferredFetch = () => {
+      if (typeof window.requestIdleCallback === 'function') {
+        idleId = window.requestIdleCallback(runFetch, { timeout: 1500 })
+        return
+      }
+      timeoutId = globalThis.setTimeout(runFetch, 0)
+    }
+
+    scheduleDeferredFetch()
 
     return () => {
       cancelled = true
+      if (idleId != null && typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
+        window.cancelIdleCallback(idleId)
+      }
+      if (timeoutId != null) {
+        globalThis.clearTimeout(timeoutId)
+      }
     }
   }, [collectionId])
 

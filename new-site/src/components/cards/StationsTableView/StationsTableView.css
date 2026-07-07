@@ -26,6 +26,17 @@
   table-layout: auto;
 }
 
+.stations-table-wrap--virtualized {
+  max-height: min(70vh, 960px);
+  overflow-y: auto;
+}
+
+.stations-table__virtual-spacer {
+  padding: 0;
+  border: 0;
+  line-height: 0;
+}
+
 .stations-table th,
 .stations-table td {
   padding: var(--space-sm) var(--space-md);

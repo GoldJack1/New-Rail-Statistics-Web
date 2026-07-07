@@ -6,10 +6,8 @@ import {
   type NetworkViewFilter,
   type StationCollectionId,
 } from '@/constants/stationCollections'
-import {
-  fetchStationsFromFirebase,
-  type StationFetchDetailLevel,
-} from '@/services/firebase'
+import type { StationFetchDetailLevel } from '@/services/stationFirestoreMapper'
+import { fetchStationsFromFirebase } from '@/services/firebase'
 import { fetchLocalStations } from '@/services/localData'
 import {
   isIndexedDbEntryFresh,
@@ -24,6 +22,7 @@ const SANDBOX_COLLECTION: StationCollectionId = SANDBOX_COLLECTION_ID
 
 type CollectionLoadState = {
   full: Station[]
+  list: Station[]
   lean: Station[]
   loading: boolean
   refreshing: boolean
@@ -41,12 +40,26 @@ let storeRevision = 0
 function createEmptyState(): CollectionLoadState {
   return {
     full: [],
+    list: [],
     lean: [],
     loading: false,
     refreshing: false,
     error: null,
     fetchedAt: null,
   }
+}
+
+function resolveCollectionStations(
+  state: CollectionLoadState,
+  detailLevel: StationFetchDetailLevel
+): Station[] {
+  if (detailLevel === 'full') {
+    return state.full.length > 0 ? state.full : state.list.length > 0 ? state.list : state.lean
+  }
+  if (detailLevel === 'list') {
+    return state.list.length > 0 ? state.list : state.full.length > 0 ? state.full : state.lean
+  }
+  return state.lean.length > 0 ? state.lean : state.list.length > 0 ? state.list : state.full
 }
 
 function getState(collectionId: StationCollectionId): CollectionLoadState {
@@ -123,8 +136,7 @@ export function getCollectionStations(
   collectionId: StationCollectionId,
   detailLevel: StationFetchDetailLevel = 'full'
 ): Station[] {
-  const state = getState(collectionId)
-  return detailLevel === 'lean' ? state.lean : state.full
+  return resolveCollectionStations(getState(collectionId), detailLevel)
 }
 
 export function isCollectionLoading(collectionId: StationCollectionId): boolean {
@@ -164,11 +176,10 @@ async function hydrateFromIndexedDb(collectionId: StationCollectionId): Promise<
   const entry = await readStationsFromIndexedDb(collectionId)
   if (!entry || entry.stations.length === 0) return false
 
-  const lean = entry.stations.map(toMapLeanStation)
-
   patchState(collectionId, {
     full: entry.stations,
-    lean,
+    list: entry.stations,
+    lean: entry.stations.map(toMapLeanStation),
     fetchedAt: entry.fetchedAt,
     error: null,
   })
@@ -185,6 +196,18 @@ async function persistCollection(
     await writeStationsToIndexedDb(collectionId, stations, fetchedAt)
     patchState(collectionId, {
       full: stations,
+      list: stations,
+      lean: stations.map(toMapLeanStation),
+      fetchedAt,
+      error: null,
+    })
+    return
+  }
+
+  if (detailLevel === 'list') {
+    await writeStationsToIndexedDb(collectionId, stations, fetchedAt)
+    patchState(collectionId, {
+      list: stations,
       lean: stations.map(toMapLeanStation),
       fetchedAt,
       error: null,
@@ -220,17 +243,40 @@ export async function ensureCollectionLoaded(
 
   const task = (async () => {
     const state = getState(collectionId)
-    const hasTargetData = detailLevel === 'lean' ? state.lean.length > 0 : state.full.length > 0
+    const hasTargetData = resolveCollectionStations(state, detailLevel).length > 0
     const hasFullData = state.full.length > 0
+    const hasListData = state.list.length > 0
 
     if (
       !force &&
       detailLevel === 'lean' &&
+      (hasFullData || hasListData) &&
+      state.fetchedAt != null &&
+      isIndexedDbEntryFresh({
+        collectionId,
+        stations: state.full.length > 0 ? state.full : state.list,
+        fetchedAt: state.fetchedAt,
+        version: 1,
+      })
+    ) {
+      const source = state.full.length > 0 ? state.full : state.list
+      patchState(collectionId, { lean: source.map(toMapLeanStation) })
+      return
+    }
+
+    if (
+      !force &&
+      detailLevel === 'list' &&
       hasFullData &&
       state.fetchedAt != null &&
-      isIndexedDbEntryFresh({ collectionId, stations: state.full, fetchedAt: state.fetchedAt, version: 1 })
+      isIndexedDbEntryFresh({
+        collectionId,
+        stations: state.full,
+        fetchedAt: state.fetchedAt,
+        version: 1,
+      })
     ) {
-      patchState(collectionId, { lean: state.full.map(toMapLeanStation) })
+      patchState(collectionId, { list: state.full })
       return
     }
 
@@ -238,12 +284,17 @@ export async function ensureCollectionLoaded(
       !force &&
       hasTargetData &&
       state.fetchedAt != null &&
-      isIndexedDbEntryFresh({ collectionId, stations: state.full.length > 0 ? state.full : state.lean, fetchedAt: state.fetchedAt, version: 1 })
+      isIndexedDbEntryFresh({
+        collectionId,
+        stations: state.full.length > 0 ? state.full : state.list.length > 0 ? state.list : state.lean,
+        fetchedAt: state.fetchedAt,
+        version: 1,
+      })
     ) {
       return
     }
 
-    const hadData = hasTargetData || hasFullData
+    const hadData = hasTargetData || hasFullData || hasListData
   const isRefreshing = hadData && !force
 
     if (!hadData) {
@@ -266,7 +317,7 @@ export async function ensureCollectionLoaded(
     }
 
     try {
-      const stations = await fetchCollectionFromNetwork(collectionId, detailLevel === 'lean' ? 'lean' : 'full')
+      const stations = await fetchCollectionFromNetwork(collectionId, detailLevel)
       if (stations.length === 0) {
         throw new Error(`No data available in Firebase for ${collectionId}`)
       }
@@ -334,14 +385,15 @@ export async function bootstrapStationsData(options: {
   detailLevel?: StationFetchDetailLevel
   force?: boolean
 }): Promise<void> {
-  const { isSandbox, networkView, detailLevel = 'full', force = false } = options
+  const { isSandbox, networkView, detailLevel = 'list', force = false } = options
 
   if (process.env.NEXT_PUBLIC_USE_LOCAL_DATA_ONLY === 'true') {
     const localStations = await fetchLocalStations()
     if (localStations.length > 0) {
       patchState(DEFAULT_NETWORK_COLLECTION_ID, {
         full: localStations,
-        lean: localStations,
+        list: localStations,
+        lean: localStations.map(toMapLeanStation),
         loading: false,
         refreshing: false,
         fetchedAt: Date.now(),
@@ -391,7 +443,10 @@ export function getSandboxStations(detailLevel: StationFetchDetailLevel = 'full'
 
 export function getFullStationById(stationId: string): Station | null {
   for (const collectionId of [...NETWORK_COLLECTION_IDS, SANDBOX_COLLECTION]) {
-    const match = getState(collectionId).full.find((station) => station.id === stationId)
+    const state = getState(collectionId)
+    const match =
+      state.full.find((station) => station.id === stationId) ??
+      state.list.find((station) => station.id === stationId)
     if (match) return match
   }
   return null

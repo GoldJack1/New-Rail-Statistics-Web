@@ -4,6 +4,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import React, { useState, useMemo, useCallback, useEffect, useSyncExternalStore } from 'react'
 
 import { useStations } from '@/hooks/useStations'
+import { useStationListPipeline } from '@/hooks/useStationListPipeline'
 import { useDebounce } from '@/hooks/useDebounce'
 import {
   BUTLeftRoundedCircleButton,
@@ -27,7 +28,6 @@ import { formatStationLocationDisplay } from '@/utils/formatStationLocation'
 import { NETWORK_COLLECTION_IDS } from '@/constants/stationCollections'
 import type { NetworkViewFilter } from '@/constants/stationCollections'
 import { countPendingChangesForCollection } from '@/utils/pendingChangesByCollection'
-import { mergePendingChangesForStationsList } from '@/utils/applyPendingChangesForDisplay'
 import { useStationCollection } from '@/contexts/StationCollectionContext'
 import { usePendingStationChanges } from '@/contexts/PendingStationChangesContext'
 import { buildStationPath } from '@/utils/stationAreaSlug'
@@ -41,20 +41,15 @@ import {
   type StationAdminDisplayMode,
 } from '@/utils/stationAdminDisplayModeStorage'
 import {
-  sortStationsByTableColumn,
-  type StationsTableSort,
-} from '@/utils/stationsTableColumns'
-import {
   getDefaultTableColumnSlots,
   getTableFieldSchemaForNetworkView,
   type StationsTableColumnSlot,
 } from '@/utils/stationsTableColumnCatalog'
 import {
-  filterStations,
-  getDefaultStationFilterSelections,
-  getStationFilterOptions,
+  type StationsTableSort,
+} from '@/utils/stationsTableColumns'
+import {
   isOnlyGreaterLondonSelected,
-  sortStations,
   type SortOption,
   type StationFilterSelections,
 } from '@/utils/stationSearchFiltering'
@@ -154,42 +149,33 @@ const StationsPage: React.FC<StationsPageProps> = ({ initialMode = 'view' }) => 
 
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
 
-  const stations = useMemo(() => {
-    const baseStations =
-      isSandbox || networkView === 'all'
-        ? loadedStations
-        : loadedStations.filter((station) => station.sourceCollectionId === networkView)
-
-    return mergePendingChangesForStationsList(baseStations, pendingChanges, networkView)
-  }, [loadedStations, isSandbox, networkView, pendingChanges])
-
-  const uniqueValues = useMemo(() => getStationFilterOptions(stations || []), [stations])
-  const defaultSelections = useMemo(
-    () => getDefaultStationFilterSelections(uniqueValues),
-    [uniqueValues]
-  )
-  const effectiveSelections = hasUserInteractedWithFilters ? filterSelections : defaultSelections
-
-  const filteredStations = useMemo(
-    () => filterStations(stations || [], debouncedSearchTerm, effectiveSelections, uniqueValues),
-    [stations, debouncedSearchTerm, effectiveSelections, uniqueValues]
-  )
-
-  const sortedStations = useMemo(() => {
-    if (adminDisplayMode === 'table') {
-      return sortStationsByTableColumn(filteredStations, tableSort)
-    }
-    return sortStations(filteredStations, sortOption)
-  }, [filteredStations, sortOption, adminDisplayMode, tableSort])
+  const {
+    uniqueValues,
+    defaultSelections,
+    effectiveSelections,
+    sortedStations,
+    boroughFilterEnabled,
+  } = useStationListPipeline({
+    loadedStations,
+    pendingChanges,
+    networkView,
+    isSandbox,
+    debouncedSearchTerm,
+    filterSelections,
+    hasUserInteractedWithFilters,
+    sortOption,
+    tableSort,
+    adminDisplayMode,
+  })
 
   const CARD_ITEMS_PER_PAGE = 20
-  const TABLE_ITEMS_PER_PAGE = 100
-  const itemsPerPage = adminDisplayMode === 'table' ? TABLE_ITEMS_PER_PAGE : CARD_ITEMS_PER_PAGE
+  const itemsPerPage = CARD_ITEMS_PER_PAGE
   const totalPages = Math.ceil(sortedStations.length / itemsPerPage)
   const paginatedStations = sortedStations.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   )
+  const tableStations = sortedStations
   const handleStationNavigate = useCallback(
     (station: (typeof sortedStations)[number]) => {
       router.push(isEditMode ? `/admin/stations/${buildStationPath(station, collectionId)}/edit` : `/stations/${buildStationPath(station, collectionId)}`)
@@ -255,8 +241,6 @@ const StationsPage: React.FC<StationsPageProps> = ({ initialMode = 'view' }) => 
     selectedItems
       .map((item) => items.indexOf(item))
       .filter((index) => index >= 0)
-
-  const boroughFilterEnabled = isOnlyGreaterLondonSelected(effectiveSelections.counties)
 
   const toggleLondonBoroughFilter = useCallback(() => {
     if (boroughFilterEnabled) {
@@ -565,7 +549,7 @@ const StationsPage: React.FC<StationsPageProps> = ({ initialMode = 'view' }) => 
         <main className="stations-main">
           {adminDisplayMode === 'table' ? (
             <StationsTableView
-              stations={paginatedStations}
+              stations={tableStations}
               sort={tableSort}
               onSortChange={setTableSort}
               onRowClick={handleStationNavigate}
@@ -590,7 +574,7 @@ const StationsPage: React.FC<StationsPageProps> = ({ initialMode = 'view' }) => 
           )}
 
           {/* Pagination */}
-          {totalPages > 1 && (
+          {adminDisplayMode !== 'table' && totalPages > 1 && (
             <div className="stations-pagination">
               <div className="pagination-control-row">
                 <BUTLeftRoundedCircleButton

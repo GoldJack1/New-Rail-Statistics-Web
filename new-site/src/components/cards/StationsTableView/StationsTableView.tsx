@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useEffect, useMemo } from 'react'
+import React, { useEffect, useMemo, useRef } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import type { Station } from '../../../types'
 import { LightRailLineChips } from '../../chips/LightRailLineChips'
 import { isLightRailStop } from '../../../utils/stationCardForNetwork'
@@ -15,6 +16,9 @@ import {
 } from '../../../utils/stationsTableColumns'
 import { getLatestYearlyPassengerDisplay } from '../../../utils/yearlyPassengers'
 import './StationsTableView.css'
+
+const TABLE_ROW_HEIGHT_PX = 44
+const VIRTUALIZE_THRESHOLD = 40
 
 function getStationTableRowKey(station: Station): string {
   return `${station.sourceCollectionId ?? station.stnarea ?? 'station'}-${station.id}`
@@ -51,6 +55,47 @@ function renderTableCell(station: Station, column: StationsTableColumnDefinition
   return formatTableCellValue(getTableColumnValue(station, column.key))
 }
 
+function StationTableRow({
+  station,
+  visibleColumns,
+  onRowClick,
+}: {
+  station: Station
+  visibleColumns: StationsTableColumnDefinition[]
+  onRowClick: (station: Station) => void
+}) {
+  const rowKey = getStationTableRowKey(station)
+
+  return (
+    <tr
+      key={rowKey}
+      className="stations-table__row"
+      tabIndex={0}
+      onClick={() => onRowClick(station)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onRowClick(station)
+        }
+      }}
+    >
+      {visibleColumns.map((column) => (
+        <td
+          key={`cell-${rowKey}-${column.slotIndex}`}
+          className={[
+            column.cellClassName,
+            column.renderAsLinesChips ? 'stations-table__lines-cell' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
+          {renderTableCell(station, column)}
+        </td>
+      ))}
+    </tr>
+  )
+}
+
 const StationsTableView: React.FC<StationsTableViewProps> = ({
   stations,
   sort,
@@ -58,6 +103,7 @@ const StationsTableView: React.FC<StationsTableViewProps> = ({
   onRowClick,
   columnSlots,
 }) => {
+  const scrollRef = useRef<HTMLDivElement>(null)
   const visibleColumns = useMemo(
     () => resolveTableColumnsFromSlots(columnSlots),
     [columnSlots]
@@ -66,6 +112,14 @@ const StationsTableView: React.FC<StationsTableViewProps> = ({
     () => visibleColumns.map((column) => column.key),
     [visibleColumns]
   )
+  const shouldVirtualize = stations.length >= VIRTUALIZE_THRESHOLD
+
+  const rowVirtualizer = useVirtualizer({
+    count: shouldVirtualize ? stations.length : 0,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => TABLE_ROW_HEIGHT_PX,
+    overscan: 10,
+  })
 
   useEffect(() => {
     if (!visibleColumnKeys.includes(sort.column)) {
@@ -77,9 +131,24 @@ const StationsTableView: React.FC<StationsTableViewProps> = ({
     onSortChange(toggleTableSort(sort, column.key))
   }
 
+  const virtualRows = rowVirtualizer.getVirtualItems()
+  const paddingTop = virtualRows.length > 0 ? virtualRows[0]?.start ?? 0 : 0
+  const paddingBottom =
+    virtualRows.length > 0
+      ? rowVirtualizer.getTotalSize() - (virtualRows[virtualRows.length - 1]?.end ?? 0)
+      : 0
+
   return (
     <div className="stations-table-panel">
-      <div className="stations-table-wrap">
+      <div
+        ref={scrollRef}
+        className={[
+          'stations-table-wrap',
+          shouldVirtualize ? 'stations-table-wrap--virtualized' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
         <table className="stations-table">
           <thead>
             <tr>
@@ -116,38 +185,49 @@ const StationsTableView: React.FC<StationsTableViewProps> = ({
             </tr>
           </thead>
           <tbody>
-            {stations.map((station) => {
-              const rowKey = getStationTableRowKey(station)
-
-              return (
-              <tr
-                key={rowKey}
-                className="stations-table__row"
-                tabIndex={0}
-                onClick={() => onRowClick(station)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault()
-                    onRowClick(station)
-                  }
-                }}
-              >
-                {visibleColumns.map((column) => (
-                  <td
-                    key={`cell-${rowKey}-${column.slotIndex}`}
-                    className={[
-                      column.cellClassName,
-                      column.renderAsLinesChips ? 'stations-table__lines-cell' : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')}
-                  >
-                    {renderTableCell(station, column)}
-                  </td>
-                ))}
-              </tr>
-              )
-            })}
+            {shouldVirtualize ? (
+              <>
+                {paddingTop > 0 && (
+                  <tr aria-hidden="true">
+                    <td
+                      colSpan={visibleColumns.length}
+                      className="stations-table__virtual-spacer"
+                      style={{ height: paddingTop }}
+                    />
+                  </tr>
+                )}
+                {virtualRows.map((virtualRow) => {
+                  const station = stations[virtualRow.index]
+                  if (!station) return null
+                  return (
+                    <StationTableRow
+                      key={getStationTableRowKey(station)}
+                      station={station}
+                      visibleColumns={visibleColumns}
+                      onRowClick={onRowClick}
+                    />
+                  )
+                })}
+                {paddingBottom > 0 && (
+                  <tr aria-hidden="true">
+                    <td
+                      colSpan={visibleColumns.length}
+                      className="stations-table__virtual-spacer"
+                      style={{ height: paddingBottom }}
+                    />
+                  </tr>
+                )}
+              </>
+            ) : (
+              stations.map((station) => (
+                <StationTableRow
+                  key={getStationTableRowKey(station)}
+                  station={station}
+                  visibleColumns={visibleColumns}
+                  onRowClick={onRowClick}
+                />
+              ))
+            )}
           </tbody>
         </table>
       </div>
