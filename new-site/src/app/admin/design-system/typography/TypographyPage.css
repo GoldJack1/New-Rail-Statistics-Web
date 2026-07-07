@@ -36,7 +36,7 @@
 }
 
 .ds-typography__sample--cursive {
-  font-family: 'Geologica Cursive', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-body);
 }
 
 .ds-typography__scale {

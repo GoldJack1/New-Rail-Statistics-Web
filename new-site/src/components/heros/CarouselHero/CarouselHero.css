@@ -375,7 +375,7 @@
 }
 
 .rs-carousel-hero__title {
-  font-family: 'Geologica Cursive';
+  font-family: var(--font-body);
   font-weight: 500;
   font-size: 36px;
   line-height: normal;
