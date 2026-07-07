@@ -1,13 +1,12 @@
 /* Map page — extends shared stations layout from StationsPageRefactored.css */
 
 .stations-map-page.stations-page {
-    --stations-map-app-header: calc(4rem + env(safe-area-inset-top, 0px));
     flex: 1;
     min-height: 0;
     display: flex;
     flex-direction: column;
-    min-height: calc(100vh - var(--stations-map-app-header));
-    min-height: calc(100dvh - var(--stations-map-app-header));
+    min-height: calc(100vh - var(--app-header-offset));
+    min-height: calc(100dvh - var(--app-header-offset));
 }
 
 .stations-map-page.stations-page .stations-content {
@@ -47,11 +46,14 @@
 
 .stations-map-page .rs-page-top-header {
     flex-shrink: 0;
+    /* Toolbar band is the sticky chrome on this page — let the title band scroll away */
+    position: static;
+    top: auto;
 }
 
 .stations-map-page .stations-toolbar-band {
     position: sticky;
-    top: var(--stations-map-app-header);
+    top: var(--app-header-offset);
     z-index: 900;
     flex-shrink: 0;
     margin-bottom: 0;
@@ -168,7 +170,6 @@
 
 @media (max-width: 639px) {
     .stations-map-page.stations-page {
-        --stations-map-app-header: calc(3.5rem + env(safe-area-inset-top, 0px));
         --stations-map-mobile-height: 500px;
         min-height: 0;
         overflow: visible;
@@ -186,7 +187,7 @@
         --stations-map-mobile-panel-height: auto;
         grid-template-rows: var(--stations-map-mobile-height) minmax(0, 1fr);
         flex: 1 1 auto;
-        min-height: calc(100dvh - var(--stations-map-app-header));
+        min-height: calc(100dvh - var(--app-header-offset));
     }
 
     .stations-map-page.stations-page .stations-main {
@@ -199,7 +200,7 @@
     .stations-map-page .stations-map-side-panel {
         height: auto;
         max-height: none;
-        scroll-margin-top: var(--stations-map-app-header);
+        scroll-margin-top: var(--app-header-offset);
     }
 
     .stations-map-page .stations-toolbar-band {
@@ -228,21 +229,5 @@
     .stations-map-page .network-station-tab-group::after {
         content: '';
         flex: 0 0 var(--space-xs);
-    }
-}
-
-@supports (-webkit-touch-callout: none) {
-    @media (max-width: 1199px) {
-        .stations-map-page.stations-page,
-        .stations-map-page .stations-toolbar-band {
-            --stations-map-app-header: calc(4rem + env(safe-area-inset-top, 0px) + 5px);
-        }
-    }
-
-    @media (max-width: 639px) {
-        .stations-map-page.stations-page,
-        .stations-map-page .stations-toolbar-band {
-            --stations-map-app-header: calc(3.5rem + env(safe-area-inset-top, 0px) + 5px);
-        }
     }
 }

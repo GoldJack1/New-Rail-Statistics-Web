@@ -3,6 +3,7 @@
 import React, { useEffect, useId } from 'react'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '../../../contexts/AuthContext'
+import { useAppHeaderOffset } from '@/hooks/useAppHeaderOffset'
 import { BUTHeaderLink } from '../../buttons'
 import BetaTag from '../BetaTag/BetaTag'
 import './Header.css'
@@ -15,8 +16,8 @@ function getHeaderPageTitle(pathname: string): string {
   if (pathname === '/privacy') return 'Privacy Policy'
   if (pathname === '/eula') return 'EULA'
   if (pathname === '/buttons') return 'Buttons'
-  if (pathname.startsWith('/stations/new')) return 'New station'
-  if (pathname.startsWith('/stations/pending-review')) return 'Pending review'
+  if (pathname.startsWith('/admin/stations/new')) return 'New station'
+  if (pathname.startsWith('/admin/stations/pending-review')) return 'Pending review'
   if (pathname === '/stations/map') return 'Map'
   if (pathname.startsWith('/stations/')) return 'Station'
   if (pathname === '/stations') return 'Stations'
@@ -43,6 +44,7 @@ const Header: React.FC = () => {
   const logoNavReplace = pathname === '/log-in'
 
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
+  const headerRef = useAppHeaderOffset<HTMLElement>(mobileMenuOpen)
 
   const isHomeActive = pathname === '/' || pathname === '/home'
   const isMigrationActive = pathname === '/migration'
@@ -81,7 +83,10 @@ const Header: React.FC = () => {
   }
 
   return (
-    <header className={`universal-header${mobileMenuOpen ? ' universal-header--menu-open' : ''}`}>
+    <header
+      ref={headerRef}
+      className={`universal-header${mobileMenuOpen ? ' universal-header--menu-open' : ''}`}
+    >
       {/*
         iOS Safari (esp. 26+ “Liquid Glass”): in-tab chrome tint is derived from fixed
         elements with a solid background-color near the top — not theme-color. A plain strip

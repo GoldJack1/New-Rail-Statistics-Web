@@ -84,6 +84,14 @@
     --container-xl: 1280px;
     --container-2xl: 1536px;
     --container-3xl: 1920px;
+
+    /* Fixed site header — keep in sync with .header-container height + safe-area / Safari extras */
+    --app-header-height: 4rem;
+    --app-header-safari-extra: 0px;
+    /* Fallback until Header ResizeObserver publishes the measured height (see useAppHeaderOffset) */
+    --app-header-offset: calc(
+        var(--app-header-height) + env(safe-area-inset-top, 0px) + var(--app-header-safari-extra) + 1px
+    );
 }
 
 /* Active color-scheme for Safari/WebKit form controls, scrollbars, and system UI hints */
@@ -123,7 +131,7 @@ html[data-theme='dark'] {
 html {
     scroll-behavior: smooth;
     /* Offset scroll targets (anchor links, scrollIntoView, hash nav) by the fixed header height */
-    scroll-padding-top: calc(4rem + env(safe-area-inset-top, 0px));
+    scroll-padding-top: var(--app-header-offset);
     -webkit-text-size-adjust: 100%;
     -ms-text-size-adjust: 100%;
     width: 100%;
@@ -136,8 +144,8 @@ html {
 }
 
 @media (max-width: 639px) {
-    html {
-        scroll-padding-top: calc(3.5rem + env(safe-area-inset-top, 0px));
+    :root {
+        --app-header-height: 3.5rem;
     }
 }
 
@@ -264,6 +272,30 @@ button, a, input, select, textarea, [role="button"] {
     background-color: var(--bg-tertiary);
 }
 
+/* Matches PageTopHeader and admin stations content width */
+.container.container--page {
+    max-width: var(--container-3xl);
+}
+
+/* Full viewport width — design system and other reference pages */
+.container.container--full-bleed {
+    max-width: none;
+    width: 100%;
+    margin: 0;
+}
+
+.ds-home-page,
+.ds-colours-page,
+.ds-typography-page,
+.ds-buttons-page,
+.ds-layout-page,
+.ds-components-page,
+.ds-icons-page,
+.ds-heros-page {
+    width: 100%;
+    min-width: 0;
+}
+
 /* Container responsive breakpoints */
 @media (max-width: 1023px) {
     .container {
@@ -284,7 +316,7 @@ button, a, input, select, textarea, [role="button"] {
  */
 .container.container--station-details {
     max-width: none !important;
-    width: 100vw;
+    width: 100%;
     margin: 0 !important;
     padding-top: 0;
     padding-bottom: var(--space-xl);
@@ -376,15 +408,35 @@ textarea:focus {
     flex: 1 0 auto;
     display: flex;
     flex-direction: column;
-    padding-top: calc(4rem + env(safe-area-inset-top, 0px));
+    padding-top: var(--app-header-offset);
     min-height: 100vh;
     min-height: 100lvh;
     min-width: 0;
 }
 
+/*
+ * PageTopHeader pages: paint the fixed-header offset strip --bg-secondary (matches site nav +
+ * page header). Offset stays on .app-main — not inside sticky .rs-page-top-header — so scrolling
+ * doesn’t leave an empty secondary band between the two headers.
+ */
+.app:has(.rs-page-top-header) .main-content.app-main {
+    background: linear-gradient(
+        to bottom,
+        var(--bg-secondary) 0,
+        var(--bg-secondary) var(--app-header-offset),
+        var(--bg-tertiary) var(--app-header-offset),
+        var(--bg-tertiary) 100%
+    );
+}
+
+/* Top overscroll / rubber-band should match the secondary header chrome on these pages */
+html:has(.rs-page-top-header),
+body:has(.rs-page-top-header) {
+    background-color: var(--bg-secondary);
+}
+
 @media (max-width: 639px) {
     .main-content.app-main {
-        padding-top: calc(3.5rem + env(safe-area-inset-top, 0px));
         min-height: 100vh;
         min-height: 100lvh;
     }
@@ -393,8 +445,11 @@ textarea:focus {
 /* Match +5px header padding where .safari-toolbar-tint is shown */
 @supports (-webkit-touch-callout: none) {
     @media (max-width: 1199px) {
+        :root {
+            --app-header-safari-extra: 5px;
+        }
+
         .main-content.app-main {
-            padding-top: calc(4rem + env(safe-area-inset-top, 0px) + 5px);
             min-height: 100vh;
             min-height: 100lvh;
         }
@@ -402,7 +457,6 @@ textarea:focus {
 
     @media (max-width: 639px) {
         .main-content.app-main {
-            padding-top: calc(3.5rem + env(safe-area-inset-top, 0px) + 5px);
             min-height: 100vh;
             min-height: 100lvh;
         }

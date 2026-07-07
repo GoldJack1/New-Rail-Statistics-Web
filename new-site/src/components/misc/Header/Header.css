@@ -68,7 +68,9 @@
 @supports (-webkit-touch-callout: none) {
     @media (max-width: 1199px) {
         .universal-header {
-            padding-top: calc(env(safe-area-inset-top, 0px) + env(safe-area-inset-top, 0px) + 5px);
+            padding-top: calc(
+                env(safe-area-inset-top, 0px) + env(safe-area-inset-top, 0px) + var(--app-header-safari-extra)
+            );
         }
     }
 }
@@ -88,7 +90,7 @@
     display: grid;
     grid-template-columns: 1fr auto;
     align-items: center;
-    height: 4rem;
+    height: var(--app-header-height);
     box-sizing: border-box;
 }
 
@@ -371,7 +373,6 @@
 @media (max-width: 1023px) {
     .header-container {
         padding: 0 var(--space-xl);
-        height: 4rem;
     }
 
     .logo {
@@ -387,7 +388,6 @@
 @media (max-width: 639px) {
     .header-container {
         padding: 0 var(--space-lg);
-        height: 3.5rem;
     }
 
     .logo {

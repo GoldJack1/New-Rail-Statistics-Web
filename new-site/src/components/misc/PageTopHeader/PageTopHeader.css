@@ -3,6 +3,9 @@
   padding: calc(var(--space-lg) + 15px) 0 calc(var(--space-sm) + 25px) 0;
   border-bottom: 1px solid var(--border-color);
   background-color: var(--bg-secondary);
+  position: sticky;
+  top: var(--app-header-offset);
+  z-index: 900;
 }
 
 .rs-page-top-header__inner {
@@ -64,6 +67,24 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+/* Unified secondary chrome: site header matches the page title band */
+.app:has(.rs-page-top-header) .universal-header {
+  background: var(--bg-secondary);
+  border-bottom-color: var(--border-color);
+  /* Opaque fill — backdrop-filter samples scrolling tertiary content and causes a colour flash */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+.app:has(.rs-page-top-header) .safari-toolbar-tint {
+  background-color: var(--bg-secondary);
+}
+
+.app:has(.rs-page-top-header) .universal-header--menu-open {
+  background: var(--bg-secondary);
 }
 
 @media (max-width: 1023px) {
