@@ -60,11 +60,17 @@ const MAP_PADDING: L.PointExpression = [48, 48]
 const MOBILE_MAP_MEDIA = '(max-width: 639px)'
 const LITE_MOVEEND_DEBOUNCE_MS = 150
 
-type StationMarkerPair = {
-  hit: L.CircleMarker | L.Marker
-  visual: L.CircleMarker | L.Marker
-  kind: 'circle' | 'supertram-logo'
-}
+type StationMarkerPair =
+  | {
+      kind: 'circle'
+      hit: L.CircleMarker
+      visual: L.CircleMarker
+    }
+  | {
+      kind: 'supertram-logo'
+      hit: L.Marker
+      visual: L.Marker
+    }
 
 function isMobileMapViewport(): boolean {
   return typeof window !== 'undefined' && window.matchMedia(MOBILE_MAP_MEDIA).matches
