@@ -2,12 +2,13 @@
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
 
 import { PageTopHeader } from '@/components/misc'
 import BetaTag from '@/components/misc/BetaTag/BetaTag'
 import { BUTBaseButton as Button, BUTWideButton } from '@/components/buttons'
 import NetworkStationTabGroup from '@/components/cards/NetworkStationTabGroup/NetworkStationTabGroup'
-import StationsOsmMap from '@/components/maps/StationsOsmMap'
+import MapLiteModeGate from '@/components/maps/MapLiteModeGate'
 import StationsMapSelectedPanel from '@/components/maps/StationsMapSelectedPanel'
 import StationsMapTimeline from '@/components/maps/StationsMapTimeline'
 import { LIGHTRAIL_COLLECTION_ID } from '@/utils/lightRailStationFields'
@@ -23,6 +24,7 @@ import { isValidStationCoordinate } from '@/utils/stationCoordinates'
 import { countPendingChangesForCollection } from '@/utils/pendingChangesByCollection'
 import { pathnameForReviewPendingSource } from '@/utils/reviewPendingNavigation'
 import { useStationAdminMode } from '@/hooks/useStationAdminMode'
+import { useDevicePerformanceTier } from '@/hooks/useDevicePerformanceTier'
 import { isNetworkCollection, NETWORK_COLLECTION_IDS } from '@/constants/stationCollections'
 import type { NewStationNavigationState } from '@/types/newStationNavigation'
 import type { Station } from '@/types'
@@ -30,6 +32,11 @@ import { setNewStationNavigationState } from '@/utils/clientNavigationState'
 import './StationsPageRefactored.css'
 import './StationsMapPage.css'
 import './StationsMapTimeline.css'
+
+const StationsOsmMap = dynamic(() => import('@/components/maps/StationsOsmMap'), {
+  ssr: false,
+  loading: () => <div className="stations-osm-map stations-osm-map--loading" aria-busy="true" aria-label="Loading map" />,
+})
 
 const MOBILE_MAP_MEDIA = '(max-width: 639px)'
 
@@ -42,6 +49,7 @@ const StationsMapPage: React.FC = () => {
   const { collectionId, networkView, setNetworkView, isSandbox } = useStationCollection()
   const { pendingChanges } = usePendingStationChanges()
   const { stations, loading, error, refetch, resolveStation } = useStationsMap()
+  const { shouldGateAllNetworks, isLiteMode, enableFullMapOverride } = useDevicePerformanceTier(networkView)
   const [selectedStation, setSelectedStation] = useState<Station | null>(null)
   const [isAddStationMode, setIsAddStationMode] = useState(false)
   const [timelineStepIndex, setTimelineStepIndex] = useState(0)
@@ -249,21 +257,29 @@ const StationsMapPage: React.FC = () => {
       <div className="stations-content stations-map-page__content">
         <div className="stations-map-page__layout">
           <main className="stations-main">
-            <StationsOsmMap
-              stations={mapStations}
-              publishedStations={firestoreMapStations}
-              pendingNewStationKeys={pendingNewKeys}
-              networkView={networkView}
-              selectedStationId={selectedStation ? getStationMapKey(selectedStation) : null}
-              onStationSelect={handleStationSelect}
-              onStationClear={handleStationClear}
-              allowAddStation={isAdminMode}
-              addStationMode={isAddStationMode}
-              onAddStationModeChange={setIsAddStationMode}
-              onAddStationAtLocation={handleAddStationAtLocation}
-              timelineCutoffMs={timelineCutoffMs}
-              timelineShowUndatedAtMax={timelineShowUndatedAtMax}
-            />
+            {shouldGateAllNetworks ? (
+              <MapLiteModeGate
+                onSelectNetwork={setNetworkView}
+                onUseFullMap={enableFullMapOverride}
+              />
+            ) : (
+              <StationsOsmMap
+                stations={mapStations}
+                publishedStations={firestoreMapStations}
+                pendingNewStationKeys={pendingNewKeys}
+                networkView={networkView}
+                selectedStationId={selectedStation ? getStationMapKey(selectedStation) : null}
+                onStationSelect={handleStationSelect}
+                onStationClear={handleStationClear}
+                allowAddStation={isAdminMode}
+                addStationMode={isAddStationMode}
+                onAddStationModeChange={setIsAddStationMode}
+                onAddStationAtLocation={handleAddStationAtLocation}
+                timelineCutoffMs={timelineCutoffMs}
+                timelineShowUndatedAtMax={timelineShowUndatedAtMax}
+                liteMode={isLiteMode}
+              />
+            )}
           </main>
           <aside ref={panelRef} className="stations-map-side-panel" aria-label="Map details">
             {showSuperTramTimeline && (

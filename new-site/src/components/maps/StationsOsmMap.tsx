@@ -22,10 +22,11 @@ import {
   createSuperTramMapDivIcon,
   isSuperTramMapStop,
 } from '../../utils/superTramMapMarker'
-import { getMarkerHitRadius, getMarkerVisualRadius, MARKER_STROKE } from '../../utils/mapMarkerSizing'
+import { getMarkerHitRadius, getMarkerVisualRadius, getSuperTramIconOuterDiameter, MARKER_STROKE } from '../../utils/mapMarkerSizing'
 import { addThemeTileLayersToMap, swapThemeTileLayers, type MapTileLayerRefs } from '../../utils/mapTileLayers'
 import { isStationVisibleAtTimelineCutoff } from '../../utils/superTramTimeline'
 import { LIGHTRAIL_COLLECTION_ID } from '../../utils/lightRailStationFields'
+import { LITE_MAP_MAX_MARKERS } from '../../utils/deviceCapability'
 import type { Station } from '../../types'
 import { BUTCircleButton } from '../buttons'
 import {
@@ -56,6 +57,7 @@ const DEFAULT_CENTER: L.LatLngTuple = [54.5, -2.5]
 const DEFAULT_ZOOM = 6
 const MAP_PADDING: L.PointExpression = [48, 48]
 const MOBILE_MAP_MEDIA = '(max-width: 639px)'
+const LITE_MOVEEND_DEBOUNCE_MS = 150
 
 type StationMarkerPair = {
   hit: L.CircleMarker
@@ -91,6 +93,26 @@ interface StationsOsmMapProps {
   /** SuperTram opening timeline — null disables timeline filtering. */
   timelineCutoffMs?: number | null
   timelineShowUndatedAtMax?: boolean
+  /** Viewport-culled markers on low-end devices. */
+  liteMode?: boolean
+}
+
+function getStationsForLiteMarkers(
+  stations: Station[],
+  bounds: L.LatLngBounds,
+  selectedStationId: string | null
+): Station[] {
+  const inView = stations.filter((station) => bounds.contains([station.latitude, station.longitude]))
+
+  if (selectedStationId) {
+    const selected = stations.find((station) => getStationMapKey(station) === selectedStationId)
+    if (selected && !inView.some((station) => getStationMapKey(station) === selectedStationId)) {
+      inView.unshift(selected)
+    }
+  }
+
+  if (inView.length <= LITE_MAP_MAX_MARKERS) return inView
+  return inView.slice(0, LITE_MAP_MAX_MARKERS)
 }
 
 function getStationLegendCollectionId(
@@ -132,7 +154,7 @@ function setMarkerTimelineVisibility(marker: StationMarkerPair, visible: boolean
     const element = (marker.visual as L.Marker).getElement()
     if (element) {
       element.style.opacity = String(opacity)
-      element.style.pointerEvents = visible ? '' : 'none'
+      element.style.pointerEvents = 'none'
     }
     return
   }
@@ -155,8 +177,13 @@ function applyMarkerStyle(
   const { visual, hit } = getMarkerRadii(isSelected, mobile)
   const isPendingNew = pendingNewStationKeys.has(getStationMapKey(station))
 
+  const hitRadius =
+    marker.kind === 'supertram-logo'
+      ? Math.max(hit, getSuperTramIconOuterDiameter(isSelected, mobile) / 2)
+      : hit
+
   marker.hit.setStyle({
-    radius: hit,
+    radius: hitRadius,
     fillOpacity: 0.001,
     stroke: false,
     weight: 0,
@@ -193,6 +220,7 @@ export function StationsOsmMap({
   onAddStationModeChange,
   timelineCutoffMs = null,
   timelineShowUndatedAtMax = true,
+  liteMode = false,
 }: StationsOsmMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
@@ -209,6 +237,8 @@ export function StationsOsmMap({
   const [mobileMarkers, setMobileMarkers] = useState(isMobileMapViewport)
   const [visibleLegendNetworks, setVisibleLegendNetworks] = useState<NetworkCollectionId[]>([])
   const [zoomBounds, setZoomBounds] = useState<{ zoom: number; min: number; max: number } | null>(null)
+  const [viewportBounds, setViewportBounds] = useState<L.LatLngBounds | null>(null)
+  const liteMoveEndTimerRef = useRef<number | null>(null)
   const { theme } = useTheme()
   const themeKey = theme === 'dark' ? 'dark' : 'light'
 
@@ -235,6 +265,11 @@ export function StationsOsmMap({
       }),
     [stations, networkView]
   )
+
+  const markerStations = useMemo(() => {
+    if (!liteMode || !viewportBounds) return mapStations
+    return getStationsForLiteMarkers(mapStations, viewportBounds, selectedStationId)
+  }, [liteMode, mapStations, viewportBounds, selectedStationId])
 
   const hasVisiblePendingNew = useMemo(
     () => mapStations.some((station) => pendingNewStationKeys.has(getStationMapKey(station))),
@@ -289,14 +324,17 @@ export function StationsOsmMap({
       if (mapStations.length === 0) return
 
       const layerGroup = L.layerGroup()
-      mapStations.forEach((station) => {
+      markerStations.forEach((station) => {
         const { hit } = getMarkerRadii(false, mobileMarkers)
         const latLng: L.LatLngTuple = [station.latitude, station.longitude]
         const isPendingNew = pendingNewStationKeys.has(getStationMapKey(station))
         const useSuperTramLogo = isSuperTramMapStop(station, networkView)
+        const hitRadius = useSuperTramLogo
+          ? Math.max(hit, getSuperTramIconOuterDiameter(false, mobileMarkers) / 2)
+          : hit
 
         const hitMarker = L.circleMarker(latLng, {
-          radius: hit,
+          radius: hitRadius,
           fillColor: '#000000',
           fillOpacity: 0.001,
           stroke: false,
@@ -325,8 +363,13 @@ export function StationsOsmMap({
           onStationSelectRef.current(station)
         })
 
-        layerGroup.addLayer(hitMarker)
-        layerGroup.addLayer(visualMarker)
+        if (useSuperTramLogo) {
+          layerGroup.addLayer(visualMarker)
+          layerGroup.addLayer(hitMarker)
+        } else {
+          layerGroup.addLayer(hitMarker)
+          layerGroup.addLayer(visualMarker)
+        }
         markersByIdRef.current.set(getStationMapKey(station), {
           hit: hitMarker,
           visual: visualMarker,
@@ -336,7 +379,7 @@ export function StationsOsmMap({
       layerGroup.addTo(map)
       markersLayerRef.current = layerGroup
     },
-    [mapStations, networkView, mobileMarkers, pendingNewStationKeys]
+    [markerStations, mapStations.length, networkView, mobileMarkers, pendingNewStationKeys]
   )
 
   useEffect(() => {
@@ -394,6 +437,10 @@ export function StationsOsmMap({
     return () => {
       window.cancelAnimationFrame(rafId)
       window.removeEventListener('resize', refreshSize)
+      if (liteMoveEndTimerRef.current !== null) {
+        window.clearTimeout(liteMoveEndTimerRef.current)
+        liteMoveEndTimerRef.current = null
+      }
       map.off('zoomend', syncZoomBounds)
       map.off('zoomlevelschange', syncZoomBounds)
       observer?.disconnect()
@@ -409,6 +456,45 @@ export function StationsOsmMap({
   }, []) // eslint-disable-line react-hooks/exhaustive-deps -- mount only
 
   useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+
+    if (!liteMode) {
+      setViewportBounds(null)
+      return
+    }
+
+    setViewportBounds(map.getBounds())
+
+    const onMoveEnd = () => {
+      if (liteMoveEndTimerRef.current !== null) {
+        window.clearTimeout(liteMoveEndTimerRef.current)
+      }
+      liteMoveEndTimerRef.current = window.setTimeout(() => {
+        liteMoveEndTimerRef.current = null
+        setViewportBounds(map.getBounds())
+      }, LITE_MOVEEND_DEBOUNCE_MS)
+    }
+
+    map.on('moveend', onMoveEnd)
+    map.on('zoomend', onMoveEnd)
+
+    return () => {
+      if (liteMoveEndTimerRef.current !== null) {
+        window.clearTimeout(liteMoveEndTimerRef.current)
+        liteMoveEndTimerRef.current = null
+      }
+      map.off('moveend', onMoveEnd)
+      map.off('zoomend', onMoveEnd)
+    }
+  }, [liteMode])
+
+  useEffect(() => {
+    if (!liteMode || !mapRef.current) return
+    setViewportBounds(mapRef.current.getBounds())
+  }, [liteMode, networkView])
+
+  useEffect(() => {
     if (!mapRef.current) return
     syncMarkers(mapRef.current)
   }, [syncMarkers])
@@ -420,7 +506,7 @@ export function StationsOsmMap({
 
   useEffect(() => {
     markersByIdRef.current.forEach((marker, stationKey) => {
-      const station = mapStations.find((item) => getStationMapKey(item) === stationKey)
+      const station = markerStations.find((item) => getStationMapKey(item) === stationKey)
       if (!station) return
       applyMarkerStyle(
         marker,
@@ -445,7 +531,7 @@ export function StationsOsmMap({
     })
   }, [
     selectedStationId,
-    mapStations,
+    markerStations,
     networkView,
     mobileMarkers,
     pendingNewStationKeys,

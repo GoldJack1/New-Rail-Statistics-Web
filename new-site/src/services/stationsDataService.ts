@@ -9,6 +9,10 @@ import {
 import type { StationFetchDetailLevel } from '@/services/stationFirestoreMapper'
 import { fetchStationsFromFirebase } from '@/services/firebase'
 import {
+  readDeviceCapabilityFromBrowser,
+  resolveDevicePerformanceTier,
+} from '@/utils/deviceCapability'
+import {
   fetchCollectionFromCdn,
   fetchMergedNetworkStationsFromCdn,
   fetchStationsCdnManifest,
@@ -108,6 +112,7 @@ export function subscribeStationsData(listener: Listener): () => void {
 
 export function getFetchConcurrency(): number {
   if (typeof navigator === 'undefined') return 3
+  if (resolveDevicePerformanceTier(readDeviceCapabilityFromBrowser()) === 'lite') return 1
   const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection
   if (connection?.saveData) return 1
   const cores = navigator.hardwareConcurrency ?? 4

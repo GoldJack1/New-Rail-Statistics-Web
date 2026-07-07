@@ -92,6 +92,7 @@
 .stations-osm-map__supertram-marker-shell {
     background: transparent;
     border: none;
+    pointer-events: none;
 }
 
 .stations-osm-map__supertram-marker {
@@ -104,6 +105,7 @@
     border-radius: 50%;
     background-color: #000000;
     opacity: 0.95;
+    pointer-events: none;
 }
 
 .stations-osm-map__supertram-marker__svg {
@@ -160,6 +162,12 @@
     border-radius: 0;
     overflow: hidden;
     z-index: 0;
+}
+
+.stations-osm-map--loading {
+    flex: 1;
+    min-height: 12rem;
+    background: var(--bg-primary);
 }
 
 .stations-osm-map__popup {

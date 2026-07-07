@@ -2,6 +2,11 @@
  * Performance utilities for the Rail Statistics application
  */
 
+import {
+  readDeviceCapabilityFromBrowser,
+  resolveDevicePerformanceTier,
+} from '@/utils/deviceCapability'
+
 // Debounce function for performance optimization
 export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
@@ -36,11 +41,8 @@ export function prefersReducedMotion(): boolean {
 
 // Check if device is low-end (based on memory and hardware concurrency)
 export function isLowEndDevice(): boolean {
-  // @ts-expect-error - navigator.deviceMemory may not be available in all browsers
-  const memory = navigator.deviceMemory || 4
-  const cores = navigator.hardwareConcurrency || 4
-  
-  return memory <= 4 || cores <= 4
+  if (typeof window === 'undefined') return false
+  return resolveDevicePerformanceTier(readDeviceCapabilityFromBrowser()) === 'lite'
 }
 
 // Optimize image loading based on device capabilities
