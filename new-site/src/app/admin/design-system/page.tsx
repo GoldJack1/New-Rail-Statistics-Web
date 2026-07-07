@@ -1,7 +1,6 @@
 'use client'
 
 import React from 'react'
-import { useRouter } from 'next/navigation'
 import { TextCard } from '@/components/cards'
 import { PageTopHeader } from '@/components/misc'
 import './DesignSystemHomePage.css'
@@ -45,8 +44,6 @@ const SECTIONS = [
 ]
 
 const DesignSystemHomePage: React.FC = () => {
-  const router = useRouter()
-
   return (
     <div className="ds-home-page">
       <PageTopHeader
@@ -54,7 +51,7 @@ const DesignSystemHomePage: React.FC = () => {
         subtitle="Central reference for typography, colour tokens, interaction states, and shared UI patterns used across Rail Statistics."
       />
 
-      <div className="container">
+      <div className="container container--full-bleed">
         <div className="ds-home">
         <section className="ds-home__layout">
           <div className="ds-home__left">
@@ -65,7 +62,7 @@ const DesignSystemHomePage: React.FC = () => {
                   <TextCard
                     title={section.title}
                     description={section.description}
-                    onClick={() => router.push(section.to)}
+                    to={section.to}
                   />
                 </div>
               ))}

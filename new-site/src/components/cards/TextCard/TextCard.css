@@ -24,6 +24,11 @@
   transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
 }
 
+a.rs-text-card {
+  text-decoration: none;
+  color: inherit;
+}
+
 .rs-text-card__content {
   display: flex;
   flex-direction: column;

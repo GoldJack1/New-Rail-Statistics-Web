@@ -1,8 +1,8 @@
 # Rail Statistics Website — Next.js Migration Plan
 
-**Source:** `Old Website ` (React 19 + TypeScript + Vite 7 SPA)
-**Target:** `New Site` (Next.js, sibling folder — not yet created)
-**Status:** Planning only. No code or folders have been created yet.
+**Source:** `Old Website /RailStatisticsWebsite` (React 19 + TypeScript + Vite 7 SPA)
+**Target:** `new-site/` (Next.js 16 App Router)
+**Status:** **Phase 1 complete** (signed off 7 Jul 2026). **Phase 2 implemented** — live Firebase, auth, admin workflows, Darwin proxy, migration tool, and all routes wired. **Polish complete** (7 Jul 2026): PWA service worker, SEO (sitemap/robots/OpenGraph), legacy edit redirects, analytics page views, layout performance (removed root `force-dynamic`).
 
 ---
 
@@ -302,14 +302,14 @@ Phase 2 begins **only after explicit Phase 1 sign-off** (see §7). Checklist:
 
 ---
 
-## 8. Open Assumptions Requiring Confirmation
+## 8. Open Assumptions — confirmed (7 Jul 2026)
 
-- [ ] **`/api-status` → `/admin/api-status` rename** — proposed for consistency with the rest of the admin surface; not explicitly requested by the user originally. Please confirm or correct.
-- [ ] **Design System auth gating in Phase 1** — recommendation is to leave `/admin/design-system/*` open/ungated in Phase 1 (Option A in §5.3), with real protection added in Phase 2 once auth exists. Please confirm this is acceptable, or if a temporary stub gate is preferred instead.
-- [ ] **Legal pages timing** — proposing `/privacy` and `/eula` be included in Phase 1 (they're static/low-risk) rather than deferred to Phase 2. Please confirm.
-- [ ] **Login page shell scope** — recommendation is a full visual/UI port in Phase 1 with no-op submit handlers (not fully deferred, not fully functional). Please confirm this middle-ground approach is desired.
-- [ ] **Leaflet placeholder data approach** — recommendation is to fully wire Leaflet + OSM tile proxy + sample `stations.json` in Phase 1 for a realistic interactive placeholder, rather than deferring all map interactivity to Phase 2. Please confirm.
-- [ ] **Netlify Functions vs. Next.js Route Handlers** — recommendation is to convert all three (`osm-tile`, `nominatim-proxy`, `darwin-proxy`) to Next.js Route Handlers under `app/api/*` rather than keeping them as separate Netlify Functions. Please confirm.
+- [x] **`/api-status` → `/admin/api-status` rename** — confirmed; redirects in `next.config.ts`.
+- [x] **Design System auth gating in Phase 1** — Option A (ungated in Phase 1); real `ProtectedRoute` via `app/admin/layout.tsx` in Phase 2.
+- [x] **Legal pages in Phase 1** — confirmed.
+- [x] **Login page shell scope** — confirmed; full auth wired in Phase 2.
+- [x] **Leaflet + sample data in Phase 1** — confirmed; live Firestore in Phase 2.
+- [x] **Netlify Functions → Route Handlers** — OSM, Nominatim, and Darwin proxies under `app/api/*`.
 
 ---
 

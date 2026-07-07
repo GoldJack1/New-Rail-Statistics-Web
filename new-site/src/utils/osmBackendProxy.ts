@@ -13,3 +13,8 @@ export function shouldUseOsmBackendProxy(): boolean {
   if (flag === 'true') return true
   return process.env.NODE_ENV === 'production'
 }
+
+/** Hook-shaped alias used by `LocationMapPicker` and other map components ported from the old site. */
+export function useOsmBackendProxy(): boolean {
+  return shouldUseOsmBackendProxy()
+}

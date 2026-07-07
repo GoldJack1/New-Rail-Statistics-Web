@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import './TextCard.css'
 
 export type TextCardState = 'default' | 'accent' | 'redAction' | 'greenAction'
@@ -9,6 +10,7 @@ export interface TextCardProps {
   title: string
   description: string
   state?: TextCardState
+  to?: string
   onClick?: () => void
   trailingIcon?: React.ReactNode
   disabled?: boolean
@@ -35,6 +37,7 @@ const TextCard: React.FC<TextCardProps> = ({
   title,
   description,
   state = 'default',
+  to,
   onClick,
   trailingIcon,
   disabled = false,
@@ -87,29 +90,52 @@ const TextCard: React.FC<TextCardProps> = ({
     className
   ].filter(Boolean).join(' ')
 
-  return (
-    <button
-      type="button"
-      className={classes}
-      disabled={disabled}
-      onPointerDown={handlePressStart}
-      onPointerUp={handlePressEnd}
-      onPointerLeave={handlePressEnd}
-      onKeyDown={(event) => {
-        if (event.key === ' ' || event.key === 'Enter') handlePressStart()
-      }}
-      onKeyUp={(event) => {
-        if (event.key === ' ' || event.key === 'Enter') handlePressEnd()
-      }}
-      onClick={handleClick}
-      aria-label={ariaLabel ?? title}
-    >
+  const content = (
+    <>
       <span className="rs-text-card__content">
         <span className="rs-text-card__title">{title}</span>
         <span className="rs-text-card__description">{description}</span>
       </span>
       <span className="rs-text-card__chevron">{trailingIcon ?? <DefaultChevron />}</span>
       <span className="rs-text-card__inner-shadow" aria-hidden="true" />
+    </>
+  )
+
+  const pressHandlers = {
+    onPointerDown: handlePressStart,
+    onPointerUp: handlePressEnd,
+    onPointerLeave: handlePressEnd,
+    onKeyDown: (event: React.KeyboardEvent) => {
+      if (event.key === ' ' || event.key === 'Enter') handlePressStart()
+    },
+    onKeyUp: (event: React.KeyboardEvent) => {
+      if (event.key === ' ' || event.key === 'Enter') handlePressEnd()
+    },
+  }
+
+  if (to && !disabled) {
+    return (
+      <Link
+        href={to}
+        className={classes}
+        aria-label={ariaLabel ?? title}
+        {...pressHandlers}
+      >
+        {content}
+      </Link>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      className={classes}
+      disabled={disabled}
+      {...pressHandlers}
+      onClick={handleClick}
+      aria-label={ariaLabel ?? title}
+    >
+      {content}
     </button>
   )
 }

@@ -1,10 +1,11 @@
 export { default as HomeDownloadPlatformModal } from './HomeDownloadPlatformModal/HomeDownloadPlatformModal'
-
-// Phase 1 note (see MIGRATION_PLAN.md §5.11 "Explicitly out of scope"): the old
-// site's admin editing/publish/schedule models — StationModal, StationEditModal,
-// NewStationModal, ChooseNetworkForNewStationModal, StationDetailsView,
-// StationDetailsEditForm, NewStationForm, PendingChangesReviewPanel,
-// PendingChangesActionModal — depend on live Firestore reads/writes and are not
-// ported in Phase 1. `StationDetails/*` leaf pieces they used (form inputs, chip
-// pickers, location map view) are kept in the tree for Phase 2 but are not
-// re-exported here since nothing in Phase 1 renders them directly.
+export { default as StationModal } from './StationModal/StationModal'
+export { default as StationEditModal } from './StationEditModal/StationEditModal'
+export { default as NewStationModal } from './NewStationModal/NewStationModal'
+export { default as ChooseNetworkForNewStationModal } from './ChooseNetworkForNewStationModal/ChooseNetworkForNewStationModal'
+export { default as PendingChangesActionModal } from './PendingChangesActionModal/PendingChangesActionModal'
+export { default as PendingChangesReviewPanel } from './PendingChangesReviewPanel/PendingChangesReviewPanel'
+export { default as StationDetailsView } from './StationDetails/StationDetailsView'
+export { default as StationDetailsEditForm } from './StationDetails/StationDetailsEditForm'
+export { default as NewStationForm } from './StationDetails/NewStationForm'
+export { default as LocationMapPicker } from './StationDetails/LocationMapPicker'

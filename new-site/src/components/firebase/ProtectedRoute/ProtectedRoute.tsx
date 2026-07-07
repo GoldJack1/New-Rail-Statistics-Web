@@ -1,20 +1,152 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
+import { reload } from 'firebase/auth'
+import { useAuth } from '@/contexts/AuthContext'
+import { initializeFirebase, getFirebaseAuth } from '@/services/firebase'
+import { userMustEnrollTotpMfaOnFirebase } from '@/services/firebaseTotpMfa'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
 }
 
+type ProfileCheck = 'idle' | 'checking' | 'ok' | 'need-email-verify' | 'need-totp-enroll'
+
+const isLocalDevLoginBypassEnabled =
+  process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_LOCAL_DEV_LOGIN_BYPASS === 'true'
+
 /**
- * Phase 1 placeholder — per MIGRATION_PLAN.md §5.3 "Option A", `/admin/*`
- * routes (Design System, Stations admin, etc.) are left open/ungated in
- * Phase 1 since there is no real Firebase Auth wired up yet. This is a
- * pure pass-through; Phase 2 will restore the real gate (signed-in +
- * verified email + TOTP enrolled, redirecting to `/log-in` otherwise) by
- * porting the old site's `src/components/firebase/ProtectedRoute/ProtectedRoute.tsx`.
+ * Requires a signed-in user with verified email and TOTP (authenticator) MFA enrolled.
  */
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+  const { user, loading } = useAuth()
+  const router = useRouter()
+  const pathname = usePathname()
+  const [profileCheck, setProfileCheck] = useState<ProfileCheck>('idle')
+
+  useEffect(() => {
+    if (isLocalDevLoginBypassEnabled) return
+    if (loading) return
+
+    if (!user) {
+      setProfileCheck('idle')
+      return
+    }
+
+    let cancelled = false
+    setProfileCheck('checking')
+
+    void (async () => {
+      try {
+        await initializeFirebase()
+        const u = getFirebaseAuth()?.currentUser
+        if (cancelled) return
+        if (!u) {
+          setProfileCheck('need-email-verify')
+          return
+        }
+        try {
+          await reload(u)
+        } catch {
+          /* still check with cached user */
+        }
+        if (cancelled) return
+
+        if (!u.emailVerified) {
+          setProfileCheck('need-email-verify')
+          return
+        }
+        if (userMustEnrollTotpMfaOnFirebase(u)) {
+          setProfileCheck('need-totp-enroll')
+          return
+        }
+        setProfileCheck('ok')
+      } catch {
+        if (!cancelled) setProfileCheck('need-email-verify')
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [user, loading])
+
+  useEffect(() => {
+    if (isLocalDevLoginBypassEnabled) return
+    if (loading || (user && profileCheck === 'checking')) return
+
+    if (!user) {
+      const from = encodeURIComponent(pathname)
+      router.replace(`/log-in?from=${from}`)
+      return
+    }
+
+    if (profileCheck === 'need-email-verify') {
+      router.replace('/log-in?reason=verify-email')
+      return
+    }
+
+    if (profileCheck === 'need-totp-enroll') {
+      router.replace('/log-in?reason=enroll-totp')
+    }
+  }, [user, loading, profileCheck, pathname, router])
+
+  if (isLocalDevLoginBypassEnabled) {
+    return <>{children}</>
+  }
+
+  if (loading || (user && profileCheck === 'checking')) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '200px',
+          fontSize: '18px',
+          color: 'var(--text-secondary)',
+        }}
+      >
+        Loading…
+      </div>
+    )
+  }
+
+  if (!user || profileCheck === 'need-email-verify' || profileCheck === 'need-totp-enroll') {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '200px',
+          fontSize: '18px',
+          color: 'var(--text-secondary)',
+        }}
+      >
+        Loading…
+      </div>
+    )
+  }
+
+  if (profileCheck !== 'ok') {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '200px',
+          fontSize: '18px',
+          color: 'var(--text-secondary)',
+        }}
+      >
+        Loading…
+      </div>
+    )
+  }
+
   return <>{children}</>
 }
 

@@ -1,5 +1,5 @@
 /**
- * Full review lives at `/stations/pending-review`. Pass `state.from`
+ * Full review lives at `/admin/stations/pending-review`. Pass `?from=`
  * when navigating so Back returns to the correct surface.
  */
 export type ReviewPendingLocationState = {

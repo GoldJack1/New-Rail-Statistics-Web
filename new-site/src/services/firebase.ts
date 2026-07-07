@@ -1,0 +1,1105 @@
+import { initializeApp, FirebaseApp } from 'firebase/app'
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check'
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  signInWithRedirect,
+  getRedirectResult,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  sendEmailVerification,
+  GoogleAuthProvider,
+  OAuthProvider,
+  Auth,
+  User
+} from 'firebase/auth'
+import {
+  getFirestore,
+  collection,
+  doc,
+  getDocs,
+  getDoc,
+  query,
+  where,
+  orderBy,
+  limit,
+  onSnapshot,
+  updateDoc,
+  setDoc,
+  deleteDoc,
+  GeoPoint,
+  connectFirestoreEmulator,
+  Firestore,
+  Timestamp,
+  serverTimestamp
+} from 'firebase/firestore'
+import { Analytics } from 'firebase/analytics'
+import type { Station } from '@/types'
+import type { SandboxStationDoc } from '@/types'
+import { parseScheduledJobDocForDisplay } from '@/utils/scheduledJobDocParse'
+import type { ScheduledJobStationPayload } from '@/utils/scheduledJobPendingMatch'
+
+// Firebase configuration from environment variables (set in Netlify or .env.local)
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'placeholder',
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'placeholder',
+  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || 'placeholder',
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'placeholder',
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'placeholder',
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || 'placeholder',
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || 'placeholder',
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || 'placeholder'
+}
+
+const isPlaceholder = (value: unknown): boolean =>
+  typeof value !== 'string' || value.trim() === '' || value === 'placeholder'
+
+/**
+ * In local development we want to fail fast if Firebase env vars
+ * are missing, rather than silently using placeholder config.
+ */
+const validateFirebaseConfigForDev = (): void => {
+  if (process.env.NODE_ENV !== 'development') return
+
+  const missing: string[] = []
+  if (isPlaceholder(firebaseConfig.apiKey)) missing.push('NEXT_PUBLIC_FIREBASE_API_KEY')
+  if (isPlaceholder(firebaseConfig.authDomain)) missing.push('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN')
+  if (isPlaceholder(firebaseConfig.projectId)) missing.push('NEXT_PUBLIC_FIREBASE_PROJECT_ID')
+  if (isPlaceholder(firebaseConfig.appId)) missing.push('NEXT_PUBLIC_FIREBASE_APP_ID')
+
+  if (missing.length > 0) {
+    throw new Error(
+      `Firebase env vars missing: ${missing.join(
+        ', '
+      )}. Create a \`.env.local\` (copy from \`.env.example\`) and restart the dev server.`
+    )
+  }
+}
+
+// Avoid logging config in production (reduces noise and env surface in DevTools).
+if (process.env.NODE_ENV === 'development') {
+  console.log('🔥 Firebase Config Check:')
+  console.log(
+    '  - API Key:',
+    firebaseConfig.apiKey === 'placeholder' ? '❌ NOT LOADED (using placeholder)' : '✅ Loaded (redacted)'
+  )
+  console.log('  - Project ID:', firebaseConfig.projectId)
+  console.log('  - Auth Domain:', firebaseConfig.authDomain)
+  console.log('  - Environment:', process.env.NODE_ENV)
+  console.log(
+    '  - NEXT_PUBLIC_* keys:',
+    Object.keys(process.env).filter((k) => k.startsWith('NEXT_PUBLIC_'))
+  )
+}
+
+// Initialize Firebase
+let app: FirebaseApp | null = null
+let auth: Auth | null = null
+let db: Firestore | null = null
+let analytics: Analytics | null = null
+
+export const initializeFirebase = async () => {
+  if (app) return { app, auth, db, analytics }
+  
+  try {
+    validateFirebaseConfigForDev()
+    app = initializeApp(firebaseConfig)
+    auth = getAuth(app)
+
+    // App Check: optional in prod. If Firebase Console enforces App Check on *Authentication*, this build must
+    // initialize with the correct reCAPTCHA v3 site key or some Auth calls can fail.
+    const appCheckSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+    const appCheckExplicitlyDisabled = process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_DISABLED === 'true'
+    const isDev = process.env.NODE_ENV === 'development'
+    const canEnableAppCheck =
+      !isDev && !appCheckExplicitlyDisabled && !!appCheckSiteKey && appCheckSiteKey !== 'placeholder'
+
+    if (canEnableAppCheck) {
+      initializeAppCheck(app, {
+        provider: new ReCaptchaV3Provider(appCheckSiteKey),
+        isTokenAutoRefreshEnabled: true
+      })
+      console.log('🔥 Firebase App Check enabled (reCAPTCHA v3)')
+    } else if (!isDev && appCheckExplicitlyDisabled) {
+      console.warn(
+        '🔥 NEXT_PUBLIC_FIREBASE_APP_CHECK_DISABLED=true — App Check is off in this build. ' +
+          'If Firebase still enforces App Check on Authentication, sign-in may fail until you use Monitoring (not enforce) or remove this flag and set a valid NEXT_PUBLIC_FIREBASE_APP_CHECK_RECAPTCHA_SITE_KEY.'
+      )
+    } else if (!isDev && (!appCheckSiteKey || appCheckSiteKey === 'placeholder')) {
+      console.warn(
+        '🔥 No NEXT_PUBLIC_FIREBASE_APP_CHECK_RECAPTCHA_SITE_KEY in this production build. ' +
+          'If App Check enforcement is ON for Authentication in Firebase Console, add the reCAPTCHA v3 site key from App Check → your web app, or turn enforcement to Monitoring.'
+      )
+    }
+
+    db = getFirestore(app)
+    
+    // Connect to Firebase emulator in development if explicitly enabled
+    if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true') {
+      try {
+        connectFirestoreEmulator(db, '127.0.0.1', 8080)
+        console.log('🔥 Connected to Firebase emulator')
+      } catch (emulatorError) {
+        console.warn('Firebase emulator connection failed:', (emulatorError as Error).message)
+      }
+    }
+    
+    // Initialize analytics (optional, won't fail if blocked)
+    try {
+      const { getAnalytics } = await import('firebase/analytics')
+      analytics = getAnalytics(app)
+    } catch {
+      // Analytics blocked by ad blockers or not available
+      analytics = null
+    }
+    
+    return { app, auth, db, analytics }
+  } catch (error) {
+    console.error('Firebase initialization failed:', error)
+    throw error
+  }
+}
+
+export const getFirebaseApp = (): FirebaseApp | null => app
+export const getFirebaseAuth = (): Auth | null => auth
+export const getFirebaseDB = (): Firestore | null => db
+export const getFirebaseAnalytics = (): Analytics | null => analytics
+
+/**
+ * Dev only: if `NEXT_PUBLIC_LOCAL_AUTH_EMAIL` and `NEXT_PUBLIC_LOCAL_AUTH_PASSWORD` are set in `.env.local`,
+ * sign in with Firebase Email/Password before the rest of auth init (so Firestore + scheduled publish work).
+ * Never commit real credentials; use only in local `.env.local`.
+ */
+export const tryDevAutoSignInFromEnv = async (): Promise<void> => {
+  if (process.env.NODE_ENV === 'development' !== true) return
+  const email = process.env.NEXT_PUBLIC_LOCAL_AUTH_EMAIL?.trim()
+  const password = process.env.NEXT_PUBLIC_LOCAL_AUTH_PASSWORD
+  if (!email || typeof password !== 'string' || password.length === 0) return
+  if (!auth) {
+    await initializeFirebase()
+  }
+  const a = getFirebaseAuth()
+  if (!a || a.currentUser) return
+  try {
+    await signInWithEmailAndPassword(a, email, password)
+    console.log('[Rail Statistics][dev] Signed in with Email/Password from NEXT_PUBLIC_LOCAL_AUTH_*')
+  } catch (e) {
+    console.warn('[Rail Statistics][dev] NEXT_PUBLIC_LOCAL_AUTH_* sign-in failed:', e)
+  }
+}
+
+// Auth helpers (call after initializeFirebase)
+export const loginWithEmail = (email: string, password: string) =>
+  signInWithEmailAndPassword(auth!, email, password)
+export const logout = () => firebaseSignOut(auth!)
+
+/** Send Firebase email verification (required for verified-email gates in this app). */
+export const sendUserEmailVerification = (user: User) => sendEmailVerification(user)
+
+/** Sign in with Google. Uses redirect (no popup) so it works when popups are blocked. */
+export const loginWithGoogle = async () => {
+  if (!auth) await initializeFirebase().then(() => {})
+  const a = getFirebaseAuth()
+  if (!a) throw new Error('Firebase Auth not initialized')
+  const provider = new GoogleAuthProvider()
+  provider.setCustomParameters({ prompt: 'select_account' })
+  await signInWithRedirect(a, provider)
+  // Page will navigate away to Google; after sign-in user returns and getRedirectResult() runs on load
+}
+
+/** Sign in with Apple. Uses redirect (no popup) so it works when popups are blocked. */
+export const loginWithApple = async () => {
+  if (!auth) await initializeFirebase().then(() => {})
+  const a = getFirebaseAuth()
+  if (!a) throw new Error('Firebase Auth not initialized')
+  const provider = new OAuthProvider('apple.com')
+  provider.addScope('email')
+  provider.addScope('name')
+  await signInWithRedirect(a, provider)
+  // Page will navigate away to Apple; after sign-in user returns and getRedirectResult() runs on load
+}
+
+/** Call once on app load to complete sign-in after returning from Google/Apple redirect. */
+export const handleRedirectResult = async () => {
+  const a = getFirebaseAuth()
+  if (!a) return null
+  return getRedirectResult(a)
+}
+
+export { onAuthStateChanged, getRedirectResult }
+export type { User }
+
+export {
+  NETWORK_COLLECTION_IDS,
+  NETWORK_LABELS,
+  SANDBOX_COLLECTION_ID,
+  STATION_COLLECTION_DISPLAY_LABELS,
+  STATION_NETWORK_STORAGE_KEY,
+  STATION_SANDBOX_STORAGE_KEY,
+  STATION_COLLECTION_STORAGE_KEY,
+  DEFAULT_NETWORK_COLLECTION_ID,
+  DEFAULT_NETWORK_VIEW,
+  deriveCollectionId,
+  getStationCollectionDisplayLabel,
+  getNetworkCollectionDisplayLabel,
+  isNetworkCollection,
+  isSandboxCollection,
+  isNetworkViewFilter,
+  type NetworkCollectionId,
+  type NetworkViewFilter,
+  type StationCollectionId,
+} from '@/constants/stationCollections'
+import { isLightRailCollection, LIGHT_RAIL_DOC_FIELDS } from '@/utils/lightRailStationFields'
+import { mapStationDetailFieldsFromFirestore } from '@/utils/stationsTableColumnCatalog'
+import { extractYearlyPassengersFromFirestoreData } from '@/utils/yearlyPassengers'
+
+import {
+  DEFAULT_NETWORK_COLLECTION_ID,
+  DEFAULT_NETWORK_VIEW,
+  NETWORK_COLLECTION_IDS,
+  SANDBOX_COLLECTION_ID,
+  STATION_COLLECTION_STORAGE_KEY,
+  STATION_NETWORK_STORAGE_KEY,
+  STATION_NETWORK_VIEW_STORAGE_KEY,
+  STATION_SANDBOX_STORAGE_KEY,
+  deriveCollectionId,
+  isNetworkCollection,
+  isNetworkViewFilter,
+  type NetworkCollectionId,
+  type NetworkViewFilter,
+  type StationCollectionId,
+} from '@/constants/stationCollections'
+
+function syncDerivedCollectionStorage(): void {
+  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') return
+  try {
+    const collectionId = deriveCollectionId(
+      getStationNetworkView(),
+      getStationNetworkId(),
+      getStationSandboxMode()
+    )
+    window.localStorage.setItem(STATION_COLLECTION_STORAGE_KEY, collectionId)
+  } catch {
+    // ignore
+  }
+}
+
+function readLegacyCollectionStorage(): StationCollectionId | null {
+  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+    return null
+  }
+  try {
+    const stored = window.localStorage.getItem(STATION_COLLECTION_STORAGE_KEY)
+    if (stored === SANDBOX_COLLECTION_ID) return SANDBOX_COLLECTION_ID
+    if (stored != null && isNetworkCollection(stored)) return stored
+    if (stored === 'stations2603') return 'stations_gbnr'
+  } catch {
+    // ignore
+  }
+  return null
+}
+
+/** Read persisted network tab selection. */
+export const getStationNetworkId = (): NetworkCollectionId => {
+  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+    return DEFAULT_NETWORK_COLLECTION_ID
+  }
+  try {
+    const stored = window.localStorage.getItem(STATION_NETWORK_STORAGE_KEY)
+    if (stored != null && isNetworkCollection(stored)) return stored
+    const legacy = readLegacyCollectionStorage()
+    if (legacy && isNetworkCollection(legacy)) return legacy
+  } catch {
+    // ignore
+  }
+  return DEFAULT_NETWORK_COLLECTION_ID
+}
+
+/** Persist network tab selection. */
+export const setStationNetworkId = (id: NetworkCollectionId): void => {
+  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') return
+  try {
+    window.localStorage.setItem(STATION_NETWORK_STORAGE_KEY, id)
+    syncDerivedCollectionStorage()
+  } catch {
+    // ignore
+  }
+}
+
+/** Read persisted network view filter (All or a single network). */
+export const getStationNetworkView = (): NetworkViewFilter => {
+  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+    return DEFAULT_NETWORK_VIEW
+  }
+  try {
+    const stored = window.localStorage.getItem(STATION_NETWORK_VIEW_STORAGE_KEY)
+    if (stored != null && isNetworkViewFilter(stored)) return stored
+  } catch {
+    // ignore
+  }
+  return DEFAULT_NETWORK_VIEW
+}
+
+/** Persist network view filter and sync derived collection id. */
+export const setStationNetworkView = (view: NetworkViewFilter): void => {
+  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') return
+  try {
+    window.localStorage.setItem(STATION_NETWORK_VIEW_STORAGE_KEY, view)
+    if (view !== 'all') {
+      window.localStorage.setItem(STATION_NETWORK_STORAGE_KEY, view)
+    }
+    syncDerivedCollectionStorage()
+  } catch {
+    // ignore
+  }
+}
+
+/** Read whether admin sandbox mode is enabled. */
+export const getStationSandboxMode = (): boolean => {
+  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+    return false
+  }
+  try {
+    const stored = window.localStorage.getItem(STATION_SANDBOX_STORAGE_KEY)
+    if (stored === 'true' || stored === 'false') return stored === 'true'
+    const legacy = readLegacyCollectionStorage()
+    if (legacy === SANDBOX_COLLECTION_ID) return true
+  } catch {
+    // ignore
+  }
+  return false
+}
+
+/** Persist sandbox mode and sync derived collection id. */
+export const setStationSandboxMode = (enabled: boolean): void => {
+  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') return
+  try {
+    window.localStorage.setItem(STATION_SANDBOX_STORAGE_KEY, enabled ? 'true' : 'false')
+    syncDerivedCollectionStorage()
+  } catch {
+    // ignore
+  }
+}
+
+/** Read the currently active station collection (network or sandbox). */
+export const getStationCollectionName = (): StationCollectionId => {
+  return deriveCollectionId(getStationNetworkView(), getStationNetworkId(), getStationSandboxMode())
+}
+
+/** Persist derived collection id (keeps network + sandbox keys in sync). */
+export const setStationCollectionName = (id: StationCollectionId): void => {
+  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+    return
+  }
+  try {
+    window.localStorage.setItem(STATION_COLLECTION_STORAGE_KEY, id)
+    if (id === SANDBOX_COLLECTION_ID) {
+      window.localStorage.setItem(STATION_SANDBOX_STORAGE_KEY, 'true')
+      return
+    }
+    if (isNetworkCollection(id)) {
+      window.localStorage.setItem(STATION_NETWORK_STORAGE_KEY, id)
+      window.localStorage.setItem(STATION_SANDBOX_STORAGE_KEY, 'false')
+    }
+  } catch {
+    // Ignore storage errors; selection just won't persist
+  }
+}
+
+// Parse location string helper
+export const parseLocationString = (locationString: string): { latitude: number; longitude: number } | null => {
+  try {
+    if (!locationString || typeof locationString !== 'string') {
+      return null
+    }
+    
+    // Handle format like "[51.59792249° N, 0.12023522° W]"
+    if (locationString.includes('°')) {
+      const cleanString = locationString.replace(/[[\]]/g, '')
+      const parts = cleanString.split(',')
+      
+      if (parts.length === 2) {
+        const latPart = parts[0].trim()
+        const latMatch = latPart.match(/(\d+\.?\d*)\s*°\s*([NS])/i)
+        
+        const lngPart = parts[1].trim()
+        const lngMatch = lngPart.match(/(\d+\.?\d*)\s*°\s*([EW])/i)
+        
+        if (latMatch && lngMatch) {
+          let latitude = parseFloat(latMatch[1])
+          let longitude = parseFloat(lngMatch[1])
+          
+          if (latMatch[2].toUpperCase() === 'S') {
+            latitude = -latitude
+          }
+          if (lngMatch[2].toUpperCase() === 'W') {
+            longitude = -longitude
+          }
+          
+          return { latitude, longitude }
+        }
+      }
+    }
+    
+    // Handle format like "[51.59792249, -0.12023522]"
+    if (locationString.startsWith('[') && locationString.endsWith(']')) {
+      const cleanString = locationString.replace(/[[\]]/g, '')
+      const parts = cleanString.split(',')
+      
+      if (parts.length === 2) {
+        const latitude = parseFloat(parts[0].trim())
+        const longitude = parseFloat(parts[1].trim())
+        
+        if (!isNaN(latitude) && !isNaN(longitude)) {
+          return { latitude, longitude }
+        }
+      }
+    }
+    
+    // Handle format like "51.59792249, -0.12023522"
+    if (locationString.includes(',')) {
+      const parts = locationString.split(',')
+      if (parts.length === 2) {
+        const latitude = parseFloat(parts[0].trim())
+        const longitude = parseFloat(parts[1].trim())
+        
+        if (!isNaN(latitude) && !isNaN(longitude)) {
+          return { latitude, longitude }
+        }
+      }
+    }
+    
+    return null
+    
+  } catch (error) {
+    console.error('Error parsing location string:', locationString, error)
+    return null
+  }
+}
+
+// Fetch stations from Firebase (optional collection override so caller can pass dropdown value at click time)
+export const fetchStationsFromFirebase = async (collectionOverride?: StationCollectionId): Promise<Station[]> => {
+  if (!db) {
+    const { db: newDb } = await initializeFirebase()
+    db = newDb
+  }
+
+  if (!db) {
+    throw new Error('Failed to initialize Firebase database')
+  }
+
+  try {
+    const collectionName = collectionOverride ?? getStationCollectionName()
+    const stationsRef = collection(db, collectionName)
+    const snapshot = await getDocs(stationsRef)
+    
+    const stations: Station[] = []
+    snapshot.forEach((doc) => {
+      const data = doc.data()
+      
+      // Extract coordinates from various formats
+      let latitude = 0
+      let longitude = 0
+      let extracted = false
+      
+      // Method 1: Parse location data (string, array, or object)
+      if (data.location) {
+        if (typeof data.location === 'string') {
+          const coords = parseLocationString(data.location)
+          if (coords) {
+            latitude = coords.latitude
+            longitude = coords.longitude
+            extracted = true
+          }
+        } else if (Array.isArray(data.location) && data.location.length >= 2) {
+          const lat = parseFloat(data.location[0])
+          const lng = parseFloat(data.location[1])
+          
+          if (!isNaN(lat) && !isNaN(lng)) {
+            latitude = lat
+            longitude = lng
+            extracted = true
+          }
+        } else if (typeof data.location === 'object' && data.location !== null) {
+          const lat = parseFloat(data.location.latitude || data.location.lat)
+          const lng = parseFloat(data.location.longitude || data.location.lng || data.location.lon)
+          
+          if (!isNaN(lat) && !isNaN(lng)) {
+            latitude = lat
+            longitude = lng
+            extracted = true
+          }
+        }
+      }
+      
+      // Method 2: Standard latitude/longitude fields
+      if (!extracted && data.latitude && data.longitude) {
+        if (data.latitude._lat !== undefined && data.longitude._long !== undefined) {
+          latitude = data.latitude._lat
+          longitude = data.longitude._long
+          extracted = true
+        } else if (data.latitude.latitude !== undefined && data.longitude.longitude !== undefined) {
+          latitude = data.latitude.latitude
+          longitude = data.longitude.longitude
+          extracted = true
+        } else if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+          latitude = data.latitude
+          longitude = data.longitude
+          extracted = true
+        } else if (typeof data.latitude === 'object' && typeof data.longitude === 'object') {
+          const latValues = Object.values(data.latitude).filter(v => typeof v === 'number')
+          const lngValues = Object.values(data.longitude).filter(v => typeof v === 'number')
+          
+          if (latValues.length > 0 && lngValues.length > 0) {
+            latitude = latValues[0]
+            longitude = lngValues[0]
+            extracted = true
+          }
+        }
+      }
+      
+      const fareZoneRaw = data.fareZone ?? data.fare_zone ?? data.FareZone ?? data['Fare Zone'] ?? data.farezone
+      const fareZone = fareZoneRaw != null && fareZoneRaw !== '' ? String(fareZoneRaw) : null
+
+      let borough: string | null = data.borough ?? data.Borough ?? null
+      if (borough == null) {
+        const legacy =
+          data.londonBorough ??
+          data['London Borough'] ??
+          data.LondonBorough ??
+          data.london_borough ??
+          null
+        if (legacy != null && legacy !== '') borough = String(legacy)
+      }
+      if (borough == null && typeof data.address === 'object' && data.address !== null) {
+        const addr = data.address as Record<string, unknown>
+        const b = addr.borough ?? addr.Borough
+        if (b != null && b !== '') borough = String(b)
+      }
+
+      const station = {
+        id: doc.id,
+        stationName: data.stationname || data.stationName || data.StopName || '',
+        crsCode: data.CrsCode || data.crsCode || '',
+        tiploc: data.tiploc || null,
+        latitude: latitude,
+        longitude: longitude,
+        country: data.country || data.Country || null,
+        county: data.county || data.County || null,
+        toc: data.TOC || data.toc || null,
+        stnarea: data.stnarea || data.STNAREA || null,
+        borough: borough != null && borough !== '' ? String(borough) : null,
+        fareZone,
+        yearlyPassengers: extractYearlyPassengersFromFirestoreData(data),
+        urlSlug: String(data.urlSlug ?? '').trim() || null,
+        stationUrl: String(data.url ?? '').trim() || null,
+        linesServed:
+          data['Lines Served'] != null && String(data['Lines Served']).trim() !== ''
+            ? String(data['Lines Served'])
+            : null,
+        dateOpened:
+          data['Date Opened'] != null && String(data['Date Opened']).trim() !== ''
+            ? String(data['Date Opened'])
+            : null,
+        ...mapStationDetailFieldsFromFirestore(data),
+        ...(isNetworkCollection(collectionName) ? { sourceCollectionId: collectionName } : {}),
+      }
+      
+      stations.push(station)
+    })
+    
+    return stations
+    
+  } catch (error) {
+    console.error('Firebase fetch error:', error)
+    throw error
+  }
+}
+
+/** Fetch and merge stations from every production network collection. */
+export const fetchAllNetworkStationsFromFirebase = async (): Promise<Station[]> => {
+  const batches = await Promise.all(
+    NETWORK_COLLECTION_IDS.map(async (collectionId) => {
+      try {
+        return await fetchStationsFromFirebase(collectionId)
+      } catch (error) {
+        console.warn(`Failed to load stations from ${collectionId}:`, error)
+        return []
+      }
+    })
+  )
+  const merged = batches.flat()
+  if (merged.length === 0) {
+    throw new Error('No data available in Firebase')
+  }
+  return merged.sort((a, b) => a.stationName.localeCompare(b.stationName))
+}
+
+/**
+ * Map our Station type to Firestore document fields (same names as used when reading).
+ * Only includes fields that are provided (non-undefined).
+ */
+const stationToFirestoreUpdate = (
+  data: Partial<Station>,
+  collectionId?: StationCollectionId
+): Record<string, unknown> => {
+  const update: Record<string, unknown> = {}
+  const isLightRail = isLightRailCollection(collectionId)
+
+  if (isLightRail) {
+    if (data.stationName !== undefined) update[LIGHT_RAIL_DOC_FIELDS.stopName] = data.stationName
+    if (data.country !== undefined) update.country = data.country
+    if (data.county !== undefined) update.county = data.county
+    if (data.stnarea !== undefined) update.stnarea = data.stnarea
+    if (data.borough !== undefined) update.borough = data.borough
+    if (data.fareZone !== undefined && data.fareZone !== null && String(data.fareZone).trim() !== '') {
+      update[LIGHT_RAIL_DOC_FIELDS.fareZone] = data.fareZone
+    }
+  } else {
+    if (data.stationName !== undefined) update.stationname = data.stationName
+    if (data.crsCode !== undefined) update.CrsCode = data.crsCode
+    if (data.tiploc !== undefined) update.tiploc = data.tiploc
+    if (data.country !== undefined) update.country = data.country
+    if (data.county !== undefined) update.county = data.county
+    if (data.toc !== undefined) update.TOC = data.toc
+    if (data.stnarea !== undefined) update.stnarea = data.stnarea
+    if (data.borough !== undefined) update.borough = data.borough
+    if (data.fareZone !== undefined) update.fareZone = data.fareZone
+    if (data.yearlyPassengers !== undefined) update.yearlyPassengers = data.yearlyPassengers
+  }
+
+  if (data.latitude !== undefined && data.longitude !== undefined) {
+    update.location = new GeoPoint(data.latitude, data.longitude)
+  }
+  return update
+}
+
+/** Update a station document in Firestore. */
+export const updateStationInFirebase = async (
+  stationId: string,
+  data: Partial<Station>,
+  collectionOverride?: StationCollectionId
+): Promise<void> => {
+  if (!db) {
+    const { db: newDb } = await initializeFirebase()
+    db = newDb
+  }
+  if (!db) throw new Error('Failed to initialize Firebase database')
+  const collectionName = collectionOverride ?? getStationCollectionName()
+  const docRef = doc(db, collectionName, stationId)
+  const update = stationToFirestoreUpdate(data, collectionOverride)
+  if (Object.keys(update).length === 0) return
+  await updateDoc(docRef, { ...update, id: stationId })
+}
+
+/** Create a new station document in Firestore with a specific ID. */
+export const createStationInFirebase = async (
+  stationId: string,
+  data: Partial<Station>,
+  collectionOverride?: StationCollectionId
+): Promise<void> => {
+  if (!db) {
+    const { db: newDb } = await initializeFirebase()
+    db = newDb
+  }
+  if (!db) throw new Error('Failed to initialize Firebase database')
+  const collectionName = collectionOverride ?? getStationCollectionName()
+  const docRef = doc(db, collectionName, stationId)
+  const payload = stationToFirestoreUpdate(data, collectionOverride)
+  if (Object.keys(payload).length === 0) {
+    throw new Error('No data provided to create station')
+  }
+  await setDoc(docRef, { ...payload, id: stationId })
+}
+
+/**
+ * Update "additional details" fields on a station document.
+ * This intentionally accepts a partial raw document shape so we can write nested sections
+ * like toilets/lift/stepFree/facilities as-is.
+ */
+export const updateStationAdditionalDetailsInFirebase = async (
+  stationId: string,
+  data: Partial<SandboxStationDoc>,
+  collectionOverride?: StationCollectionId
+): Promise<void> => {
+  if (!db) {
+    const { db: newDb } = await initializeFirebase()
+    db = newDb
+  }
+  if (!db) throw new Error('Failed to initialize Firebase database')
+  const collectionName = collectionOverride ?? getStationCollectionName()
+  const docRef = doc(db, collectionName, stationId)
+  const payload = data as Record<string, unknown>
+  if (!payload || Object.keys(payload).length === 0) return
+  await updateDoc(docRef, payload)
+}
+
+/** Create/merge additional details for a station document (safe for new stations). */
+export const mergeStationAdditionalDetailsInFirebase = async (
+  stationId: string,
+  data: Partial<SandboxStationDoc>,
+  collectionOverride?: StationCollectionId
+): Promise<void> => {
+  if (!db) {
+    const { db: newDb } = await initializeFirebase()
+    db = newDb
+  }
+  if (!db) throw new Error('Failed to initialize Firebase database')
+  const collectionName = collectionOverride ?? getStationCollectionName()
+  const docRef = doc(db, collectionName, stationId)
+  const payload = data as Record<string, unknown>
+  if (!payload || Object.keys(payload).length === 0) return
+  await setDoc(docRef, payload, { merge: true })
+}
+
+/** Sample raw station documents from a collection (for inferring field schema). */
+export const fetchStationCollectionSampleDocs = async (
+  collectionId: StationCollectionId,
+  maxDocs = 40
+): Promise<Record<string, unknown>[]> => {
+  if (!db) {
+    const { db: newDb } = await initializeFirebase()
+    db = newDb
+  }
+  if (!db) return []
+  try {
+    const stationsRef = collection(db, collectionId)
+    const snapshot = await getDocs(query(stationsRef, limit(maxDocs)))
+    const docs: Record<string, unknown>[] = []
+    snapshot.forEach((snap) => {
+      docs.push(snap.data() as Record<string, unknown>)
+    })
+    return docs
+  } catch (error) {
+    console.error('Firebase fetch collection sample docs error:', error)
+    return []
+  }
+}
+
+/** Fetch a single station document by ID from the current collection (for sandbox full-detail modal). */
+export const fetchStationDocumentById = async (
+  stationId: string,
+  collectionOverride?: StationCollectionId
+): Promise<Record<string, unknown> | null> => {
+  if (!db) {
+    const { db: newDb } = await initializeFirebase()
+    db = newDb
+  }
+  if (!db) return null
+  try {
+    const collectionName = collectionOverride ?? getStationCollectionName()
+    const docRef = doc(db, collectionName, stationId)
+    const snapshot = await getDoc(docRef)
+    if (!snapshot.exists()) return null
+    return snapshot.data() as Record<string, unknown>
+  } catch (error) {
+    console.error('Firebase fetch station doc error:', error)
+    return null
+  }
+}
+
+/** Firestore collection processed by Cloud Function `processScheduledStationPublishJobs`. */
+export const SCHEDULED_STATION_PUBLISH_JOBS_COLLECTION = 'scheduledStationPublishJobs'
+
+/** Summary row for scheduled publish jobs (pending review list + schedule modal). */
+export type PendingScheduleJobSummary = {
+  id: string
+  runAtMs: number
+  status: string
+  stationIds: string[]
+  stationLabels: Record<string, string>
+  errorMessage?: string
+  collectionId?: string
+  /** Set when status is `cancelled` (client writes). */
+  cancelReason?: 'user' | 'publish' | 'superseded'
+  supersededByJobId?: string
+}
+
+export type ScheduleJobSoftCancelMeta =
+  | { kind: 'user' }
+  | { kind: 'publish' }
+  | { kind: 'superseded'; replacedByJobId: string }
+
+export function mapScheduledJobDocToSummary(docId: string, d: Record<string, unknown>): PendingScheduleJobSummary {
+  const runAt = d.runAt as { toMillis?: () => number } | undefined
+  const runAtMs = typeof runAt?.toMillis === 'function' ? runAt.toMillis() : 0
+  const parsed = parseScheduledJobDocForDisplay(d)
+  const cr = d.cancelReason
+  const cancelReason =
+    cr === 'user' || cr === 'publish' || cr === 'superseded' ? (cr as PendingScheduleJobSummary['cancelReason']) : undefined
+  const sid = d.supersededByJobId
+  return {
+    id: docId,
+    runAtMs,
+    status: String(d.status ?? ''),
+    stationIds: parsed.stationIds,
+    stationLabels: parsed.stationLabels,
+    errorMessage: typeof d.errorMessage === 'string' ? d.errorMessage : undefined,
+    collectionId: typeof d.collectionId === 'string' ? d.collectionId : undefined,
+    cancelReason,
+    supersededByJobId: typeof sid === 'string' && sid.trim() !== '' ? sid : undefined
+  }
+}
+
+/**
+ * Live list of this user’s scheduled jobs (all statuses), newest `runAt` first.
+ * Requires Firestore composite index: `createdByUid` + `runAt` (desc).
+ */
+export function subscribeMyScheduleJobsForUser(
+  uid: string,
+  onRows: (rows: PendingScheduleJobSummary[]) => void,
+  onError: (err: Error) => void,
+  maxJobs = 80
+): () => void {
+  let unsub: (() => void) | undefined
+  let cancelled = false
+
+  void initializeFirebase().then(() => {
+    if (cancelled) return
+    const database = getFirebaseDB()
+    if (!database) {
+      onError(new Error('Firestore is not available.'))
+      return
+    }
+
+    const q = query(
+      collection(database, SCHEDULED_STATION_PUBLISH_JOBS_COLLECTION),
+      where('createdByUid', '==', uid),
+      orderBy('runAt', 'desc'),
+      limit(maxJobs)
+    )
+
+    unsub = onSnapshot(
+      q,
+      snap => {
+        onRows(snap.docs.map(docSnap => mapScheduledJobDocToSummary(docSnap.id, docSnap.data() as Record<string, unknown>)))
+      },
+      err => {
+        onError(err instanceof Error ? err : new Error(String(err)))
+      }
+    )
+  })
+
+  return () => {
+    cancelled = true
+    unsub?.()
+  }
+}
+
+/** Pending jobs only (for schedule modal radios), soonest `runAt` first. */
+export async function fetchMyPendingScheduleJobs(uid: string): Promise<PendingScheduleJobSummary[]> {
+  if (!db) {
+    const { db: newDb } = await initializeFirebase()
+    db = newDb
+  }
+  if (!db) return []
+
+  const q = query(
+    collection(db, SCHEDULED_STATION_PUBLISH_JOBS_COLLECTION),
+    where('createdByUid', '==', uid),
+    where('status', '==', 'pending')
+  )
+  const snap = await getDocs(q)
+  const rows: PendingScheduleJobSummary[] = snap.docs.map(docSnap =>
+    mapScheduledJobDocToSummary(docSnap.id, docSnap.data() as Record<string, unknown>)
+  )
+  rows.sort((a, b) => a.runAtMs - b.runAtMs)
+  return rows
+}
+
+/** Load `changes` + `runAt` from a pending job doc (for merge-into-existing saves). */
+export async function getScheduledStationPublishJobMergeSource(
+  jobId: string
+): Promise<{ runAtMs: number; changes: Record<string, ScheduledJobStationPayload> } | null> {
+  if (!db) {
+    const { db: newDb } = await initializeFirebase()
+    db = newDb
+  }
+  if (!db) return null
+
+  const snap = await getDoc(doc(db, SCHEDULED_STATION_PUBLISH_JOBS_COLLECTION, jobId))
+  if (!snap.exists()) return null
+  const d = snap.data() as Record<string, unknown>
+  if (String(d.status ?? '') !== 'pending') return null
+  const runAt = d.runAt as { toMillis?: () => number } | undefined
+  const runAtMs = typeof runAt?.toMillis === 'function' ? runAt.toMillis() : 0
+  const parsed = parseScheduledJobDocForDisplay(d)
+  if (!parsed.scheduledChanges) return null
+  return { runAtMs, changes: parsed.scheduledChanges }
+}
+
+/**
+ * Document id for `scheduledStationPublishJobs`: embeds UTC date/time when the job was created,
+ * plus a random suffix so two jobs in the same millisecond cannot collide.
+ */
+export function buildScheduledStationPublishJobDocId(createdAtMs: number = Date.now()): string {
+  const iso = new Date(createdAtMs).toISOString()
+  const stamped = iso.replace(/[:.]/g, '-')
+  const suffix = Math.random().toString(36).slice(2, 10)
+  return `${stamped}_${suffix}`
+}
+
+function stripUndefinedDeep<T>(value: T): T {
+  if (value === undefined) return value
+  if (value === null || typeof value !== 'object') return value
+  if (Array.isArray(value)) {
+    return value.map((item) => stripUndefinedDeep(item)) as unknown as T
+  }
+  const out = {} as Record<string, unknown>
+  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+    if (v === undefined) continue
+    out[k] = stripUndefinedDeep(v)
+  }
+  return out as T
+}
+
+/**
+ * Create a server-side scheduled publish job (Firestore + Cloud Scheduler function).
+ * Requires an authenticated user.
+ */
+export const createScheduledStationPublishJob = async (params: {
+  runAtMs: number
+  collectionId: StationCollectionId
+  changes: Record<
+    string,
+    {
+      isNew?: boolean
+      updated: Partial<Station>
+      sandboxUpdated?: Partial<SandboxStationDoc> | null
+    }
+  >
+}): Promise<string> => {
+  if (!db) {
+    const { db: newDb } = await initializeFirebase()
+    db = newDb
+  }
+  if (!db) throw new Error('Failed to initialize Firebase database')
+
+  const authInstance = getFirebaseAuth()
+  if (!authInstance) throw new Error('Firebase Auth not initialized')
+  const user = authInstance.currentUser
+  if (!user) {
+    throw new Error('You must be signed in to schedule a publish.')
+  }
+
+  const keys = Object.keys(params.changes)
+  if (keys.length === 0) throw new Error('No pending changes to schedule')
+
+  const col = collection(db, SCHEDULED_STATION_PUBLISH_JOBS_COLLECTION)
+  const jobId = buildScheduledStationPublishJobDocId()
+  const docRef = doc(col, jobId)
+  await setDoc(docRef, {
+    createdAt: serverTimestamp(),
+    runAt: Timestamp.fromMillis(params.runAtMs),
+    collectionId: params.collectionId,
+    createdByUid: user.uid,
+    status: 'pending',
+    changes: stripUndefinedDeep(params.changes),
+    stationIds: keys
+  })
+  return jobId
+}
+
+/** Delete job document (e.g. admin). Prefer soft cancel for normal user flows. */
+export const deleteScheduledStationPublishJobDocument = async (jobId: string): Promise<void> => {
+  if (!db) {
+    const { db: newDb } = await initializeFirebase()
+    db = newDb
+  }
+  if (!db) throw new Error('Failed to initialize Firebase database')
+  await deleteDoc(doc(db, SCHEDULED_STATION_PUBLISH_JOBS_COLLECTION, jobId))
+}
+
+/**
+ * If the job is still `pending`, mark it `cancelled` so it remains in history. No-op if missing or not pending.
+ * Use after publish-all or when superseding a job during save.
+ */
+export const softCancelScheduledStationPublishJobDocument = async (
+  jobId: string,
+  cancelMeta?: ScheduleJobSoftCancelMeta
+): Promise<void> => {
+  if (!db) {
+    const { db: newDb } = await initializeFirebase()
+    db = newDb
+  }
+  if (!db) throw new Error('Failed to initialize Firebase database')
+  const ref = doc(db, SCHEDULED_STATION_PUBLISH_JOBS_COLLECTION, jobId)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) return
+  const st = String((snap.data() as Record<string, unknown>).status ?? '')
+  if (st !== 'pending') return
+  const payload: Record<string, unknown> = {
+    status: 'cancelled',
+    cancelledAt: serverTimestamp()
+  }
+  if (cancelMeta?.kind === 'superseded') {
+    payload.cancelReason = 'superseded'
+    payload.supersededByJobId = cancelMeta.replacedByJobId
+  } else if (cancelMeta?.kind === 'publish') {
+    payload.cancelReason = 'publish'
+  } else if (cancelMeta?.kind === 'user') {
+    payload.cancelReason = 'user'
+  }
+  await updateDoc(ref, payload)
+}
+
+/**
+ * After saving a replacement schedule document, ensure the previous job cannot still run as `pending`.
+ * Tries soft cancel first (keeps history); if the doc is still pending (e.g. rules blocked update), deletes it.
+ */
+export const supersedeScheduledStationPublishJobDocument = async (
+  supersededJobId: string,
+  replacementJobId: string
+): Promise<void> => {
+  if (!supersededJobId.trim() || !replacementJobId.trim()) return
+  if (!db) {
+    const { db: newDb } = await initializeFirebase()
+    db = newDb
+  }
+  if (!db) throw new Error('Failed to initialize Firebase database')
+  const ref = doc(db, SCHEDULED_STATION_PUBLISH_JOBS_COLLECTION, supersededJobId)
+  try {
+    await softCancelScheduledStationPublishJobDocument(supersededJobId, {
+      kind: 'superseded',
+      replacedByJobId: replacementJobId
+    })
+  } catch (e) {
+    console.warn('Soft cancel superseded schedule job failed:', e)
+  }
+  let snap = await getDoc(ref)
+  if (!snap.exists()) return
+  let st = String((snap.data() as Record<string, unknown>).status ?? '')
+  if (st !== 'pending') return
+  try {
+    await deleteScheduledStationPublishJobDocument(supersededJobId)
+  } catch (e) {
+    console.warn('Could not delete superseded pending schedule job:', e)
+  }
+}
+
+/**
+ * User-initiated cancel: pending jobs only (same as rules). Throws if the job is gone or no longer pending.
+ */
+export const cancelScheduledStationPublishJobDocument = async (jobId: string): Promise<void> => {
+  if (!db) {
+    const { db: newDb } = await initializeFirebase()
+    db = newDb
+  }
+  if (!db) throw new Error('Failed to initialize Firebase database')
+  const ref = doc(db, SCHEDULED_STATION_PUBLISH_JOBS_COLLECTION, jobId)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) {
+    throw new Error('That schedule no longer exists.')
+  }
+  const st = String((snap.data() as Record<string, unknown>).status ?? '')
+  if (st !== 'pending') {
+    throw new Error(
+      'Only a pending schedule can be cancelled here. If it is already running, wait for it to finish.'
+    )
+  }
+  await updateDoc(ref, {
+    status: 'cancelled',
+    cancelledAt: serverTimestamp(),
+    cancelReason: 'user'
+  })
+}

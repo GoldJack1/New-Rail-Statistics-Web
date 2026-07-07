@@ -376,7 +376,7 @@ const ColoursPage: React.FC = () => {
           ),
         }}
       />
-      <div className="container">
+      <div className="container container--full-bleed">
         <div className="ds-colours">
           <section className="ds-colours__section-panel ds-colours__section-panel--comparison">
             <h2>Token Light vs Dark Comparison</h2>

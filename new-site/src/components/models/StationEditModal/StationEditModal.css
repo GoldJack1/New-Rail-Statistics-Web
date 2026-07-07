@@ -1,0 +1,205 @@
+.modal-content-edit {
+  max-width: 640px;
+}
+
+.edit-readonly {
+  margin-bottom: var(--space-md);
+}
+
+.edit-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md) var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+
+.edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.edit-field-full {
+  grid-column: 1 / -1;
+}
+
+.edit-label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.edit-input,
+.edit-textarea {
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--text-base);
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Ensure inputs work in dark mode (browser defaults can override) */
+[data-theme="dark"] .edit-input,
+[data-theme="dark"] .edit-textarea {
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .edit-input::placeholder,
+[data-theme="dark"] .edit-textarea::placeholder {
+  color: var(--text-disabled);
+}
+
+/* Dark mode autofill override so text stays visible */
+[data-theme="dark"] .edit-input:-webkit-autofill,
+[data-theme="dark"] .edit-input:-webkit-autofill:hover,
+[data-theme="dark"] .edit-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text-primary);
+  -webkit-box-shadow: 0 0 0 1000px var(--bg-secondary) inset;
+  box-shadow: 0 0 0 1000px var(--bg-secondary) inset;
+}
+
+.edit-input:focus,
+.edit-textarea:focus {
+  outline: none;
+  border-color: var(--focus-ring, #3b82f6);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.edit-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.edit-error {
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+
+.modal-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-md);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--border-color);
+  margin-top: var(--space-lg);
+}
+
+.modal-edit-actions--inline {
+  padding-top: 0;
+  border-top: none;
+  margin-top: 0;
+}
+
+.edit-review-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.edit-review-header {
+  margin-bottom: var(--space-sm);
+}
+
+.edit-review-title {
+  margin: 0 0 var(--space-xs) 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.edit-review-subtitle {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.edit-review-empty {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.edit-review-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.edit-review-item {
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.edit-review-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-xs);
+}
+
+.edit-review-values {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--text-sm);
+}
+
+.edit-review-from {
+  color: var(--text-secondary);
+  text-decoration: line-through;
+}
+
+.edit-review-arrow {
+  color: var(--text-disabled);
+}
+
+.edit-review-to {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.edit-cancel-button {
+  /* Allow `Button` design-system styles to apply. */
+  min-width: 0;
+}
+
+.edit-save-button {
+  /* Allow `Button` design-system styles to apply. */
+  min-width: 0;
+}
+
+.edit-save-button:disabled {
+  /* `Button` handles disabled styling. */
+}
+
+@media (max-width: 639px) {
+  .edit-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Tablet + mobile: always single column for form rows */
+@media (max-width: 1023px) {
+  .edit-form-grid {
+    grid-template-columns: 1fr;
+  }
+}

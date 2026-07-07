@@ -16,6 +16,7 @@ interface BUTLinkProps {
   title?: string
   target?: BUTLinkTarget
   rel?: string
+  replace?: boolean
 }
 
 const BUTLink: React.FC<BUTLinkProps> = ({
@@ -28,10 +29,18 @@ const BUTLink: React.FC<BUTLinkProps> = ({
   title,
   target,
   rel,
+  replace = false,
 }) => {
   if (to) {
     return (
-      <Link href={to} className={className} onClick={onClick} aria-label={ariaLabel} title={title}>
+      <Link
+        href={to}
+        replace={replace}
+        className={className}
+        onClick={onClick}
+        aria-label={ariaLabel}
+        title={title}
+      >
         {children}
       </Link>
     )

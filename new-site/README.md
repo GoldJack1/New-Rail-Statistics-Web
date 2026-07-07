@@ -1,36 +1,39 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Rail Statistics — Next.js site
 
-## Getting Started
+Next.js port of the Rail Statistics web app (migrated from the Vite/React SPA).
 
-First, run the development server:
+## Commands
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm ci
+npm run dev      # http://localhost:3000
+npm run build
+npm run start
+npm test
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Copy `.env.local.example` → `.env.local` and fill in Firebase + feature flags. See `netlify.env.example` for production (Netlify site env).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Required for full functionality:
 
-## Learn More
+- `NEXT_PUBLIC_FIREBASE_*` — Auth, Firestore, Storage
+- `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` — App Check (production)
+- `DARWIN_API_KEY` (+ optional `DARWIN_API_ORIGIN`) — departures, units, services, API status
 
-To learn more about Next.js, take a look at the following resources:
+## Deploy
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Netlify config at monorepo root (`netlify.toml`). Build base: `new-site/`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Firebase rules/indexes: `firestore.rules`, `storage.rules`, `firestore.indexes.json` (deploy separately via Firebase CLI).
 
-## Deploy on Vercel
+## Route map
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Public: `/`, `/stations/map`, `/stations/:network/:slug`, `/migration`, `/departures`, `/units`, `/privacy`, `/eula`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Protected (`/admin/*`): stations CRUD, map editing, design system, messages, API status
+
+Legacy URLs redirect via `next.config.ts` (e.g. `/stations` → `/admin/stations`).
+
+PWA: `public/sw.js` registers in production. SEO: `/sitemap.xml`, `/robots.txt`, OpenGraph metadata.

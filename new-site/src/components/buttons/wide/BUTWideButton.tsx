@@ -1,7 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import React from 'react'
 import BUTBaseButton, { type ButtonProps } from '../base/BUTBaseButton/BUTBaseButton'
 
 type BUTWideButtonProps = Omit<ButtonProps, 'variant'> & {
@@ -23,30 +22,20 @@ const BUTWideButton: React.FC<BUTWideButtonProps> = ({
   disabled,
   ...props
 }) => {
-  const [isNavigating, setIsNavigating] = useState(false)
-  const router = useRouter()
-
-  const handleNavigateClick = () => {
-    if (!to || disabled || isNavigating) return
-    setIsNavigating(true)
+  const handleClick: ButtonProps['onClick'] = (event) => {
     onNavigate?.()
-    setTimeout(() => {
-      if (replace) {
-        router.replace(to)
-      } else {
-        router.push(to)
-      }
-      setIsNavigating(false)
-    }, 300)
+    onClick?.(event)
   }
 
   return (
     <BUTBaseButton
       {...props}
       variant="wide"
-      onClick={to ? () => handleNavigateClick() : onClick}
-      pressed={pressed || isActive || isNavigating}
-      disabled={disabled || isNavigating}
+      to={to}
+      replace={replace}
+      onClick={to ? handleClick : onClick}
+      pressed={pressed || isActive}
+      disabled={disabled}
     />
   )
 }

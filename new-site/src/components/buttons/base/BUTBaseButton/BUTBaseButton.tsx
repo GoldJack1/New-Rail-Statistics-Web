@@ -33,6 +33,8 @@ export interface ButtonProps {
   rel?: string
   form?: string
   instantAction?: boolean
+  to?: string
+  replace?: boolean
 }
 
 export type BUTSharedNativeButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -70,6 +72,8 @@ const BUTBaseButton: React.FC<ButtonProps> = ({
   form,
   instantAction = false,
   href,
+  to,
+  replace = false,
   target = '_blank',
   rel = 'noopener noreferrer'
 }) => {
@@ -94,6 +98,23 @@ const BUTBaseButton: React.FC<ButtonProps> = ({
     }, 300)
   }
 
+  const handleLinkClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (disabled) {
+      event.preventDefault()
+      return
+    }
+    if (!onClick) return
+    if (instantAction) {
+      onClick(event)
+      return
+    }
+    setIsPressed(true)
+    setTimeout(() => {
+      onClick(event)
+      setIsPressed(false)
+    }, 300)
+  }
+
   const buttonClasses = [
     'rs-button',
     `rs-button--${variant}`,
@@ -104,6 +125,39 @@ const BUTBaseButton: React.FC<ButtonProps> = ({
     width && `rs-button--width-${width}`,
     className
   ].filter(Boolean).join(' ')
+
+  if (to) {
+    if (disabled) {
+      return (
+        <BUTSharedNativeButton
+          className={buttonClasses}
+          type="button"
+          disabled
+          aria-label={ariaLabel}
+          title={title}
+        >
+          {icon && <span className="rs-button__icon">{icon}</span>}
+          {children && <span className="rs-button__text">{children}</span>}
+          <div className="rs-button__inner-shadow" aria-hidden="true" />
+        </BUTSharedNativeButton>
+      )
+    }
+
+    return (
+      <BUTLink
+        className={buttonClasses}
+        to={to}
+        replace={replace}
+        onClick={handleLinkClick}
+        ariaLabel={ariaLabel}
+        title={title}
+      >
+        {icon && <span className="rs-button__icon">{icon}</span>}
+        {children && <span className="rs-button__text">{children}</span>}
+        <div className="rs-button__inner-shadow" aria-hidden="true" />
+      </BUTLink>
+    )
+  }
 
   if (href) {
     return (

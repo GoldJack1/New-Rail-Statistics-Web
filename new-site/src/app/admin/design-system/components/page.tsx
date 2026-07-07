@@ -1,13 +1,45 @@
 'use client'
 
 import React, { useState } from 'react'
+import dynamic from 'next/dynamic'
 import { BUTBaseButton as Button, BUTWideButton } from '@/components/buttons'
 import { BUTBaseButtonBar as ButtonBar } from '@/components/buttons'
 import { NavLink } from '@/components/buttons'
 import VisitButton from '@/components/buttons/other/BUTVisitStatusButton'
 import BUTLink from '@/components/buttons/other/BUTLink'
 import { PageTopHeader } from '@/components/misc'
+import { ActivityPill } from '@/components/darwin/ActivityPill'
+import { StationMessages } from '@/components/darwin/StationMessages'
+import { CarriageMap } from '@/components/darwin/CarriageMap'
+import DataLicenceAttribution from '@/components/darwin/DataLicenceAttribution'
+import type { Station } from '@/types'
 import './ComponentsPage.css'
+
+const StationModal = dynamic(() => import('@/components/models/StationModal/StationModal'), { ssr: false })
+const StationEditModal = dynamic(() => import('@/components/models/StationEditModal/StationEditModal'), {
+  ssr: false,
+})
+const NewStationModal = dynamic(() => import('@/components/models/NewStationModal/NewStationModal'), { ssr: false })
+
+const EXAMPLE_STATION: Station = {
+  id: 'DS001',
+  stationName: 'Design System Central',
+  crsCode: 'DSC',
+  tiploc: 'DSCENTRL',
+  latitude: 51.5074,
+  longitude: -0.1278,
+  country: 'England',
+  county: 'Greater London',
+  toc: 'Sample TOC',
+  stnarea: 'Central',
+  borough: 'City of Westminster',
+  fareZone: '1',
+  yearlyPassengers: {
+    '2023': 1234567,
+    '2024': 1456789,
+    '2025': 1678901,
+  },
+}
 
 const COMPONENT_GROUPS = [
   {
@@ -34,7 +66,7 @@ const COMPONENT_GROUPS = [
       {
         name: 'StationModal / StationEditModal / NewStationModal',
         file: 'src/components/models/*',
-        usage: 'Phase 2 — depend on live Firestore reads/writes, not ported in Phase 1',
+        usage: 'Station detail, edit, and create modals (live Firestore + pending-change flows)',
       },
     ],
   },
@@ -43,6 +75,9 @@ const COMPONENT_GROUPS = [
 const ComponentsPage: React.FC = () => {
   const [isVisited, setIsVisited] = useState(false)
   const [selectedButtonBar, setSelectedButtonBar] = useState<number | null>(0)
+  const [showStationModal, setShowStationModal] = useState(false)
+  const [showStationEditModal, setShowStationEditModal] = useState(false)
+  const [showNewStationModal, setShowNewStationModal] = useState(false)
 
   return (
     <div className="ds-components-page">
@@ -61,7 +96,7 @@ const ComponentsPage: React.FC = () => {
           ),
         }}
       />
-      <div className="container">
+      <div className="container container--full-bleed">
         <div className="ds-components">
 
         {COMPONENT_GROUPS.map((group) => (
@@ -158,9 +193,66 @@ const ComponentsPage: React.FC = () => {
         <section className="ds-components__section">
           <h2>Modal Component Examples</h2>
           <p className="ds-components__intro">
-            Phase 1 note: <code>StationModal</code>, <code>StationEditModal</code>, and <code>NewStationModal</code> read/write
-            live Firestore data and are not ported until Phase 2 (see MIGRATION_PLAN.md §5.11).
+            Interactive modal examples with sample station data. Save and publish use the real pending-changes workflow.
           </p>
+          <div className="ds-components__example-row">
+            <Button variant="wide" width="hug" onClick={() => setShowStationModal(true)}>
+              Open StationModal
+            </Button>
+            <Button variant="wide" width="hug" onClick={() => setShowStationEditModal(true)}>
+              Open StationEditModal
+            </Button>
+            <Button variant="wide" width="hug" onClick={() => setShowNewStationModal(true)}>
+              Open NewStationModal
+            </Button>
+          </div>
+        </section>
+
+        <section className="ds-components__section">
+          <h2>Darwin components</h2>
+          <p className="ds-components__intro">
+            Darwin UI components (live data when <code>DARWIN_API_KEY</code> is configured).
+          </p>
+          <div className="ds-components__examples-grid">
+            <article className="ds-components__example-card">
+              <h3>ActivityPill</h3>
+              <ActivityPill activity="R  " />
+            </article>
+            <article className="ds-components__example-card">
+              <h3>StationMessages</h3>
+              <StationMessages
+                messages={[
+                  {
+                    id: '1',
+                    severity: 2,
+                    category: 'TRAIN',
+                    plainMessage: 'Sample disruption message for design review.',
+                    htmlMessage: '',
+                    stations: ['PAD'],
+                    receivedAt: new Date().toISOString(),
+                  },
+                ]}
+              />
+            </article>
+            <article className="ds-components__example-card ds-components__example-card--wide">
+              <h3>CarriageMap</h3>
+              <CarriageMap
+                formation={{
+                  fid: 'demo',
+                  coaches: [
+                    { number: 'A1', class: 'Standard', toilet: null, catering: null },
+                    { number: 'B1', class: 'First', toilet: null, catering: null },
+                  ],
+                }}
+                stops={[]}
+                reverse={false}
+              />
+            </article>
+            <article className="ds-components__example-card">
+              <h3>DataLicenceAttribution</h3>
+              <DataLicenceAttribution />
+            </article>
+          </div>
         </section>
 
         <section className="ds-components__section">
@@ -172,6 +264,18 @@ const ComponentsPage: React.FC = () => {
         </section>
         </div>
       </div>
+
+      <StationModal
+        station={EXAMPLE_STATION}
+        isOpen={showStationModal}
+        onClose={() => setShowStationModal(false)}
+      />
+      <StationEditModal
+        station={EXAMPLE_STATION}
+        isOpen={showStationEditModal}
+        onClose={() => setShowStationEditModal(false)}
+      />
+      <NewStationModal isOpen={showNewStationModal} onClose={() => setShowNewStationModal(false)} />
     </div>
   )
 }

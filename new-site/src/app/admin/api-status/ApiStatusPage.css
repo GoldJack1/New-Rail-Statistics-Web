@@ -1,0 +1,111 @@
+.api-status-shell {
+  background-color: var(--bg-tertiary);
+  width: 100%;
+}
+
+.api-status-page {
+  max-width: var(--container-2xl);
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-2xl) var(--space-3xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.api-status-controls,
+.api-status-card,
+.api-panel {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.api-status-controls {
+  padding: var(--space-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.api-status-error {
+  margin: 0;
+  color: var(--accent-base);
+}
+
+.api-status-meta {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.api-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--space-sm);
+}
+
+.api-status-card {
+  padding: var(--space-md);
+}
+
+.api-status-card h3 {
+  margin: 0 0 var(--space-xs);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+}
+
+.api-status-card p {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.api-panel {
+  padding: var(--space-md);
+}
+
+.api-panel h2 {
+  margin: 0 0 var(--space-sm);
+}
+
+.api-panel-subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.api-available-list {
+  margin-top: var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.api-available-item {
+  border: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.6rem;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  align-items: center;
+  background: color-mix(in srgb, var(--bg-primary) 62%, transparent);
+}
+
+.api-available-meta {
+  margin-top: 0.15rem;
+  display: flex;
+  gap: var(--space-sm);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.api-available-last {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

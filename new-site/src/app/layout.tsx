@@ -7,13 +7,48 @@ import { PendingStationChangesProvider } from '@/contexts/PendingStationChangesC
 import Header from '@/components/misc/Header/Header'
 import Footer from '@/components/misc/Footer/Footer'
 import AppMain from '@/components/misc/AppMain'
+import ServiceWorkerRegistration from '@/components/misc/ServiceWorkerRegistration'
+import FirebaseAnalytics from '@/components/misc/FirebaseAnalytics'
+import { SITE_DESCRIPTION, SITE_KEYWORDS, SITE_NAME, SITE_URL } from '@/lib/site'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Rail Statistics',
-  description: 'Rail Statistics - Track your railway station visits and statistics',
-  keywords: ['rail', 'statistics', 'railway', 'stations', 'tracking'],
-  authors: [{ name: 'Rail Statistics' }],
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
+  },
+  manifest: '/manifest.json',
+  description: SITE_DESCRIPTION,
+  keywords: SITE_KEYWORDS,
+  authors: [{ name: SITE_NAME }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_GB',
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    images: [
+      {
+        url: '/pwa-192x192.png',
+        width: 192,
+        height: 192,
+        alt: `${SITE_NAME} icon`,
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary',
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    images: ['/pwa-192x192.png'],
+  },
   icons: {
     icon: [
       { url: '/favicon.svg?v=1', type: 'image/svg+xml' },
@@ -24,7 +59,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Rail Statistics',
+    title: SITE_NAME,
   },
   formatDetection: {
     telephone: false,
@@ -86,11 +121,15 @@ export default function RootLayout({
         <AuthProvider>
           <StationCollectionProvider>
             <PendingStationChangesProvider>
+              <ServiceWorkerRegistration />
               <div className="app">
                 <Header />
-                <AppMain>{children}</AppMain>
+                <AppMain>
+                  <Suspense fallback={null}>{children}</Suspense>
+                </AppMain>
                 <Suspense fallback={null}>
                   <Footer />
+                  <FirebaseAnalytics />
                 </Suspense>
               </div>
             </PendingStationChangesProvider>

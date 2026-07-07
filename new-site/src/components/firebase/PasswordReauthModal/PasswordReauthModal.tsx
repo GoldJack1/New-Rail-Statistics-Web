@@ -1,31 +1,33 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import FirebaseReauthPanel, { type PlaceholderReauthUser } from '../FirebaseReauthPanel'
+import type { User } from 'firebase/auth'
+import FirebaseReauthPanel from '@/components/firebase/FirebaseReauthPanel'
 import './PasswordReauthModal.css'
 
 export interface PasswordReauthModalProps {
   open: boolean
-  user: PlaceholderReauthUser | null
+  user: User | null
   onClose: () => void
+  /** Called after successful reauthentication. */
   onVerified: () => void
   title?: string
 }
 
 /**
- * Phase 1 visual shell only — see `FirebaseReauthPanel.tsx` for context.
+ * Step-up before sensitive actions: password and optional TOTP in one dialog (single Verify).
  */
 const PasswordReauthModal: React.FC<PasswordReauthModalProps> = ({
   open,
   user,
   onClose,
   onVerified,
-  title = 'Confirm it\u2019s you',
+  title = 'Confirm it’s you'
 }) => {
   const [panelKey, setPanelKey] = useState(0)
 
   useEffect(() => {
-    if (open) setPanelKey((k) => k + 1)
+    if (open) setPanelKey(k => k + 1)
   }, [open])
 
   useEffect(() => {
@@ -51,7 +53,7 @@ const PasswordReauthModal: React.FC<PasswordReauthModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="password-reauth-title"
-        onClick={(e) => e.stopPropagation()}
+        onClick={e => e.stopPropagation()}
       >
         <FirebaseReauthPanel
           key={panelKey}

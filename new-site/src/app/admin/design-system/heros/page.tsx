@@ -161,7 +161,7 @@ const HerosPage: React.FC = () => {
           ),
         }}
       />
-      <div className="container">
+      <div className="container container--full-bleed">
         <div className="ds-heros">
 
         <section className="ds-heros__section">

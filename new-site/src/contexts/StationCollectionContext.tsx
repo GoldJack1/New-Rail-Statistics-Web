@@ -1,43 +1,18 @@
 'use client'
 
-/**
- * Phase 1 placeholder — same interface as the old site's
- * `src/contexts/StationCollectionContext.tsx`, but without any Firestore
- * calls (`setStationCollectionName` etc. are Phase 2 / firebase.ts). State is
- * kept in-memory + localStorage only, matching Phase 1's "no live Firebase
- * data" scope.
- */
-import React, { createContext, useContext, useCallback, useState, useMemo } from 'react'
+/* eslint-disable react-refresh/only-export-components */
+import React, { createContext, useContext, useCallback, useState, useEffect, useMemo } from 'react'
+import type { NetworkCollectionId, NetworkViewFilter, StationCollectionId } from '@/constants/stationCollections'
+import { deriveCollectionId } from '@/constants/stationCollections'
 import {
-  deriveCollectionId,
-  DEFAULT_NETWORK_COLLECTION_ID,
-  DEFAULT_NETWORK_VIEW,
-  isNetworkCollection,
-  isNetworkViewFilter,
-  STATION_NETWORK_STORAGE_KEY,
-  STATION_NETWORK_VIEW_STORAGE_KEY,
-  STATION_SANDBOX_STORAGE_KEY,
-  type NetworkCollectionId,
-  type NetworkViewFilter,
-  type StationCollectionId,
-} from '@/constants/stationCollections'
-
-function readStoredNetworkId(): NetworkCollectionId {
-  if (typeof window === 'undefined') return DEFAULT_NETWORK_COLLECTION_ID
-  const raw = window.localStorage.getItem(STATION_NETWORK_STORAGE_KEY)
-  return raw && isNetworkCollection(raw) ? raw : DEFAULT_NETWORK_COLLECTION_ID
-}
-
-function readStoredNetworkView(): NetworkViewFilter {
-  if (typeof window === 'undefined') return DEFAULT_NETWORK_VIEW
-  const raw = window.localStorage.getItem(STATION_NETWORK_VIEW_STORAGE_KEY)
-  return raw && isNetworkViewFilter(raw) ? raw : DEFAULT_NETWORK_VIEW
-}
-
-function readStoredSandboxMode(): boolean {
-  if (typeof window === 'undefined') return false
-  return window.localStorage.getItem(STATION_SANDBOX_STORAGE_KEY) === 'true'
-}
+  getStationNetworkId,
+  setStationNetworkId,
+  getStationNetworkView,
+  setStationNetworkView,
+  getStationSandboxMode,
+  setStationSandboxMode,
+  setStationCollectionName,
+} from '@/services/firebase'
 
 interface StationCollectionContextValue {
   networkView: NetworkViewFilter
@@ -46,63 +21,73 @@ interface StationCollectionContextValue {
   setNetworkId: (id: NetworkCollectionId) => void
   isSandbox: boolean
   setSandbox: (enabled: boolean) => void
+  /** Active Firestore collection for edits (sandbox overrides; All uses last single-network). */
   collectionId: StationCollectionId
+  /** @deprecated Use networkView / networkId / isSandbox */
   setCollectionId: (id: StationCollectionId) => void
 }
 
 const StationCollectionContext = createContext<StationCollectionContextValue | null>(null)
 
 export const StationCollectionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [networkView, setNetworkViewState] = useState<NetworkViewFilter>(readStoredNetworkView)
-  const [networkId, setNetworkIdState] = useState<NetworkCollectionId>(readStoredNetworkId)
-  const [isSandbox, setSandboxState] = useState<boolean>(readStoredSandboxMode)
+  const [networkView, setNetworkViewState] = useState<NetworkViewFilter>(() => getStationNetworkView())
+  const [networkId, setNetworkIdState] = useState<NetworkCollectionId>(() => getStationNetworkId())
+  const [isSandbox, setSandboxState] = useState<boolean>(() => getStationSandboxMode())
 
   const collectionId = useMemo(
     () => deriveCollectionId(networkView, networkId, isSandbox),
     [networkView, networkId, isSandbox]
   )
 
+  useEffect(() => {
+    setStationCollectionName(collectionId)
+  }, [collectionId])
+
   const setNetworkView = useCallback((view: NetworkViewFilter) => {
     setNetworkViewState(view)
-    if (typeof window !== 'undefined') window.localStorage.setItem(STATION_NETWORK_VIEW_STORAGE_KEY, view)
+    setStationNetworkView(view)
     if (view !== 'all') {
       setNetworkIdState(view)
-      if (typeof window !== 'undefined') window.localStorage.setItem(STATION_NETWORK_STORAGE_KEY, view)
     }
   }, [])
 
   const setNetworkId = useCallback((id: NetworkCollectionId) => {
     setNetworkIdState(id)
     setNetworkViewState(id)
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(STATION_NETWORK_STORAGE_KEY, id)
-      window.localStorage.setItem(STATION_NETWORK_VIEW_STORAGE_KEY, id)
-    }
+    setStationNetworkId(id)
+    setStationNetworkView(id)
   }, [])
 
   const setSandbox = useCallback((enabled: boolean) => {
     setSandboxState(enabled)
-    if (typeof window !== 'undefined') window.localStorage.setItem(STATION_SANDBOX_STORAGE_KEY, String(enabled))
+    setStationSandboxMode(enabled)
   }, [])
 
-  const setCollectionId = useCallback(
-    (id: StationCollectionId) => {
-      if (id === 'newsandboxstations1') {
-        setSandbox(true)
-        return
-      }
-      setSandbox(false)
-      setNetworkId(id)
-    },
-    [setNetworkId, setSandbox]
-  )
+  const setCollectionId = useCallback((id: StationCollectionId) => {
+    if (id === 'newsandboxstations1') {
+      setSandbox(true)
+      return
+    }
+    setSandbox(false)
+    setNetworkId(id)
+  }, [setNetworkId, setSandbox])
 
-  const value = useMemo<StationCollectionContextValue>(
-    () => ({ networkView, setNetworkView, networkId, setNetworkId, isSandbox, setSandbox, collectionId, setCollectionId }),
-    [networkView, setNetworkView, networkId, setNetworkId, isSandbox, setSandbox, collectionId, setCollectionId]
+  return (
+    <StationCollectionContext.Provider
+      value={{
+        networkView,
+        setNetworkView,
+        networkId,
+        setNetworkId,
+        isSandbox,
+        setSandbox,
+        collectionId,
+        setCollectionId,
+      }}
+    >
+      {children}
+    </StationCollectionContext.Provider>
   )
-
-  return <StationCollectionContext.Provider value={value}>{children}</StationCollectionContext.Provider>
 }
 
 export const useStationCollection = (): StationCollectionContextValue => {

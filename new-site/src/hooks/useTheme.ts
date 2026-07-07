@@ -39,11 +39,14 @@ export function applyStoredThemeToDocument(): void {
 }
 
 export const useTheme = (): UseThemeReturn => {
-  const [theme, setTheme] = useState<ThemeMode>(() => {
-    if (typeof window === 'undefined') return 'light'
-    const raw = localStorage.getItem('theme') || 'light'
-    return raw === 'dark' ? 'dark' : 'light'
-  })
+  const [theme, setTheme] = useState<ThemeMode>('light')
+
+  useEffect(() => {
+    const attr = document.documentElement.getAttribute('data-theme')
+    const raw = localStorage.getItem('theme') || attr || 'light'
+    const stored: ThemeMode = raw === 'dark' ? 'dark' : 'light'
+    setTheme(stored)
+  }, [])
 
   useEffect(() => {
     // Apply on <html> so :root CSS variables match the canvas behind the app

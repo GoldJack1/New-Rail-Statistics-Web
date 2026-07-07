@@ -132,6 +132,15 @@
 
 .site-footer-theme-toggle__icon--sun {
   top: -1.5px;
+  display: none;
+}
+
+[data-theme='dark'] .site-footer-theme-toggle__icon--sun {
+  display: inline;
+}
+
+[data-theme='dark'] .site-footer-theme-toggle__icon--moon {
+  display: none;
 }
 
 .site-footer-theme-toggle:hover {

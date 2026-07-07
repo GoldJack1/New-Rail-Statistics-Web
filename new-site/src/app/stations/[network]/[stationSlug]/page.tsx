@@ -1,0 +1,437 @@
+'use client'
+
+import { useRouter, usePathname, useSearchParams, useParams } from 'next/navigation'
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+
+import { useStations } from '@/hooks/useStations'
+import { useStationCollectionFieldSchema } from '@/hooks/useStationCollectionFieldSchema'
+import type { SandboxStationDoc, Station } from '@/types'
+import { fetchStationDocumentById } from '@/services/firebase'
+import {
+  buildStationPath,
+  findStationByRoute,
+  getCollectionIdFromNetworkUrlSlug,
+  getStationNetworkCollectionId,
+} from '@/utils/stationAreaSlug'
+import { isStationCollectionId } from '@/constants/stationCollections'
+import { useStationCollection } from '@/contexts/StationCollectionContext'
+import { useAuth } from '@/contexts/AuthContext'
+import { usePendingStationChanges } from '@/contexts/PendingStationChangesContext'
+import {
+  getPendingFieldChangesForEntry,
+  mergeAdditionalDocWithPendingUpdate,
+  mergeStationWithPendingUpdate,
+} from '@/utils/applyPendingChangesForDisplay'
+import {
+  getVisibleStationDetailsTabs,
+  stationDetailsShowsAdditionalTab,
+  type StationDetailsTab,
+} from '@/utils/stationCollectionFieldSchema'
+import { StationDetailsView } from '@/components/models'
+import { StationDetailsEditForm } from '@/components/models'
+import { BUTWideButton } from '@/components/buttons'
+import { BUTCircleButton } from '@/components/buttons'
+import { PageTopHeader } from '@/components/misc'
+import '@/components/models/StationModal/StationModal.css'
+import '@/components/models/StationEditModal/StationEditModal.css'
+import { paramAsString } from '@/utils/nextParams'
+import { setStationDetailsNavigationState, readStationDetailsNavigationState } from '@/utils/clientNavigationState'
+import './StationDetailsPage.css'
+
+function getStationDetailsReturnPath(state: unknown): string {
+  if (state && typeof state === 'object' && 'returnTo' in state) {
+    const returnTo = (state as { returnTo?: unknown }).returnTo
+    if (typeof returnTo === 'string' && returnTo.startsWith('/')) return returnTo
+  }
+  return '/admin/stations'
+}
+
+function StationDetailsPage() {
+  const mode = 'view' as 'view' | 'edit'
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const location = { pathname, search: searchParams.toString() ? `?${searchParams}` : '', state: null as unknown }
+  const backPath = getStationDetailsReturnPath(readStationDetailsNavigationState())
+  const navigationState = readStationDetailsNavigationState()
+  const params = useParams()
+  const network = paramAsString(params.network)
+  const stationSlug = paramAsString(params.stationSlug)
+  const { collectionId } = useStationCollection()
+  const { user, loading: authLoading } = useAuth()
+  const canEdit = !authLoading && Boolean(user)
+  const { stations, loading, error } = useStations()
+  const [additionalDoc, setAdditionalDoc] = useState<SandboxStationDoc | null>(null)
+  const [additionalLoading, setAdditionalLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState<StationDetailsTab>('details')
+  const [isMobile, setIsMobile] = useState(false)
+  const [editFormHasUnsavedChanges, setEditFormHasUnsavedChanges] = useState(false)
+  const [maxTabContentHeight, setMaxTabContentHeight] = useState(0)
+  const visibleBodyRef = useRef<HTMLDivElement | null>(null)
+  const tabMeasureRefs = useRef<Partial<Record<StationDetailsTab, HTMLDivElement | null>>>({})
+
+  const station: Station | null = useMemo(() => {
+    if (!network || !stationSlug) return null
+    return findStationByRoute(stations, network, stationSlug, collectionId)
+  }, [stations, network, stationSlug, collectionId])
+
+  const { pendingChanges } = usePendingStationChanges()
+  const pendingEntry = station ? pendingChanges[station.id] : undefined
+  const pendingFieldChanges = useMemo(
+    () => getPendingFieldChangesForEntry(pendingEntry, { additionalDocFallback: additionalDoc }),
+    [pendingEntry, additionalDoc]
+  )
+  const displayStation = useMemo(
+    () => (station ? mergeStationWithPendingUpdate(station, pendingEntry) : null),
+    [station, pendingEntry]
+  )
+  const displayAdditionalDoc = useMemo(
+    () => mergeAdditionalDocWithPendingUpdate(additionalDoc, pendingEntry),
+    [additionalDoc, pendingEntry]
+  )
+  const showPendingOverlay = canEdit && Boolean(pendingEntry) && pendingFieldChanges.length > 0
+
+  const routeCollectionId = getCollectionIdFromNetworkUrlSlug(network)
+  const schemaCollectionId = useMemo(() => {
+    if (!station) return null
+    const resolved = getStationNetworkCollectionId(station, routeCollectionId ?? collectionId)
+    return resolved && isStationCollectionId(resolved) ? resolved : null
+  }, [station, routeCollectionId, collectionId])
+  const { fieldSchema, loading: schemaLoading } = useStationCollectionFieldSchema(schemaCollectionId)
+  const showAdditionalTab = stationDetailsShowsAdditionalTab(fieldSchema)
+  const visibleTabs = useMemo(() => getVisibleStationDetailsTabs(fieldSchema), [fieldSchema])
+
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 768px)')
+    const update = () => setIsMobile(mql.matches)
+    update()
+    mql.addEventListener('change', update)
+    return () => mql.removeEventListener('change', update)
+  }, [])
+
+  useEffect(() => {
+    if (activeTab === 'additional' && !showAdditionalTab) setActiveTab('details')
+    if (activeTab === 'service' && !fieldSchema.showServiceTab) setActiveTab('details')
+    if (activeTab === 'usage' && !fieldSchema.showUsageTab) setActiveTab('details')
+    if (activeTab === 'stepFree' && !fieldSchema.showStepFreeTab) setActiveTab('details')
+    if (activeTab === 'facilities' && !fieldSchema.showFacilitiesTab) setActiveTab('details')
+  }, [
+    activeTab,
+    showAdditionalTab,
+    fieldSchema.showServiceTab,
+    fieldSchema.showUsageTab,
+    fieldSchema.showStepFreeTab,
+    fieldSchema.showFacilitiesTab,
+  ])
+
+  useEffect(() => {
+    if (!station) return
+    document.title =
+      mode === 'edit'
+        ? `Edit ${station.stationName || 'Station'} | Rail Statistics`
+        : `${station.stationName || 'Station'} | Rail Statistics`
+  }, [mode, station])
+
+  useEffect(() => {
+    if (!station) return
+    let cancelled = false
+    setAdditionalLoading(true)
+    setAdditionalDoc(null)
+    fetchStationDocumentById(
+      station.id,
+      getStationNetworkCollectionId(station, routeCollectionId ?? collectionId) ?? collectionId
+    )
+      .then((data) => {
+        if (cancelled) return
+        setAdditionalDoc((data as SandboxStationDoc) ?? null)
+      })
+      .finally(() => {
+        if (!cancelled) setAdditionalLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [station?.id, station?.sourceCollectionId, collectionId, routeCollectionId])
+
+  useLayoutEffect(() => {
+    if (mode !== 'view') return
+
+    const measureHeights = () => {
+      const heights = visibleTabs
+        .map((tab) => {
+          const pane = tabMeasureRefs.current[tab]
+          if (!pane) return 0
+          return Math.ceil(pane.getBoundingClientRect().height)
+        })
+        .filter((height) => height > 0)
+
+      const visibleHeight = Math.ceil(visibleBodyRef.current?.getBoundingClientRect().height ?? 0)
+      const nextMax = Math.max(visibleHeight, ...(heights.length > 0 ? heights : [0]))
+      if (nextMax <= 0) return
+      setMaxTabContentHeight((current) => (current === nextMax ? current : nextMax))
+    }
+
+    measureHeights()
+    const frameA = window.requestAnimationFrame(measureHeights)
+    const frameB = window.requestAnimationFrame(measureHeights)
+    window.addEventListener('resize', measureHeights)
+    return () => {
+      window.cancelAnimationFrame(frameA)
+      window.cancelAnimationFrame(frameB)
+      window.removeEventListener('resize', measureHeights)
+    }
+  }, [mode, station?.id, additionalDoc, additionalLoading, visibleTabs])
+
+  useEffect(() => {
+    setMaxTabContentHeight(0)
+  }, [station?.id, mode])
+
+  useEffect(() => {
+    const visibleMap = document.querySelector('.station-details-visible-body .location-map-preview-osm') as HTMLElement | null
+    const measureMap = document.querySelector('.station-details-measure-layer .location-map-preview-osm') as HTMLElement | null
+    const visibleRect = visibleMap?.getBoundingClientRect()
+    const measureRect = measureMap?.getBoundingClientRect()
+  }, [mode, activeTab, isMobile, maxTabContentHeight, station?.id])
+
+  if (loading || schemaLoading) {
+    return (
+      <div className="container">
+        <div className="loading-state">
+          <div className="loading-spinner"></div>
+          <p>Loading station…</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="container">
+        <div className="error-state">
+          <h3>Failed to Load Station</h3>
+          <p>{error}</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!network || !stationSlug || !station) {
+    return (
+      <div className="container">
+        <div className="error-state">
+          <h3>Station not found</h3>
+          <p>We couldn’t find that station in the current data source.</p>
+          <BUTWideButton type="button" width="hug" onClick={() => router.push(backPath)}>
+            Back to stations
+          </BUTWideButton>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="container container--station-details">
+      <PageTopHeader
+        title={`${mode === 'edit' ? 'Edit station' : 'Station details'}: ${(displayStation ?? station).stationName || 'Station'}`}
+        subtitle={`${(displayStation ?? station).crsCode || 'No CRS'} · ID: ${station.id}${showPendingOverlay ? ' · Unpublished changes' : ''}`}
+        actionContent={canEdit && !isMobile && mode === 'edit' ? <div id="station-details-header-actions" className="station-details-header-actions-slot" /> : undefined}
+      />
+      <div className="station-details-page">
+        <div className="station-details-layout">
+          <aside className="station-details-sidebar">
+            <div className="station-details-sidebar-actions">
+              <BUTWideButton
+                type="button"
+                width="hug"
+                onClick={() => {
+                  if (mode === 'edit' && editFormHasUnsavedChanges && !window.confirm('Are you sure you want to go back? All data will not be saved.')) return
+                  router.push(backPath)
+                }}
+              >
+                Back
+              </BUTWideButton>
+              {canEdit && (
+                <>
+                  <div className="station-details-sidebar-actions-spacer" aria-hidden="true" />
+                  {mode === 'view' ? (
+                    <BUTCircleButton
+                      type="button"
+                      ariaLabel="Edit station"
+                      onClick={() => {
+                        setStationDetailsNavigationState(navigationState)
+                        router.push(`/admin/stations/${buildStationPath(station, collectionId)}/edit`)
+                      }}
+                      icon={
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M12 20h9" />
+                          <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                        </svg>
+                      }
+                    />
+                  ) : (
+                    <BUTCircleButton
+                      type="button"
+                      ariaLabel="View station"
+                      onClick={() => {
+                        setStationDetailsNavigationState(navigationState)
+                        router.push(`/stations/${buildStationPath(station, collectionId)}`)
+                      }}
+                      icon={
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      }
+                    />
+                  )}
+                </>
+              )}
+            </div>
+            <div className="station-details-sidebar-secondary-actions">
+              <div id="station-details-sidebar-actions" />
+            </div>
+
+            <nav className="station-details-tabs" aria-label="Station sections">
+              <BUTWideButton
+                type="button"
+                width="hug"
+                colorVariant="accent"
+                className="station-details-tab"
+                state={activeTab === 'details' ? 'active' : 'pressed'}
+                onClick={() => setActiveTab('details')}
+              >
+                Details
+              </BUTWideButton>
+              {showAdditionalTab && (
+                <BUTWideButton
+                  type="button"
+                  width="hug"
+                  colorVariant="accent"
+                  className="station-details-tab"
+                  state={activeTab === 'additional' ? 'active' : 'pressed'}
+                  onClick={() => setActiveTab('additional')}
+                >
+                  Additional details
+                </BUTWideButton>
+              )}
+              {fieldSchema.showServiceTab && (
+                <BUTWideButton
+                  type="button"
+                  width="hug"
+                  colorVariant="accent"
+                  className="station-details-tab"
+                  state={activeTab === 'service' ? 'active' : 'pressed'}
+                  onClick={() => setActiveTab('service')}
+                >
+                  Service & Connections
+                </BUTWideButton>
+              )}
+              <BUTWideButton
+                type="button"
+                width="hug"
+                colorVariant="accent"
+                className="station-details-tab"
+                state={activeTab === 'location' ? 'active' : 'pressed'}
+                onClick={() => setActiveTab('location')}
+              >
+                Location
+              </BUTWideButton>
+              {fieldSchema.showUsageTab && (
+                <BUTWideButton
+                  type="button"
+                  width="hug"
+                  colorVariant="accent"
+                  className="station-details-tab"
+                  state={activeTab === 'usage' ? 'active' : 'pressed'}
+                  onClick={() => setActiveTab('usage')}
+                >
+                  Usage
+                </BUTWideButton>
+              )}
+              {fieldSchema.showStepFreeTab && (
+                <BUTWideButton
+                  type="button"
+                  width="hug"
+                  colorVariant="accent"
+                  className="station-details-tab"
+                  state={activeTab === 'stepFree' ? 'active' : 'pressed'}
+                  onClick={() => setActiveTab('stepFree')}
+                >
+                  {fieldSchema.stepFreeTabLabel}
+                </BUTWideButton>
+              )}
+              {fieldSchema.showFacilitiesTab && (
+                <BUTWideButton
+                  type="button"
+                  width="hug"
+                  colorVariant="accent"
+                  className="station-details-tab"
+                  state={activeTab === 'facilities' ? 'active' : 'pressed'}
+                  onClick={() => setActiveTab('facilities')}
+                >
+                  Facilities
+                </BUTWideButton>
+              )}
+            </nav>
+          </aside>
+
+          <main className="station-details-main">
+            <section className={`station-details-card modal-content ${mode === 'edit' ? 'modal-content-edit' : ''}`}>
+              {canEdit && mode === 'edit' ? (
+                <StationDetailsEditForm
+                  station={station}
+                  pendingEntry={pendingEntry}
+                  onCancel={() => router.push(backPath)}
+                  onSaved={() => router.push(backPath)}
+                  activeTab={activeTab}
+                  fieldSchema={fieldSchema}
+                  actionsPortalId={isMobile ? 'station-details-sidebar-actions' : 'station-details-header-actions'}
+                  onUnsavedChangesChange={setEditFormHasUnsavedChanges}
+                />
+              ) : (
+                <div
+                  className="modal-body station-details-visible-body"
+                  ref={visibleBodyRef}
+                  style={maxTabContentHeight > 0 ? { minHeight: `${maxTabContentHeight}px` } : undefined}
+                >
+                  <StationDetailsView
+                    station={displayStation ?? station}
+                    additionalDoc={displayAdditionalDoc}
+                    additionalLoading={additionalLoading}
+                    activeTab={activeTab}
+                    fieldSchema={fieldSchema}
+                    pendingFieldChanges={showPendingOverlay ? pendingFieldChanges : undefined}
+                    isPendingNew={pendingEntry?.isNew === true}
+                  />
+                  <div className="station-details-measure-layer" aria-hidden="true">
+                    {visibleTabs.map((tab) => (
+                      <div
+                        key={tab}
+                        className="station-details-measure-pane"
+                        ref={(el) => {
+                          tabMeasureRefs.current[tab] = el
+                        }}
+                      >
+                        <StationDetailsView
+                          station={displayStation ?? station}
+                          additionalDoc={displayAdditionalDoc}
+                          additionalLoading={additionalLoading}
+                          activeTab={tab}
+                          fieldSchema={fieldSchema}
+                          pendingFieldChanges={showPendingOverlay ? pendingFieldChanges : undefined}
+                          isPendingNew={pendingEntry?.isNew === true}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+          </main>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default StationDetailsPage

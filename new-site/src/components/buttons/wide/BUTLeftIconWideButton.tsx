@@ -1,7 +1,6 @@
 'use client'
 
 import React from 'react'
-import { useRouter } from 'next/navigation'
 import BUTBaseButton, { type ButtonProps } from '../base/BUTBaseButton/BUTBaseButton'
 
 type BUTLeftIconWideButtonProps = Omit<ButtonProps, 'variant' | 'iconPosition'> & {
@@ -20,18 +19,9 @@ const BUTLeftIconWideButton: React.FC<BUTLeftIconWideButtonProps> = ({
   disabled,
   ...props
 }) => {
-  const router = useRouter()
-
-  const handleNavigateClick = () => {
-    if (!to || disabled) return
+  const handleClick: ButtonProps['onClick'] = (event) => {
     onNavigate?.()
-    setTimeout(() => {
-      if (replace) {
-        router.replace(to)
-      } else {
-        router.push(to)
-      }
-    }, 300)
+    onClick?.(event)
   }
 
   return (
@@ -39,8 +29,10 @@ const BUTLeftIconWideButton: React.FC<BUTLeftIconWideButtonProps> = ({
       {...props}
       variant="wide"
       iconPosition="left"
+      to={to}
+      replace={replace}
       disabled={disabled}
-      onClick={to ? () => handleNavigateClick() : onClick}
+      onClick={to ? handleClick : onClick}
     />
   )
 }

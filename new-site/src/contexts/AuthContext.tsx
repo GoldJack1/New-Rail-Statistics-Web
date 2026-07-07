@@ -1,27 +1,21 @@
 'use client'
 
-/**
- * Phase 1 placeholder auth context.
- *
- * The Firebase SDK is intentionally NOT initialized anywhere in Phase 1 (see
- * MIGRATION_PLAN.md §5.11) — there is no live authentication yet. This stub
- * preserves the same `useAuth()` shape the old site's components expect
- * (`user`, `loading`, `login`, `loginWithGoogle`, `loginWithApple`, `logout`)
- * so Header/Footer/ProtectedRoute can be ported without modification, while
- * always reporting a signed-out state. Phase 2 will replace this file's
- * internals with the real `src/contexts/AuthContext.tsx` port (Firebase Auth
- * listeners) without needing to touch any consuming component.
- */
-import React, { createContext, useContext, useCallback, useMemo } from 'react'
-
-export interface PlaceholderUser {
-  uid: string
-  email: string | null
-  emailVerified: boolean
-}
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import {
+  initializeFirebase,
+  getFirebaseAuth,
+  onAuthStateChanged,
+  handleRedirectResult,
+  tryDevAutoSignInFromEnv,
+  loginWithEmail,
+  loginWithGoogle as firebaseLoginWithGoogle,
+  loginWithApple as firebaseLoginWithApple,
+  logout as firebaseLogout,
+  type User,
+} from '@/services/firebase'
 
 interface AuthContextValue {
-  user: PlaceholderUser | null
+  user: User | null
   loading: boolean
   login: (email: string, password: string) => Promise<void>
   loginWithGoogle: () => Promise<void>
@@ -32,26 +26,57 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const login = useCallback(async (email: string) => {
-    console.log('[Phase 1 placeholder] login() called — no real auth yet.', { email })
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined
+    const init = async () => {
+      await initializeFirebase()
+      await tryDevAutoSignInFromEnv()
+
+      const auth = getFirebaseAuth()
+      if (auth) {
+        try {
+          const result = await handleRedirectResult()
+          if (result?.user) {
+            setUser(result.user)
+            setLoading(false)
+          }
+        } catch (err) {
+          console.warn('Redirect result error:', err)
+        }
+        unsubscribe = onAuthStateChanged(auth, (u) => {
+          setUser(u)
+          setLoading(false)
+        })
+      } else {
+        setLoading(false)
+      }
+    }
+    void init()
+    return () => {
+      if (unsubscribe) unsubscribe()
+    }
+  }, [])
+
+  const login = useCallback(async (email: string, password: string) => {
+    await loginWithEmail(email, password)
   }, [])
 
   const loginWithGoogle = useCallback(async () => {
-    console.log('[Phase 1 placeholder] loginWithGoogle() called — no real auth yet.')
+    await firebaseLoginWithGoogle()
   }, [])
 
   const loginWithApple = useCallback(async () => {
-    console.log('[Phase 1 placeholder] loginWithApple() called — no real auth yet.')
+    await firebaseLoginWithApple()
   }, [])
 
   const logout = useCallback(async () => {
-    console.log('[Phase 1 placeholder] logout() called — no real auth yet.')
+    await firebaseLogout()
   }, [])
 
-  const value = useMemo<AuthContextValue>(
-    () => ({ user: null, loading: false, login, loginWithGoogle, loginWithApple, logout }),
-    [login, loginWithGoogle, loginWithApple, logout]
-  )
+  const value: AuthContextValue = { user, loading, login, loginWithGoogle, loginWithApple, logout }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

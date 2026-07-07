@@ -253,7 +253,7 @@ const IconsPage: React.FC = () => {
           ),
         }}
       />
-      <div className="container">
+      <div className="container container--full-bleed">
         <div className="ds-icons">
 
         <section aria-label="Website icons gallery">

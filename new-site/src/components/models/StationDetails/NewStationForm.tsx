@@ -1,0 +1,1202 @@
+'use client'
+
+import React, { useEffect, useState } from 'react'
+import type { SandboxStationDoc, Station, YearlyPassengers } from '../../../types'
+import { usePendingStationChanges } from '../../../contexts/PendingStationChangesContext'
+import { BUTBaseButton as Button, BUTBaseButtonBar } from '../../buttons'
+import { NETWORK_COLLECTION_IDS, NETWORK_LABELS } from '../../../constants/stationCollections'
+import type { NetworkCollectionId } from '../../../constants/stationCollections'
+import type { StationCollectionFieldSchema } from '../../../utils/stationCollectionFieldSchema'
+import { writeStationUrlPayload } from '../../../utils/stationUrlField'
+import LocationMapPicker from './LocationMapPicker'
+import { LightRailDateOpenedInput } from './LightRailDateOpenedInput'
+import { LightRailYesNoSelect } from './LightRailYesNoSelect'
+import type { StationDetailsTab } from '../../../utils/stationCollectionFieldSchema'
+import { STEP_FREE_SECTION_LABEL } from '../../../utils/stationCollectionFieldSchema'
+import type { PendingNewStationDraftPrefill } from '../../../utils/pendingNewStationEdit'
+import { createPortal } from 'react-dom'
+import { LightRailLinesServedChipPicker } from '../../chips/LightRailLinesServedChipPicker'
+import { LightRailPlatformsChipPicker } from '../../chips/LightRailPlatformsChipPicker'
+import {
+  buildDefaultLightRailAdditionalForm,
+  buildDefaultLightRailNewStationCoreFields,
+  buildLightRailAdditionalSavePayload,
+  LIGHT_RAIL_DOC_FIELDS,
+  readLightRailDocString,
+} from '../../../utils/lightRailStationFields'
+import TXTINPWideButton from '../../textInputs/plain/TXTINPWideButton'
+
+type NewStationFormState = Partial<Station>
+
+type YearlyPassengerRow = { year: string; value: string }
+
+const buildDefaultFacilitiesRows = (): Array<{ key: string; value: string }> => []
+
+const buildDefaultYearlyPassengerRows = (): YearlyPassengerRow[] => {
+  const currentYear = new Date().getFullYear()
+  const rows: YearlyPassengerRow[] = []
+  for (let year = 1998; year <= currentYear; year += 1) {
+    rows.push({ year: String(year), value: '' })
+  }
+  return rows
+}
+
+const emptyForm = (): NewStationFormState => ({
+  stationName: '',
+  crsCode: '',
+  tiploc: '',
+  latitude: 0,
+  longitude: 0,
+  country: '',
+  county: '',
+  toc: '',
+  stnarea: '',
+  borough: '',
+  fareZone: ''
+})
+
+const UNSAVED_MESSAGE = 'Are you sure you want to go back? All data will not be saved.'
+
+interface NewStationFormProps {
+  nextStationId: string
+  targetCollectionId: NetworkCollectionId
+  onTargetCollectionChange?: (id: NetworkCollectionId) => void
+  onCancel: () => void
+  onCreated: (stationId: string) => void
+  /** When set (e.g. on new station page), only this section is shown. When undefined (e.g. in modal), all sections shown. */
+  activeTab?: StationDetailsTab
+  /** When set, renders the action buttons into the given element id. */
+  actionsPortalId?: string
+  /** Called when form has unsaved data (for parent to show confirm on Back). */
+  onDirtyChange?: (dirty: boolean) => void
+  /** Hide inline network picker when network was chosen in a modal first. */
+  hideNetworkPicker?: boolean
+  /** Fields/tabs inferred from existing Firestore documents in the target collection. */
+  fieldSchema: StationCollectionFieldSchema
+  initialLatitude?: number
+  initialLongitude?: number
+  /** Prefill when editing an unpublished new-station draft. */
+  draftPrefill?: PendingNewStationDraftPrefill | null
+}
+
+const NewStationForm: React.FC<NewStationFormProps> = ({
+  nextStationId,
+  targetCollectionId,
+  onTargetCollectionChange,
+  onCancel,
+  onCreated,
+  activeTab,
+  actionsPortalId,
+  onDirtyChange,
+  hideNetworkPicker = false,
+  fieldSchema,
+  initialLatitude,
+  initialLongitude,
+  draftPrefill = null,
+}) => {
+  const isEditDraft = Boolean(draftPrefill)
+  const showAll = activeTab === undefined
+  const showAdditionalFields =
+    fieldSchema.showOperatorCode ||
+    fieldSchema.showMinConnectionTime ||
+    fieldSchema.showProvince ||
+    fieldSchema.showPostEirCode
+  const showDetails = showAll || activeTab === 'details'
+  const showLocationTab = showAll || activeTab === 'location'
+  const showUsage = fieldSchema.showUsageTab && (showAll || activeTab === 'usage')
+  const showAdditional = showAdditionalFields && (showAll || activeTab === 'additional')
+  const showStepFree = fieldSchema.showStepFreeTab && (showAll || activeTab === 'stepFree')
+  const showService = fieldSchema.showServiceTab && (showAll || activeTab === 'service')
+  const showFacilities = fieldSchema.showFacilitiesTab && (showAll || activeTab === 'facilities')
+  const [form, setForm] = useState<NewStationFormState>(emptyForm)
+  const [yearlyPassengersRows, setYearlyPassengersRows] = useState<YearlyPassengerRow[]>(buildDefaultYearlyPassengerRows)
+  const [additionalForm, setAdditionalForm] = useState<Partial<SandboxStationDoc>>({})
+  const [facilitiesRows, setFacilitiesRows] = useState<Array<{ key: string; value: string }>>(buildDefaultFacilitiesRows)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const { addNewPendingStation } = usePendingStationChanges()
+
+  useEffect(() => {
+    if (draftPrefill && draftPrefill.stationId === nextStationId) {
+      setForm({
+        stationName: draftPrefill.form.stationName ?? '',
+        crsCode: draftPrefill.form.crsCode ?? '',
+        tiploc: draftPrefill.form.tiploc ?? '',
+        latitude: draftPrefill.form.latitude ?? 0,
+        longitude: draftPrefill.form.longitude ?? 0,
+        country: draftPrefill.form.country ?? '',
+        county: draftPrefill.form.county ?? '',
+        toc: draftPrefill.form.toc ?? '',
+        stnarea: draftPrefill.form.stnarea ?? '',
+        borough: draftPrefill.form.borough ?? '',
+        fareZone: draftPrefill.form.fareZone ?? '',
+      })
+      setAdditionalForm({ ...draftPrefill.additionalForm })
+      setYearlyPassengersRows(
+        draftPrefill.yearlyPassengersRows.length > 0
+          ? draftPrefill.yearlyPassengersRows
+          : buildDefaultYearlyPassengerRows()
+      )
+      setFacilitiesRows(
+        draftPrefill.facilitiesRows.length > 0
+          ? draftPrefill.facilitiesRows
+          : fieldSchema.facilityKeys.map((key) => ({ key, value: '' }))
+      )
+      return
+    }
+
+    setYearlyPassengersRows(buildDefaultYearlyPassengerRows())
+    const facilityRows =
+      fieldSchema.facilityKeys.length > 0
+        ? fieldSchema.facilityKeys.map((key) => ({ key, value: '' }))
+        : []
+    setFacilitiesRows(facilityRows)
+    if (!isEditDraft) {
+      if (fieldSchema.isLightRail) {
+        setForm({
+          ...emptyForm(),
+          ...buildDefaultLightRailNewStationCoreFields(),
+          stnarea: fieldSchema.defaultStnarea,
+        })
+        setAdditionalForm(buildDefaultLightRailAdditionalForm())
+      } else {
+        setForm(emptyForm())
+        setAdditionalForm({})
+      }
+    }
+  }, [nextStationId, fieldSchema.facilityKeys, fieldSchema.isLightRail, fieldSchema.defaultStnarea, draftPrefill, isEditDraft])
+
+  useEffect(() => {
+    setForm((prev) => ({
+      ...prev,
+      stnarea: fieldSchema.defaultStnarea || prev.stnarea,
+    }))
+  }, [targetCollectionId, fieldSchema.defaultStnarea])
+
+  useEffect(() => {
+    if (initialLatitude == null || initialLongitude == null) return
+    if (!Number.isFinite(initialLatitude) || !Number.isFinite(initialLongitude)) return
+    if (isEditDraft) return
+
+    setForm((prev) => ({
+      ...prev,
+      latitude: initialLatitude,
+      longitude: initialLongitude,
+    }))
+  }, [initialLatitude, initialLongitude, isEditDraft])
+
+  const update = (updates: Partial<NewStationFormState>) => {
+    setForm((prev) => ({ ...prev, ...updates }))
+  }
+
+  const validateAndPrepareYearlyPassengers = (): YearlyPassengers | null | 'error' => {
+    setSaveError(null)
+    if (yearlyPassengersRows.length === 0) return null
+
+    const out: YearlyPassengers = {}
+    const seen = new Set<string>()
+    for (const row of yearlyPassengersRows) {
+      const year = row.year.trim()
+      if (!year) continue
+      if (!/^\d{4}$/.test(year)) {
+        setSaveError('Year must be a 4-digit year (e.g. 2021)')
+        return 'error'
+      }
+      if (seen.has(year)) {
+        setSaveError(`Duplicate year: ${year}`)
+        return 'error'
+      }
+      seen.add(year)
+
+      const raw = row.value.trim()
+      if (raw === '') {
+        out[year] = null
+        continue
+      }
+      const num = Number(raw.replace(/,/g, ''))
+      if (Number.isNaN(num)) {
+        setSaveError(`Passenger value for ${year} must be a number`)
+        return 'error'
+      }
+      out[year] = num
+    }
+    return Object.keys(out).length > 0 ? out : null
+  }
+
+  const validateAndPrepareAdditionalDetails = (): Partial<SandboxStationDoc> | null => {
+    if (fieldSchema.isLightRail) {
+      const picked = buildLightRailAdditionalSavePayload(additionalForm as Record<string, unknown>)
+      return Object.keys(picked).length > 0 ? (picked as Partial<SandboxStationDoc>) : null
+    }
+    const payload: Partial<SandboxStationDoc> = { ...additionalForm }
+    const facilities: Record<string, unknown> = {}
+    for (const row of facilitiesRows) {
+      const k = row.key.trim()
+      if (!k) continue
+      const raw = row.value.trim()
+      if (raw === '') {
+        facilities[k] = null
+      } else if (raw === 'true') facilities[k] = true
+      else if (raw === 'false') facilities[k] = false
+      else if (!Number.isNaN(Number(raw)) && raw !== '') facilities[k] = Number(raw)
+      else facilities[k] = raw
+    }
+    payload.facilities = facilities
+    const cleaned = Object.fromEntries(Object.entries(payload).filter(([, v]) => v !== undefined && v !== null && v !== '')) as Partial<SandboxStationDoc>
+    if (facilitiesRows.length === 0) {
+      delete cleaned.facilities
+    }
+    return Object.keys(cleaned).length > 0 ? cleaned : null
+  }
+
+  const updateAdditional = (updates: Partial<SandboxStationDoc>) => {
+    setAdditionalForm((prev) => ({ ...prev, ...updates }))
+  }
+
+  const updateAdditionalNested = <K extends keyof SandboxStationDoc>(key: K, nested: Record<string, unknown>) => {
+    setAdditionalForm((prev) => ({
+      ...prev,
+      [key]: { ...(typeof prev[key] === 'object' && prev[key] !== null ? (prev[key] as object) : {}), ...nested }
+    }))
+  }
+
+  // Required fields for Create button to be enabled (must match handleSave validation)
+  const requiredDetailsFilled =
+    Boolean((form.stationName ?? '').trim()) &&
+    (!fieldSchema.requireCrsCode || Boolean((form.crsCode ?? '').trim())) &&
+    (!fieldSchema.requireTiploc || Boolean((form.tiploc ?? '').trim())) &&
+    (fieldSchema.isLightRail || Boolean((form.toc ?? '').trim())) &&
+    Boolean((form.country ?? '').trim()) &&
+    Boolean((form.county ?? '').trim()) &&
+    Boolean((form.stnarea ?? '').trim()) &&
+    (!fieldSchema.showUrl ||
+      Boolean(String(additionalForm[fieldSchema.urlFieldKey] ?? '').trim()))
+  const lat = typeof form.latitude === 'number' ? form.latitude : parseFloat(String(form.latitude ?? '')) || 0
+  const lng = typeof form.longitude === 'number' ? form.longitude : parseFloat(String(form.longitude ?? '')) || 0
+  const requiredCoordsFilled =
+    Number.isFinite(lat) && Number.isFinite(lng) && String(form.latitude ?? '').trim() !== '' && String(form.longitude ?? '').trim() !== ''
+  const canCreate = requiredDetailsFilled && requiredCoordsFilled
+
+  const isDirty =
+    (form.stationName ?? '').trim() !== '' ||
+    (form.crsCode ?? '').trim() !== '' ||
+    (form.tiploc ?? '').trim() !== '' ||
+    (form.toc ?? '').trim() !== '' ||
+    (form.country ?? '').trim() !== '' ||
+    (form.county ?? '').trim() !== '' ||
+    (form.stnarea ?? '').trim() !== '' ||
+    (form.borough ?? '').trim() !== '' ||
+    (form.fareZone ?? '').trim() !== '' ||
+    Number(form.latitude) !== 0 ||
+    Number(form.longitude) !== 0 ||
+    Object.keys(additionalForm).length > 0 ||
+    yearlyPassengersRows.some((r) => (r.value ?? '').trim() !== '') ||
+    facilitiesRows.some((r) => (r.value ?? '').trim() !== '')
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty)
+  }, [isDirty, onDirtyChange])
+
+  const handleSave = async () => {
+    setSaveError(null)
+
+    const name = (form.stationName ?? '').trim()
+    const crs = (form.crsCode ?? '').trim()
+    const tiploc = (form.tiploc ?? '').trim()
+    const toc = (form.toc ?? '').trim()
+    const country = (form.country ?? '').trim()
+    const county = (form.county ?? '').trim()
+    const stnarea = (form.stnarea ?? '').trim()
+    const urlValue = String(additionalForm[fieldSchema.urlFieldKey] ?? '').trim()
+
+    if (!name || !country || !county || !stnarea) {
+      setSaveError(
+        fieldSchema.isLightRail
+          ? 'Missing required fields: Stop name, Country, County, Station area.'
+          : 'Missing required fields: Station name, TOC, Country, County, Station area.'
+      )
+      return
+    }
+    if (!fieldSchema.isLightRail && !toc) {
+      setSaveError('Missing required field: TOC.')
+      return
+    }
+    if (fieldSchema.requireCrsCode && !crs) {
+      setSaveError('Missing required field: CRS Code.')
+      return
+    }
+    if (fieldSchema.requireTiploc && !tiploc) {
+      setSaveError('Missing required field: Tiploc.')
+      return
+    }
+    if (fieldSchema.showUrl && !urlValue) {
+      setSaveError(`Missing required field: ${fieldSchema.urlFieldLabel}.`)
+      return
+    }
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || String(form.latitude ?? '').trim() === '' || String(form.longitude ?? '').trim() === '') {
+      setSaveError('Missing required fields: Latitude, Longitude.')
+      return
+    }
+
+    const yearlyPassengers = validateAndPrepareYearlyPassengers()
+    if (yearlyPassengers === 'error') return
+
+    const payload: Partial<Station> = fieldSchema.isLightRail
+      ? {
+          stationName: name,
+          latitude: lat,
+          longitude: lng,
+          country: country || null,
+          county: county || null,
+          stnarea: stnarea || null,
+          borough: (form.borough ?? '').trim() || null,
+          fareZone: (form.fareZone ?? '').trim() || null,
+        }
+      : {
+          stationName: name,
+          crsCode: crs,
+          tiploc: tiploc || null,
+          latitude: lat,
+          longitude: lng,
+          country: country || null,
+          county: county || null,
+          toc: toc || null,
+          stnarea: stnarea || null,
+          borough: (form.borough ?? '').trim() || null,
+          fareZone: (form.fareZone ?? '').trim() || null,
+          yearlyPassengers,
+        }
+
+    const additional = validateAndPrepareAdditionalDetails()
+    const additionalWithSlug = fieldSchema.showUrl
+      ? { ...(additional ?? {}), ...writeStationUrlPayload(targetCollectionId, urlValue) }
+      : (additional ?? {})
+
+    setSaving(true)
+    try {
+      addNewPendingStation(nextStationId, payload, targetCollectionId, additionalWithSlug)
+      onCreated(nextStationId)
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Failed to stage new station')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="modal-body">
+      {showDetails && (
+      <>
+      <div className="modal-section">
+        <h3 className="modal-section-title">Details</h3>
+        {!hideNetworkPicker && onTargetCollectionChange && (
+          <div className="edit-field" style={{ marginBottom: '1rem' }}>
+            <span className="edit-label">Add to database *</span>
+            <BUTBaseButtonBar
+              buttons={NETWORK_COLLECTION_IDS.map((id) => ({
+                label: NETWORK_LABELS[id],
+                value: id,
+              }))}
+              selectedIndex={Math.max(0, NETWORK_COLLECTION_IDS.indexOf(targetCollectionId))}
+              onChange={(_, value) => onTargetCollectionChange(value as NetworkCollectionId)}
+            />
+          </div>
+        )}
+        {hideNetworkPicker && (
+          <div className="modal-detail-item edit-readonly" style={{ marginBottom: '1rem' }}>
+            <span className="modal-detail-label">Network</span>
+            <span className="modal-detail-value">{NETWORK_LABELS[targetCollectionId]}</span>
+          </div>
+        )}
+        <div className="modal-detail-item edit-readonly">
+          <span className="modal-detail-label">Station ID</span>
+          <span className="modal-detail-value">{nextStationId}</span>
+        </div>
+
+        <p className="edit-hint">Required fields are marked *</p>
+
+        <div className="edit-form-grid">
+          <div className="edit-field">
+            <label className="edit-label" htmlFor="new-stationName">
+              {fieldSchema.isLightRail ? 'Stop name *' : 'Station name *'}
+            </label>
+            <TXTINPWideButton
+              id="new-stationName"
+              value={form.stationName ?? ''}
+              onInputChange={(e) => update({ stationName: e.target.value })}
+              inputClassName="edit-input"
+            
+                colorVariant="secondary"
+              />
+          </div>
+          {!fieldSchema.isLightRail && (
+            <>
+          <div className="edit-field">
+            <label className="edit-label" htmlFor="new-crsCode">
+              CRS Code{fieldSchema.requireCrsCode ? ' *' : ''}
+            </label>
+            <TXTINPWideButton
+              id="new-crsCode"
+              value={form.crsCode ?? ''}
+              onInputChange={(e) => update({ crsCode: e.target.value })}
+              inputClassName="edit-input"
+            
+                colorVariant="secondary"
+              />
+          </div>
+          <div className="edit-field">
+            <label className="edit-label" htmlFor="new-tiploc">
+              Tiploc{fieldSchema.requireTiploc ? ' *' : ''}
+            </label>
+            <TXTINPWideButton
+              id="new-tiploc"
+              value={form.tiploc ?? ''}
+              onInputChange={(e) => update({ tiploc: e.target.value })}
+              inputClassName="edit-input"
+            
+                colorVariant="secondary"
+              />
+          </div>
+          <div className="edit-field">
+            <label className="edit-label" htmlFor="new-toc">
+              TOC *
+            </label>
+            <TXTINPWideButton id="new-toc" value={form.toc ?? ''} onInputChange={(e) => update({ toc: e.target.value })} inputClassName="edit-input" 
+                colorVariant="secondary"
+              />
+          </div>
+            </>
+          )}
+          <div className="edit-field">
+            <label className="edit-label" htmlFor="new-country">
+              Country *
+            </label>
+            <TXTINPWideButton
+              id="new-country"
+              value={form.country ?? ''}
+              onInputChange={(e) => update({ country: e.target.value })}
+              inputClassName="edit-input"
+            
+                colorVariant="secondary"
+              />
+          </div>
+          <div className="edit-field">
+            <label className="edit-label" htmlFor="new-county">
+              County *
+            </label>
+            <TXTINPWideButton id="new-county" value={form.county ?? ''} onInputChange={(e) => update({ county: e.target.value })} inputClassName="edit-input" 
+                colorVariant="secondary"
+              />
+          </div>
+          <div className="edit-field">
+            <label className="edit-label" htmlFor="new-stnarea">
+              Station area *
+            </label>
+            <TXTINPWideButton
+              id="new-stnarea"
+              value={form.stnarea ?? ''}
+              onInputChange={(e) => update({ stnarea: e.target.value })}
+              inputClassName="edit-input"
+            
+                colorVariant="secondary"
+              />
+          </div>
+          {fieldSchema.showBorough && (
+            <div className="edit-field">
+              <label className="edit-label" htmlFor="new-borough">
+                Borough
+              </label>
+              <TXTINPWideButton
+                id="new-borough"
+                value={form.borough ?? ''}
+                onInputChange={(e) => update({ borough: e.target.value })}
+                inputClassName="edit-input"
+                colorVariant="secondary"
+              />
+            </div>
+          )}
+          {fieldSchema.showFareZone && (
+            <div className="edit-field">
+              <label className="edit-label" htmlFor="new-fareZone">
+                Fare Zone
+              </label>
+              <TXTINPWideButton
+                id="new-fareZone"
+                value={form.fareZone ?? ''}
+                onInputChange={(e) => update({ fareZone: e.target.value })}
+                inputClassName="edit-input"
+                colorVariant="secondary"
+              />
+            </div>
+          )}
+          {fieldSchema.showLinesServed && (
+            <div className="edit-field edit-field-full">
+              <span className="edit-label" id="new-linesServed-label">
+                Lines served
+              </span>
+              <LightRailLinesServedChipPicker
+                id="new-linesServed"
+                labelledBy="new-linesServed-label"
+                value={readLightRailDocString(additionalForm as Record<string, unknown>, LIGHT_RAIL_DOC_FIELDS.linesServed)}
+                onChange={(next) =>
+                  updateAdditional({ [LIGHT_RAIL_DOC_FIELDS.linesServed]: next } as Partial<SandboxStationDoc>)
+                }
+              />
+            </div>
+          )}
+          {fieldSchema.showPlatforms && (
+            <div className="edit-field edit-field-full">
+              <span className="edit-label" id="new-platforms-label">
+                Platforms
+              </span>
+              <LightRailPlatformsChipPicker
+                id="new-platforms"
+                labelledBy="new-platforms-label"
+                value={readLightRailDocString(additionalForm as Record<string, unknown>, LIGHT_RAIL_DOC_FIELDS.platforms)}
+                onChange={(next) =>
+                  updateAdditional({ [LIGHT_RAIL_DOC_FIELDS.platforms]: next } as Partial<SandboxStationDoc>)
+                }
+              />
+            </div>
+          )}
+          {fieldSchema.showNlc && (
+            <div className="edit-field">
+              <label className="edit-label" htmlFor="new-nlc">
+                NLC
+              </label>
+              <TXTINPWideButton
+                id="new-nlc"
+                value={String(additionalForm.nlc ?? '')}
+                onInputChange={(e) => updateAdditional({ nlc: e.target.value })}
+                inputClassName="edit-input"
+                colorVariant="secondary"
+              />
+            </div>
+          )}
+          {fieldSchema.showGauge && (
+            <div className="edit-field">
+              <label className="edit-label" htmlFor="new-gauge">
+                Gauge
+              </label>
+              <TXTINPWideButton
+                id="new-gauge"
+                value={String(additionalForm.guage ?? '')}
+                onInputChange={(e) => updateAdditional({ guage: e.target.value })}
+                inputClassName="edit-input"
+                colorVariant="secondary"
+              />
+            </div>
+          )}
+          {fieldSchema.showUrl && (
+            <div className="edit-field edit-field-full">
+              <label className="edit-label" htmlFor="new-station-url">
+                {fieldSchema.urlFieldLabel} *
+              </label>
+              <TXTINPWideButton
+                id="new-station-url"
+                value={String(additionalForm[fieldSchema.urlFieldKey] ?? '')}
+                onInputChange={(e) =>
+                  updateAdditional({ [fieldSchema.urlFieldKey]: e.target.value } as Partial<SandboxStationDoc>)
+                }
+                inputClassName="edit-input"
+                colorVariant="secondary"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {fieldSchema.showStepFreeSection && (
+        <div className="modal-section">
+          <h3 className="modal-section-title">{STEP_FREE_SECTION_LABEL}</h3>
+          <div className="edit-form-grid">
+            <div className="edit-field">
+              <label className="edit-label" htmlFor="new-stepFreeCode">
+                {fieldSchema.isLightRail ? 'Step Free Status' : 'Step-free code'}
+              </label>
+              {fieldSchema.isLightRail ? (
+                <LightRailYesNoSelect
+                  id="new-stepFreeCode"
+                  value={readLightRailDocString(additionalForm as Record<string, unknown>, LIGHT_RAIL_DOC_FIELDS.isStepFree)}
+                  onChange={(nextValue) =>
+                    updateAdditional({ [LIGHT_RAIL_DOC_FIELDS.isStepFree]: nextValue } as Partial<SandboxStationDoc>)
+                  }
+                />
+              ) : (
+                <TXTINPWideButton
+                  id="new-stepFreeCode"
+                  value={String(additionalForm.stepFree?.stepFreeCode ?? '')}
+                  onInputChange={(e) => updateAdditionalNested('stepFree', { stepFreeCode: e.target.value })}
+                  inputClassName="edit-input"
+                  colorVariant="secondary"
+                />
+              )}
+            </div>
+            {fieldSchema.showStepFreeNote && (
+              <div className="edit-field edit-field-full">
+                <label className="edit-label" htmlFor="new-stepFreeNote">
+                  Note
+                </label>
+                <TXTINPWideButton
+                  id="new-stepFreeNote"
+                  value={String(additionalForm.stepFree?.stepFreeNote ?? '')}
+                  onInputChange={(e) => updateAdditionalNested('stepFree', { stepFreeNote: e.target.value })}
+                  inputClassName="edit-input"
+                  colorVariant="secondary"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      </>
+      )}
+
+      {showLocationTab && (
+        <div className="modal-section">
+          <h3 className="modal-section-title">Location</h3>
+          <LocationMapPicker
+            latitude={Number(form.latitude ?? 0)}
+            longitude={Number(form.longitude ?? 0)}
+            onLatLngChange={(lat, lng) => update({ latitude: lat, longitude: lng })}
+            height={480}
+          />
+          <div className="edit-form-grid">
+            <div className="edit-field">
+              <label className="edit-label" htmlFor="new-latitude">
+                Latitude *
+              </label>
+              <input
+                id="new-latitude"
+                type="number"
+                step="any"
+                value={form.latitude ?? 0}
+                onChange={(e) => update({ latitude: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
+                className="edit-input"
+              />
+            </div>
+            <div className="edit-field">
+              <label className="edit-label" htmlFor="new-longitude">
+                Longitude *
+              </label>
+              <input
+                id="new-longitude"
+                type="number"
+                step="any"
+                value={form.longitude ?? 0}
+                onChange={(e) => update({ longitude: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
+                className="edit-input"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showUsage && (
+      <div className="modal-section">
+        <h3 className="modal-section-title">Usage</h3>
+        {yearlyPassengersRows.length === 0 && <p className="edit-hint">No yearly passenger rows set.</p>}
+        {yearlyPassengersRows.map((row, idx) => (
+          <div key={`${idx}-${row.year}`} className="edit-form-grid">
+            <div className="edit-field">
+              <label className="edit-label" htmlFor={`new-year-${idx}`}>
+                Year
+              </label>
+              <TXTINPWideButton
+                id={`new-year-${idx}`}
+                value={row.year}
+                onInputChange={(e) => {
+                  const v = e.target.value
+                  setYearlyPassengersRows((prev) => prev.map((r, i) => (i === idx ? { ...r, year: v } : r)))
+                }}
+                inputClassName="edit-input"
+                placeholder="e.g. 2021"
+              
+                colorVariant="secondary"
+              />
+            </div>
+            <div className="edit-field">
+              <label className="edit-label" htmlFor={`new-passengers-${idx}`}>
+                Passengers
+              </label>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <TXTINPWideButton
+                  id={`new-passengers-${idx}`}
+                  value={row.value}
+                  onInputChange={(e) => {
+                    const v = e.target.value
+                    setYearlyPassengersRows((prev) => prev.map((r, i) => (i === idx ? { ...r, value: v } : r)))
+                  }}
+                  inputClassName="edit-input"
+                  placeholder="e.g. 123456"
+                  style={{ flex: 1 }}
+                
+                colorVariant="secondary"
+              />
+                <Button
+                  type="button"
+                  variant="circle"
+                  ariaLabel="Remove yearly passenger row"
+                  onClick={() => setYearlyPassengersRows((prev) => prev.filter((_, i) => i !== idx))}
+                  icon={
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  }
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+        <Button type="button" variant="wide" width="hug" onClick={() => setYearlyPassengersRows((prev) => [...prev, { year: '', value: '' }])}>
+          + Add year
+        </Button>
+      </div>
+      )}
+
+      {showAdditional && (
+      <>
+      <div className="modal-section">
+        <h3 className="modal-section-title">Additional details</h3>
+        <div className="edit-form-grid">
+          {fieldSchema.showOperatorCode && (
+            <div className="edit-field">
+              <label className="edit-label" htmlFor="new-operatorCode">
+                Operator Code
+              </label>
+              <TXTINPWideButton
+                id="new-operatorCode"
+                value={String(additionalForm.operatorCode ?? '')}
+                onInputChange={(e) => updateAdditional({ operatorCode: e.target.value })}
+                inputClassName="edit-input"
+                colorVariant="secondary"
+              />
+            </div>
+          )}
+          {fieldSchema.showMinConnectionTime && (
+            <div className="edit-field">
+              <label className="edit-label" htmlFor="new-minConnectionTime">
+                Min connection time
+              </label>
+              <TXTINPWideButton
+                id="new-minConnectionTime"
+                value={String((additionalForm['min-connection-time'] as unknown) ?? '')}
+                onInputChange={(e) => updateAdditional({ 'min-connection-time': e.target.value })}
+                inputClassName="edit-input"
+                colorVariant="secondary"
+              />
+            </div>
+          )}
+          {fieldSchema.showProvince && (
+            <div className="edit-field">
+              <label className="edit-label" htmlFor="new-province">
+                Province
+              </label>
+              <TXTINPWideButton
+                id="new-province"
+                value={String(additionalForm.province ?? '')}
+                onInputChange={(e) => updateAdditional({ province: e.target.value })}
+                inputClassName="edit-input"
+                colorVariant="secondary"
+              />
+            </div>
+          )}
+          {fieldSchema.showPostEirCode && (
+            <div className="edit-field">
+              <label className="edit-label" htmlFor="new-post-eir-code">
+                Post / Eircode
+              </label>
+              <TXTINPWideButton
+                id="new-post-eir-code"
+                value={String(additionalForm['post-eir_code'] ?? '')}
+                onInputChange={(e) => updateAdditional({ 'post-eir_code': e.target.value })}
+                inputClassName="edit-input"
+                colorVariant="secondary"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+      </>
+      )}
+
+      {showFacilities && fieldSchema.showToiletsSection && (
+        <div className="modal-section">
+          <h3 className="modal-section-title">Toilets</h3>
+          <div className="edit-form-grid">
+            <div className="edit-field">
+              <label className="edit-label" htmlFor="new-toiletsAccessible">
+                Accessible
+              </label>
+              <TXTINPWideButton
+                id="new-toiletsAccessible"
+                value={String(additionalForm.toilets?.toiletsAccessible ?? '')}
+                onInputChange={(e) => updateAdditionalNested('toilets', { toiletsAccessible: e.target.value })}
+                inputClassName="edit-input"
+              
+                colorVariant="secondary"
+              />
+            </div>
+            <div className="edit-field">
+              <label className="edit-label" htmlFor="new-toiletsChangingPlace">
+                Changing Place
+              </label>
+              <TXTINPWideButton
+                id="new-toiletsChangingPlace"
+                value={String(additionalForm.toilets?.toiletsChangingPlace ?? '')}
+                onInputChange={(e) => updateAdditionalNested('toilets', { toiletsChangingPlace: e.target.value })}
+                inputClassName="edit-input"
+              
+                colorVariant="secondary"
+              />
+            </div>
+            <div className="edit-field">
+              <label className="edit-label" htmlFor="new-toiletsBabyChanging">
+                Baby changing
+              </label>
+              <TXTINPWideButton
+                id="new-toiletsBabyChanging"
+                value={String(additionalForm.toilets?.toiletsBabyChanging ?? '')}
+                onInputChange={(e) => updateAdditionalNested('toilets', { toiletsBabyChanging: e.target.value })}
+                inputClassName="edit-input"
+              
+                colorVariant="secondary"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showStepFree && fieldSchema.showLiftSection && (
+        <div className="modal-section">
+          <h3 className="modal-section-title">Lift</h3>
+          <div className="edit-form-grid">
+            {fieldSchema.isLightRail ? (
+              <div className="edit-field">
+                <label className="edit-label" htmlFor="new-hasLift">
+                  Has lift
+                </label>
+                <LightRailYesNoSelect
+                  id="new-hasLift"
+                  value={readLightRailDocString(additionalForm as Record<string, unknown>, LIGHT_RAIL_DOC_FIELDS.hasLift)}
+                  onChange={(nextValue) =>
+                    updateAdditional({ [LIGHT_RAIL_DOC_FIELDS.hasLift]: nextValue } as Partial<SandboxStationDoc>)
+                  }
+                />
+              </div>
+            ) : (
+              <>
+            <div className="edit-field">
+              <label className="edit-label" htmlFor="new-liftAvailable">
+                Available
+              </label>
+              <TXTINPWideButton
+                id="new-liftAvailable"
+                value={String(additionalForm.lift?.liftAvailable ?? '')}
+                onInputChange={(e) => updateAdditionalNested('lift', { liftAvailable: e.target.value })}
+                inputClassName="edit-input"
+              
+                colorVariant="secondary"
+              />
+            </div>
+            <div className="edit-field edit-field-full">
+              <label className="edit-label" htmlFor="new-liftNotes">
+                Notes
+              </label>
+              <TXTINPWideButton
+                id="new-liftNotes"
+                value={String(additionalForm.lift?.liftNotes ?? '')}
+                onInputChange={(e) => updateAdditionalNested('lift', { liftNotes: e.target.value })}
+                inputClassName="edit-input"
+              
+                colorVariant="secondary"
+              />
+            </div>
+            <div className="edit-field edit-field-full">
+              <label className="edit-label" htmlFor="new-liftDetails">
+                Details
+              </label>
+              <TXTINPWideButton
+                id="new-liftDetails"
+                value={String(additionalForm.lift?.liftDetails ?? '')}
+                onInputChange={(e) => updateAdditionalNested('lift', { liftDetails: e.target.value })}
+                inputClassName="edit-input"
+              
+                colorVariant="secondary"
+              />
+            </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showService && (
+        <div className="modal-section">
+          <h3 className="modal-section-title">Service & Connections</h3>
+          <div className="edit-form-grid">
+            {fieldSchema.isLightRail && fieldSchema.showDateOpened && (
+              <div className="edit-field">
+                <label className="edit-label" htmlFor="new-dateOpened">
+                  Date opened
+                </label>
+                <LightRailDateOpenedInput
+                  id="new-dateOpened"
+                  value={readLightRailDocString(additionalForm as Record<string, unknown>, LIGHT_RAIL_DOC_FIELDS.dateOpened)}
+                  onChange={(nextValue) =>
+                    updateAdditional({ [LIGHT_RAIL_DOC_FIELDS.dateOpened]: nextValue } as Partial<SandboxStationDoc>)
+                  }
+                />
+              </div>
+            )}
+            {!fieldSchema.isLightRail && fieldSchema.showConnectionBus && (
+              <div className="edit-field">
+                <label className="edit-label" htmlFor="new-connectionBus">
+                  Bus
+                </label>
+                <TXTINPWideButton
+                  id="new-connectionBus"
+                  value={String(additionalForm.connections?.connectionBus ?? '')}
+                  onInputChange={(e) => updateAdditionalNested('connections', { connectionBus: e.target.value })}
+                  inputClassName="edit-input"
+                  colorVariant="secondary"
+                />
+              </div>
+            )}
+            {fieldSchema.isLightRail && fieldSchema.showConnectionBus && (
+              <div className="edit-field">
+                <label className="edit-label" htmlFor="new-bus">
+                  Bus
+                </label>
+                <LightRailYesNoSelect
+                  id="new-bus"
+                  value={readLightRailDocString(additionalForm as Record<string, unknown>, LIGHT_RAIL_DOC_FIELDS.bus)}
+                  onChange={(nextValue) =>
+                    updateAdditional({ [LIGHT_RAIL_DOC_FIELDS.bus]: nextValue } as Partial<SandboxStationDoc>)
+                  }
+                />
+              </div>
+            )}
+            {fieldSchema.isLightRail && fieldSchema.showConnectionTrain && (
+              <div className="edit-field">
+                <label className="edit-label" htmlFor="new-train">
+                  Train
+                </label>
+                <LightRailYesNoSelect
+                  id="new-train"
+                  value={readLightRailDocString(additionalForm as Record<string, unknown>, LIGHT_RAIL_DOC_FIELDS.train)}
+                  onChange={(nextValue) =>
+                    updateAdditional({ [LIGHT_RAIL_DOC_FIELDS.train]: nextValue } as Partial<SandboxStationDoc>)
+                  }
+                />
+              </div>
+            )}
+            {!fieldSchema.isLightRail && fieldSchema.showConnectionTaxi && (
+              <div className="edit-field">
+                <label className="edit-label" htmlFor="new-connectionTaxi">
+                  Taxi
+                </label>
+                <TXTINPWideButton
+                  id="new-connectionTaxi"
+                  value={String(additionalForm.connections?.connectionTaxi ?? '')}
+                  onInputChange={(e) => updateAdditionalNested('connections', { connectionTaxi: e.target.value })}
+                  inputClassName="edit-input"
+                  colorVariant="secondary"
+                />
+              </div>
+            )}
+            {!fieldSchema.isLightRail && fieldSchema.showConnectionUnderground && (
+              <div className="edit-field">
+                <label className="edit-label" htmlFor="new-connectionUnderground">
+                  Underground
+                </label>
+                <TXTINPWideButton
+                  id="new-connectionUnderground"
+                  value={String(additionalForm.connections?.connectionUnderground ?? '')}
+                  onInputChange={(e) => updateAdditionalNested('connections', { connectionUnderground: e.target.value })}
+                  inputClassName="edit-input"
+                  colorVariant="secondary"
+                />
+              </div>
+            )}
+            {!fieldSchema.isLightRail && fieldSchema.showStationStatusSection && (
+              <>
+                <div className="edit-field">
+                  <label className="edit-label" htmlFor="new-station-status">
+                    Status
+                  </label>
+                  <TXTINPWideButton
+                    id="new-station-status"
+                    value={String(additionalForm.stationstatus?.status ?? '')}
+                    onInputChange={(e) => updateAdditionalNested('stationstatus', { status: e.target.value })}
+                    inputClassName="edit-input"
+                    colorVariant="secondary"
+                  />
+                </div>
+                <div className="edit-field">
+                  <label className="edit-label" htmlFor="new-operational-period">
+                    Operational period
+                  </label>
+                  <TXTINPWideButton
+                    id="new-operational-period"
+                    value={String(additionalForm.stationstatus?.operationalperiod ?? '')}
+                    onInputChange={(e) =>
+                      updateAdditionalNested('stationstatus', { operationalperiod: e.target.value })
+                    }
+                    inputClassName="edit-input"
+                    colorVariant="secondary"
+                  />
+                </div>
+              </>
+            )}
+            {fieldSchema.showStaffingLevel && (
+              <div className="edit-field">
+                <label className="edit-label" htmlFor="new-staffingLevel">
+                  {fieldSchema.isLightRail ? 'Staffed' : 'Staffing Level'}
+                </label>
+                {fieldSchema.isLightRail ? (
+                  <LightRailYesNoSelect
+                    id="new-staffingLevel"
+                    value={readLightRailDocString(additionalForm as Record<string, unknown>, LIGHT_RAIL_DOC_FIELDS.isStaffed)}
+                    onChange={(nextValue) =>
+                      updateAdditional({ [LIGHT_RAIL_DOC_FIELDS.isStaffed]: nextValue } as Partial<SandboxStationDoc>)
+                    }
+                  />
+                ) : (
+                  <TXTINPWideButton
+                    id="new-staffingLevel"
+                    value={String(additionalForm.staffingLevel ?? '')}
+                    onInputChange={(e) => updateAdditional({ staffingLevel: e.target.value })}
+                    inputClassName="edit-input"
+                    colorVariant="secondary"
+                  />
+                )}
+              </div>
+            )}
+            {!fieldSchema.isLightRail && fieldSchema.showRequestStop && (
+              <div className="edit-field">
+                <label className="edit-label" htmlFor="new-requestStop">
+                  Request stop
+                </label>
+                <TXTINPWideButton
+                  id="new-requestStop"
+                  value={String(additionalForm.is?.isrequeststop ?? '')}
+                  onInputChange={(e) => updateAdditionalNested('is', { isrequeststop: e.target.value })}
+                  inputClassName="edit-input"
+                  colorVariant="secondary"
+                />
+              </div>
+            )}
+            {fieldSchema.showLimitedService && (
+              <div className="edit-field">
+                <label className="edit-label" htmlFor="new-limitedService">
+                  Limited service
+                </label>
+                {fieldSchema.isLightRail ? (
+                  <LightRailYesNoSelect
+                    id="new-limitedService"
+                    value={readLightRailDocString(
+                      additionalForm as Record<string, unknown>,
+                      LIGHT_RAIL_DOC_FIELDS.isLimitedService
+                    )}
+                    onChange={(nextValue) =>
+                      updateAdditional({ [LIGHT_RAIL_DOC_FIELDS.isLimitedService]: nextValue } as Partial<SandboxStationDoc>)
+                    }
+                  />
+                ) : (
+                  <TXTINPWideButton
+                    id="new-limitedService"
+                    value={String(additionalForm.is?.Islimitedservice ?? '')}
+                    onInputChange={(e) => updateAdditionalNested('is', { Islimitedservice: e.target.value })}
+                    inputClassName="edit-input"
+                    colorVariant="secondary"
+                  />
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showFacilities && fieldSchema.facilityKeys.length > 0 && (
+        <div className="modal-section">
+          <h3 className="modal-section-title">Facilities</h3>
+          {facilitiesRows.length === 0 && <p className="edit-hint">No facilities set for this station.</p>}
+          {facilitiesRows.length > 0 && (
+            <div className="edit-form-grid">
+              {facilitiesRows.map((row, idx) => {
+                const label = row.key
+                  .replace(/([A-Z])/g, ' $1')
+                  .replace(/[_-]+/g, ' ')
+                  .replace(/^./, (s) => s.toUpperCase())
+                return (
+                  <div key={`${idx}-${row.key}`} className="edit-field">
+                    <label className="edit-label" htmlFor={`new-facility-${idx}`}>
+                      {label}
+                    </label>
+                    <TXTINPWideButton
+                      id={`new-facility-${idx}`}
+                      value={row.value}
+                      onInputChange={(e) => {
+                        const v = e.target.value
+                        setFacilitiesRows((prev) => prev.map((r, i) => (i === idx ? { ...r, value: v } : r)))
+                      }}
+                      inputClassName="edit-input"
+                      placeholder="—"
+                    
+                colorVariant="secondary"
+              />
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {saveError && (
+        <div className="edit-error" role="alert">
+          {saveError}
+        </div>
+      )}
+
+      {(() => {
+        const actions = (
+          <div className="modal-edit-actions modal-edit-actions--inline">
+            <Button
+              type="button"
+              variant="wide"
+              width="hug"
+              className="edit-cancel-button"
+              onClick={() => {
+                if (isDirty && !window.confirm(UNSAVED_MESSAGE)) return
+                onCancel()
+              }}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="wide"
+              width="hug"
+              className="edit-save-button"
+              onClick={handleSave}
+              disabled={saving || !canCreate}
+            >
+              {saving ? (isEditDraft ? 'Saving…' : 'Creating…') : isEditDraft ? 'Save draft' : 'Create station'}
+            </Button>
+          </div>
+        )
+        const portalEl =
+          actionsPortalId && typeof document !== 'undefined' ? document.getElementById(actionsPortalId) : null
+        return portalEl ? createPortal(actions, portalEl) : actions
+      })()}
+    </div>
+  )
+}
+
+export default NewStationForm
+

@@ -44,7 +44,7 @@ const LayoutPage: React.FC = () => {
           ),
         }}
       />
-      <div className="container">
+      <div className="container container--full-bleed">
         <div className="ds-layout">
 
         <section className="ds-layout__section">

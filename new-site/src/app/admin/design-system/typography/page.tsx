@@ -36,7 +36,7 @@ const TypographyPage: React.FC = () => {
           ),
         }}
       />
-      <div className="container">
+      <div className="container container--full-bleed">
         <div className="ds-typography">
 
         <section className="ds-typography__section">
