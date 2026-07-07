@@ -1,0 +1,5 @@
+.DS_Store
+
+# Reference-only copy of the old Vite/React site — tracked separately in its
+# own repo (https://github.com/GoldJack1/railstatisticsweb.git), never in this one.
+/Old Website\ /
