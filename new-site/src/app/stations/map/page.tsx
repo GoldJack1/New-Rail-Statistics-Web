@@ -16,7 +16,7 @@ import {
 } from '@/utils/superTramTimeline'
 import { useStationCollection } from '@/contexts/StationCollectionContext'
 import { usePendingStationChanges } from '@/contexts/PendingStationChangesContext'
-import { fetchAllNetworkStationsFromFirebase } from '@/services/firebase'
+import { useStationsMap } from '@/hooks/useStations'
 import { getStationMapKey } from '@/utils/stationAreaSlug'
 import { mergePendingNewStationsForMap } from '@/utils/pendingMapStations'
 import { isValidStationCoordinate } from '@/utils/stationCoordinates'
@@ -41,9 +41,7 @@ const StationsMapPage: React.FC = () => {
   const isAdminMode = useStationAdminMode()
   const { collectionId, networkView, setNetworkView, isSandbox } = useStationCollection()
   const { pendingChanges } = usePendingStationChanges()
-  const [stations, setStations] = useState<Station[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { stations, loading, error, refetch, resolveStation } = useStationsMap()
   const [selectedStation, setSelectedStation] = useState<Station | null>(null)
   const [isAddStationMode, setIsAddStationMode] = useState(false)
   const [timelineStepIndex, setTimelineStepIndex] = useState(0)
@@ -58,23 +56,17 @@ const StationsMapPage: React.FC = () => {
     }
   }, [isAdminMode])
 
-  const loadStations = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await fetchAllNetworkStationsFromFirebase()
-      setStations(data)
-    } catch (err) {
-      console.error('Failed to load stations for map:', err)
-      setError('Unable to load station data for the map. Please try again.')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  const loadStations = useCallback(() => {
+    refetch()
+  }, [refetch])
 
   useEffect(() => {
-    void loadStations()
-  }, [loadStations])
+    if (!selectedStation) return
+    const resolved = resolveStation(selectedStation)
+    if (resolved !== selectedStation) {
+      setSelectedStation(resolved)
+    }
+  }, [stations, selectedStation, resolveStation])
 
   useEffect(() => {
     if (!selectedStation) return
@@ -95,9 +87,12 @@ const StationsMapPage: React.FC = () => {
     return () => window.cancelAnimationFrame(frameId)
   }, [selectedStation])
 
-  const handleStationSelect = useCallback((station: Station) => {
-    setSelectedStation(station)
-  }, [])
+  const handleStationSelect = useCallback(
+    (station: Station) => {
+      setSelectedStation(resolveStation(station))
+    },
+    [resolveStation]
+  )
 
   const handleStationClear = useCallback(() => {
     setSelectedStation(null)
@@ -210,7 +205,7 @@ const StationsMapPage: React.FC = () => {
           </svg>
           <h2>Failed to load stations</h2>
           <p>{error}</p>
-          <BUTWideButton onClick={() => void loadStations()} width="hug">
+          <BUTWideButton onClick={loadStations} width="hug">
             Try Again
           </BUTWideButton>
         </div>

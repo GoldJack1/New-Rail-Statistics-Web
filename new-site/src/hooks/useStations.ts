@@ -1,130 +1,178 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import {
-  fetchStationsFromFirebase,
-  fetchAllNetworkStationsFromFirebase,
-} from '@/services/firebase'
-import { calculateStats, fetchLocalStations } from '@/services/localData'
-import type { Station, StationStats, UseStationsReturn } from '@/types'
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { useStationCollection } from '@/contexts/StationCollectionContext'
+import { calculateStats } from '@/services/localData'
+import {
+  bootstrapStationsData,
+  getCollectionError,
+  getFullStationById,
+  getMergedNetworkStations,
+  getSandboxStations,
+  invalidateStationsCache,
+  isAnyNetworkCollectionLoading,
+  isAnyNetworkCollectionRefreshing,
+  isCollectionLoading,
+  isCollectionRefreshing,
+  loadAllNetworkStationsProgressive,
+  getStationsStoreRevision,
+  subscribeStationsData,
+} from '@/services/stationsDataService'
+import type { Station, StationStats, UseStationsReturn } from '@/types'
+import { buildFullStationIndex, resolveFullStationFromCache } from '@/utils/mapLeanStation'
 
-const FIREBASE_TIMEOUT_MS = 12_000
-const SANDBOX_COLLECTION_ID = 'newsandboxstations1'
-
-const getErrorMessage = (err: unknown): string => {
-  if (err instanceof Error) return err.message
-  if (typeof err === 'string') return err
-  try {
-    return JSON.stringify(err)
-  } catch {
-    return 'Unknown error'
-  }
-}
-
-export const useStations = (): UseStationsReturn => {
-  const { isSandbox } = useStationCollection()
-  const [networkStations, setNetworkStations] = useState<Station[]>([])
-  const [sandboxStations, setSandboxStations] = useState<Station[]>([])
-  const [loading, setLoading] = useState<boolean>(true)
-  const [error, setError] = useState<string | null>(null)
-  const [stats, setStats] = useState<StationStats>({
+const SERVER_STATION_SNAPSHOT = {
+  stations: [] as Station[],
+  loading: true,
+  isRefreshing: false,
+  error: null as string | null,
+  stats: {
     totalStations: 0,
     withCoordinates: 0,
     withTOC: 0,
-    withPassengers: 0
-  })
-  const networksLoadedRef = useRef(false)
-  const sandboxLoadedRef = useRef(false)
-
-  const stations = isSandbox ? sandboxStations : networkStations
-
-  const loadStations = useCallback(async (): Promise<void> => {
-    try {
-      setError(null)
-
-      const useLocalOnly = process.env.NEXT_PUBLIC_USE_LOCAL_DATA_ONLY === 'true'
-
-      if (useLocalOnly) {
-        setLoading(true)
-        const localStations = await fetchLocalStations()
-        if (localStations.length > 0) {
-          setNetworkStations(localStations)
-          setStats(calculateStats(localStations))
-          networksLoadedRef.current = true
-        } else {
-          setError('No local data. Add public/data/stations.json or set VITE_USE_LOCAL_DATA_ONLY=false.')
-        }
-        return
-      }
-
-      const hasCached = isSandbox ? sandboxLoadedRef.current : networksLoadedRef.current
-      if (!hasCached) {
-        setLoading(true)
-      }
-
-      const isDev = process.env.NODE_ENV === 'development'
-      const fetchData = async (): Promise<Station[]> => {
-        if (isSandbox) {
-          return fetchStationsFromFirebase(SANDBOX_COLLECTION_ID)
-        }
-        return fetchAllNetworkStationsFromFirebase()
-      }
-
-      let firebaseStations: Station[]
-      if (isDev) {
-        const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Firebase request timed out')), FIREBASE_TIMEOUT_MS)
-        )
-        firebaseStations = await Promise.race([fetchData(), timeoutPromise])
-      } else {
-        firebaseStations = await fetchData()
-      }
-
-      if (firebaseStations.length > 0) {
-        if (isSandbox) {
-          setSandboxStations(firebaseStations)
-          sandboxLoadedRef.current = true
-        } else {
-          setNetworkStations(firebaseStations)
-          networksLoadedRef.current = true
-        }
-        setStats(calculateStats(firebaseStations))
-      } else {
-        throw new Error('No data available in Firebase')
-      }
-    } catch (err) {
-      console.error('Failed to load stations:', err)
-      const details = getErrorMessage(err)
-      const isDev = process.env.NODE_ENV === 'development'
-      const hint = isDev
-        ? 'Check your `.env.local` Firebase config (VITE_FIREBASE_*). Local JSON fallback is disabled.'
-        : 'Please try again later.'
-      setError(`Unable to fetch station data from Firebase. ${hint}${details ? ` (${details})` : ''}`)
-    } finally {
-      setLoading(false)
-    }
-  }, [isSandbox])
-
-  useEffect(() => {
-    void loadStations()
-  }, [loadStations])
-
-  useEffect(() => {
-    const onRefetch = () => {
-      void loadStations()
-    }
-    window.addEventListener('railstats-stations-refetch', onRefetch)
-    return () => window.removeEventListener('railstats-stations-refetch', onRefetch)
-  }, [loadStations])
-
-  const refetch = (): void => {
-    void loadStations()
-  }
-
-  return {
-    stations,
-    loading,
-    error,
-    stats,
-    refetch
-  }
+    withPassengers: 0,
+  } satisfies StationStats,
 }
+
+function buildStationsError(isSandbox: boolean): string | null {
+  if (isSandbox) {
+    return getCollectionError('newsandboxstations1')
+  }
+  for (const message of [
+    getCollectionError('stations_gbnr'),
+    getCollectionError('stations_nitranslink'),
+    getCollectionError('stations_roiirerail'),
+    getCollectionError('stations_gbheritage'),
+    getCollectionError('lightrail_GBSHEFFSUPERTRAM'),
+  ]) {
+    if (message) return message
+  }
+  return null
+}
+
+export interface UseStationsMapReturn {
+  stations: Station[]
+  loading: boolean
+  isRefreshing: boolean
+  error: string | null
+  refetch: () => void
+  resolveStation: (station: Station) => Station
+}
+
+export const useStations = (): UseStationsReturn => {
+  const { isSandbox, networkView } = useStationCollection()
+  const [hydrated, setHydrated] = useState(false)
+
+  useEffect(() => {
+    setHydrated(true)
+  }, [])
+
+  const revision = useSyncExternalStore(
+    subscribeStationsData,
+    getStationsStoreRevision,
+    () => 0
+  )
+
+  const snapshot = useMemo(() => {
+    if (!hydrated) return SERVER_STATION_SNAPSHOT
+    const fullStations = isSandbox ? getSandboxStations('full') : getMergedNetworkStations('full')
+    const leanStations = isSandbox ? getSandboxStations('lean') : getMergedNetworkStations('lean')
+    const stations = fullStations.length > 0 ? fullStations : leanStations
+    const loading = isSandbox
+      ? isCollectionLoading('newsandboxstations1')
+      : isAnyNetworkCollectionLoading() && stations.length === 0
+    const isRefreshing = isSandbox
+      ? isCollectionRefreshing('newsandboxstations1')
+      : isAnyNetworkCollectionRefreshing()
+    const error = stations.length === 0 ? buildStationsError(isSandbox) : null
+    const stats = calculateStats(stations)
+    return { stations, loading, isRefreshing, error, stats }
+  }, [hydrated, isSandbox, revision])
+
+  const refetch = useCallback(() => {
+    invalidateStationsCache()
+    void bootstrapStationsData({ isSandbox, networkView, detailLevel: 'lean', force: true }).then(() =>
+      loadAllNetworkStationsProgressive({ detailLevel: 'full', force: true })
+    )
+  }, [isSandbox, networkView])
+
+  return useMemo(
+    () => ({
+      ...snapshot,
+      refetch,
+    }),
+    [snapshot, refetch]
+  )
+}
+
+export const useStationsMap = (): UseStationsMapReturn => {
+  const { isSandbox, networkView } = useStationCollection()
+  const [hydrated, setHydrated] = useState(false)
+
+  useEffect(() => {
+    setHydrated(true)
+  }, [])
+
+  const revision = useSyncExternalStore(
+    subscribeStationsData,
+    getStationsStoreRevision,
+    () => 0
+  )
+
+  const snapshot = useMemo(() => {
+    if (!hydrated) {
+      return {
+        stations: SERVER_STATION_SNAPSHOT.stations,
+        fullById: new Map<string, Station>(),
+        loading: true,
+        isRefreshing: false,
+        error: null,
+      }
+    }
+    const leanStations = isSandbox ? getSandboxStations('lean') : getMergedNetworkStations('lean')
+    const fullStations = isSandbox ? getSandboxStations('full') : getMergedNetworkStations('full')
+    const stations = leanStations.length > 0 ? leanStations : fullStations
+    const loading = isSandbox
+      ? isCollectionLoading('newsandboxstations1')
+      : isAnyNetworkCollectionLoading() && stations.length === 0
+    const isRefreshing = isSandbox
+      ? isCollectionRefreshing('newsandboxstations1')
+      : isAnyNetworkCollectionRefreshing()
+    const error = stations.length === 0 ? buildStationsError(isSandbox) : null
+    return {
+      stations,
+      fullById: buildFullStationIndex(fullStations),
+      loading,
+      isRefreshing,
+      error,
+    }
+  }, [hydrated, isSandbox, revision])
+
+  const refetch = useCallback(() => {
+    invalidateStationsCache()
+    void bootstrapStationsData({ isSandbox, networkView, detailLevel: 'lean', force: true }).then(() =>
+      loadAllNetworkStationsProgressive({ detailLevel: 'full', force: true })
+    )
+  }, [isSandbox, networkView])
+
+  const resolveStation = useCallback(
+    (station: Station) => {
+      const full = getFullStationById(station.id)
+      if (full) return full
+      return resolveFullStationFromCache(station, snapshot.fullById)
+    },
+    [snapshot.fullById]
+  )
+
+  return useMemo(
+    () => ({
+      stations: snapshot.stations,
+      loading: snapshot.loading,
+      isRefreshing: snapshot.isRefreshing,
+      error: snapshot.error,
+      refetch,
+      resolveStation,
+    }),
+    [snapshot, refetch, resolveStation]
+  )
+}
+
+export { SERVER_STATION_SNAPSHOT }

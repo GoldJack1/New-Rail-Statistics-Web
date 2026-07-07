@@ -3,6 +3,7 @@ import { Suspense } from 'react'
 import { geologica, aronetiv, aronetivNormal } from './fonts'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { StationCollectionProvider } from '@/contexts/StationCollectionContext'
+import { StationsCacheProvider } from '@/contexts/StationsCacheContext'
 import { PendingStationChangesProvider } from '@/contexts/PendingStationChangesContext'
 import Header from '@/components/misc/Header/Header'
 import Footer from '@/components/misc/Footer/Footer'
@@ -120,7 +121,8 @@ export default function RootLayout({
       <body>
         <AuthProvider>
           <StationCollectionProvider>
-            <PendingStationChangesProvider>
+            <StationsCacheProvider>
+              <PendingStationChangesProvider>
               <ServiceWorkerRegistration />
               <div className="app">
                 <Header />
@@ -132,7 +134,8 @@ export default function RootLayout({
                   <FirebaseAnalytics />
                 </Suspense>
               </div>
-            </PendingStationChangesProvider>
+              </PendingStationChangesProvider>
+            </StationsCacheProvider>
           </StationCollectionProvider>
         </AuthProvider>
       </body>
