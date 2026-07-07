@@ -4,6 +4,8 @@
   align-items: stretch;
   gap: 0;
   position: relative;
+  overflow: visible;
+  padding-bottom: 4px;
 }
 
 .rs-button-bar__item {

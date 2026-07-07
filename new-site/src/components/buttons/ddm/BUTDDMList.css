@@ -1,6 +1,18 @@
 .but-ddm {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   position: relative;
+  overflow: visible;
+}
+
+.but-ddm--open {
+  z-index: 2;
+}
+
+.but-ddm__header {
+  position: relative;
+  overflow: visible;
 }
 
 .but-ddm__header .rs-button {
@@ -28,6 +40,7 @@
 
 .but-ddm--open .but-ddm__panel {
   opacity: 1;
+  overflow: visible;
 }
 
 .but-ddm__list-wrap {

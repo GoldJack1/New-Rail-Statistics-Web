@@ -216,6 +216,11 @@ button, a, input, select, textarea, [role="button"] {
     min-width: unset;
 }
 
+button.rs-tog-toggle {
+    min-height: unset;
+    min-width: unset;
+}
+
 .universal-header a.header-nav-link {
     min-height: unset;
     min-width: unset;
@@ -445,10 +450,4 @@ body:has(.rs-page-top-header) {
     width: 100%;
     min-width: 0;
     max-width: 100%;
-}
-
-@media (max-width: 639px) {
-    .main-content.app-main.app-main--stations-layout {
-        overflow-x: clip;
-    }
 }

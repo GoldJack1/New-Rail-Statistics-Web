@@ -8,9 +8,22 @@
 }
 
 .stations-map-timeline__header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background-color: var(--bg-primary);
+    box-sizing: border-box;
+}
+
+.stations-map-timeline__header-copy {
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: var(--space-sm);
+    min-width: 0;
 }
 
 .stations-map-timeline__title {
@@ -18,12 +31,27 @@
     font-size: var(--text-sm);
     font-weight: 700;
     color: var(--text-primary);
+    line-height: 1.2;
+    min-width: 0;
 }
 
+.stations-map-timeline__toggle.rs-tog-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-self: end;
+    align-self: center;
+    flex-shrink: 0;
+    min-height: 25px;
+    min-width: unset;
+    height: 25px;
+}
+
+.stations-map-timeline__subtitle,
 .stations-map-timeline__meta {
     margin: 0;
     font-size: var(--text-xs);
     color: var(--text-secondary);
+    line-height: 1.45;
 }
 
 .stations-map-timeline__empty {
@@ -55,16 +83,35 @@
 .stations-map-timeline__slider-wrap {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.45rem;
+    padding: 0.15rem 0;
 }
 
 .stations-map-timeline__slider {
-    --timeline-track: color-mix(in srgb, var(--border-color) 70%, transparent);
+    --timeline-track: color-mix(in srgb, var(--text-secondary) 28%, transparent);
     --timeline-fill: #ff5700;
+    --timeline-track-height: 3px;
+    --timeline-thumb-size: 0.875rem;
     width: 100%;
     margin: 0;
-    height: 0.35rem;
+    height: 1.5rem;
     appearance: none;
+    background: transparent;
+    cursor: pointer;
+}
+
+.stations-map-timeline__slider:focus {
+    outline: none;
+}
+
+.stations-map-timeline__slider:focus-visible {
+    outline: 2px solid var(--timeline-fill);
+    outline-offset: 3px;
+    border-radius: 999px;
+}
+
+.stations-map-timeline__slider::-webkit-slider-runnable-track {
+    height: var(--timeline-track-height);
     border-radius: 999px;
     background: linear-gradient(
         to right,
@@ -73,31 +120,51 @@
         var(--timeline-track) var(--timeline-progress, 0%),
         var(--timeline-track) 100%
     );
-    cursor: pointer;
-}
-
-.stations-map-timeline__slider:focus-visible {
-    outline: 2px solid var(--timeline-fill);
-    outline-offset: 2px;
 }
 
 .stations-map-timeline__slider::-webkit-slider-thumb {
     appearance: none;
-    width: 1rem;
-    height: 1rem;
+    width: var(--timeline-thumb-size);
+    height: var(--timeline-thumb-size);
+    margin-top: calc((var(--timeline-track-height) - var(--timeline-thumb-size)) / 2);
     border-radius: 50%;
     border: 2px solid #ffffff;
     background: var(--timeline-fill);
-    box-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.28);
+    transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.stations-map-timeline__slider:active::-webkit-slider-thumb {
+    transform: scale(1.08);
+    box-shadow: 0 2px 6px rgb(0 0 0 / 0.32);
+}
+
+.stations-map-timeline__slider::-moz-range-track {
+    height: var(--timeline-track-height);
+    border: 0;
+    border-radius: 999px;
+    background: var(--timeline-track);
+}
+
+.stations-map-timeline__slider::-moz-range-progress {
+    height: var(--timeline-track-height);
+    border-radius: 999px 0 0 999px;
+    background: var(--timeline-fill);
 }
 
 .stations-map-timeline__slider::-moz-range-thumb {
-    width: 1rem;
-    height: 1rem;
+    width: var(--timeline-thumb-size);
+    height: var(--timeline-thumb-size);
     border-radius: 50%;
     border: 2px solid #ffffff;
     background: var(--timeline-fill);
-    box-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.28);
+    transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.stations-map-timeline__slider:active::-moz-range-thumb {
+    transform: scale(1.08);
+    box-shadow: 0 2px 6px rgb(0 0 0 / 0.32);
 }
 
 .stations-map-timeline__range-labels {

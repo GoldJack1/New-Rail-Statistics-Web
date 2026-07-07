@@ -1234,7 +1234,7 @@ const MigrationPage: React.FC = () => {
       <div className="migration-container">
         <div className="loading-state">
           <div className="loading-spinner"></div>
-          <p>Loading data from Cloud Database...</p>
+          <p>Loading stations. This may take a few moments.</p>
         </div>
       </div>
     )

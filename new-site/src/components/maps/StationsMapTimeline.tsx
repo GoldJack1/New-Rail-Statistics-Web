@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, type CSSProperties } from 'react'
-import { BUTWideButton } from '../buttons'
+import { BUTWideButton, TOGToggleVisited } from '../buttons'
 import {
   buildSuperTramTimelineSteps,
   countStationsVisibleAtTimelineCutoff,
@@ -50,7 +50,7 @@ export function StationsMapTimeline({
   )
 
   useEffect(() => {
-    if (!isPlaying || steps.length === 0) return
+    if (!modeEnabled || !isPlaying || steps.length === 0) return
 
     if (clampedIndex >= maxIndex) {
       onPlayingChange(false)
@@ -66,7 +66,15 @@ export function StationsMapTimeline({
     }, AUTO_PLAY_INTERVAL_MS)
 
     return () => window.clearTimeout(timer)
-  }, [isPlaying, clampedIndex, maxIndex, steps.length, onStepIndexChange, onPlayingChange])
+  }, [
+    modeEnabled,
+    isPlaying,
+    clampedIndex,
+    maxIndex,
+    steps.length,
+    onStepIndexChange,
+    onPlayingChange,
+  ])
 
   const handleSliderChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -92,97 +100,89 @@ export function StationsMapTimeline({
     onStepIndexChange(0)
   }, [onStepIndexChange, onPlayingChange])
 
-  const handleEnableTimeline = useCallback(() => {
-    onModeEnabledChange(true)
-    onStepIndexChange(Math.max(0, steps.length - 1))
-  }, [onModeEnabledChange, onStepIndexChange, steps.length])
+  const handleModeToggle = useCallback(
+    (enabled: boolean) => {
+      if (enabled) {
+        onModeEnabledChange(true)
+        onStepIndexChange(Math.max(0, steps.length - 1))
+        return
+      }
+      onPlayingChange(false)
+      onModeEnabledChange(false)
+    },
+    [onModeEnabledChange, onPlayingChange, onStepIndexChange, steps.length]
+  )
 
-  const handleDisableTimeline = useCallback(() => {
-    onPlayingChange(false)
-    onModeEnabledChange(false)
-  }, [onModeEnabledChange, onPlayingChange])
-
-  if (!modeEnabled) {
-    return (
-      <section className="stations-map-timeline" aria-label="Network opening timeline">
-        <div className="stations-map-timeline__header">
-          <h2 className="stations-map-timeline__title">Opening timeline</h2>
-          <p className="stations-map-timeline__intro">
-            All stops are shown on the map. Enable timeline mode to replay how the network opened over time.
-          </p>
-        </div>
-        <BUTWideButton type="button" width="fill" onClick={handleEnableTimeline}>
-          Enable timeline mode
-        </BUTWideButton>
-      </section>
-    )
-  }
-
-  if (steps.length === 0) {
-    return (
-      <section className="stations-map-timeline" aria-label="Network opening timeline">
-        <h2 className="stations-map-timeline__title">Opening timeline</h2>
-        <p className="stations-map-timeline__empty">No opening dates are available for this network.</p>
-      </section>
-    )
-  }
+  const subtitle = modeEnabled
+    ? steps.length === 0
+      ? 'No opening dates are available for this network.'
+      : `${visibleCount} of ${stations.length} stops visible on the map for the selected date.`
+    : 'All stops are shown on the map. Turn on to replay how the network opened over time.'
 
   const currentLabel = cutoffMs != null ? formatTimelineDate(cutoffMs) : '—'
   const sliderPercent = maxIndex === 0 ? 100 : (clampedIndex / maxIndex) * 100
+  const showTimelineControls = modeEnabled && steps.length > 0
 
   return (
-    <section className="stations-map-timeline" aria-label="Network opening timeline">
+    <section className="stations-map-timeline" aria-label="Network timeline">
       <div className="stations-map-timeline__header">
-        <h2 className="stations-map-timeline__title">Opening timeline</h2>
-        <p className="stations-map-timeline__meta">
-          {visibleCount} of {stations.length} stops visible
-        </p>
-      </div>
-
-      <div className="stations-map-timeline__date-row">
-        <time
-          className="stations-map-timeline__date"
-          dateTime={cutoffMs != null ? new Date(cutoffMs).toISOString() : undefined}
-        >
-          {currentLabel}
-        </time>
-        <span className="stations-map-timeline__step">
-          {clampedIndex + 1} / {steps.length}
-        </span>
-      </div>
-
-      <div className="stations-map-timeline__slider-wrap">
-        <input
-          type="range"
-          className="stations-map-timeline__slider"
-          min={0}
-          max={maxIndex}
-          step={1}
-          value={clampedIndex}
-          onChange={handleSliderChange}
-          aria-valuemin={0}
-          aria-valuemax={maxIndex}
-          aria-valuenow={clampedIndex}
-          aria-valuetext={currentLabel}
-          style={{ '--timeline-progress': `${sliderPercent}%` } as CSSProperties}
-        />
-        <div className="stations-map-timeline__range-labels">
-          <span>{steps[0].label}</span>
-          <span>{steps[steps.length - 1].label}</span>
+        <div className="stations-map-timeline__header-copy">
+          <h2 className="stations-map-timeline__title">Network Timeline</h2>
+          <p className="stations-map-timeline__subtitle">{subtitle}</p>
         </div>
+        <TOGToggleVisited
+          checked={modeEnabled}
+          onChange={handleModeToggle}
+          ariaLabel={modeEnabled ? 'Turn off network timeline' : 'Turn on network timeline'}
+          className="stations-map-timeline__toggle"
+        />
       </div>
 
-      <div className="stations-map-timeline__actions">
-        <BUTWideButton type="button" width="fill" onClick={handlePlayToggle} aria-pressed={isPlaying}>
-          {isPlaying ? 'Pause' : clampedIndex >= maxIndex ? 'Replay' : 'Play'}
-        </BUTWideButton>
-        <BUTWideButton type="button" width="fill" colorVariant="primary" onClick={handleRestart}>
-          From start
-        </BUTWideButton>
-      </div>
-      <button type="button" className="stations-map-timeline__disable" onClick={handleDisableTimeline}>
-        Turn off timeline mode
-      </button>
+      {showTimelineControls && (
+        <>
+          <div className="stations-map-timeline__date-row">
+            <time
+              className="stations-map-timeline__date"
+              dateTime={cutoffMs != null ? new Date(cutoffMs).toISOString() : undefined}
+            >
+              {currentLabel}
+            </time>
+            <span className="stations-map-timeline__step">
+              {clampedIndex + 1} / {steps.length}
+            </span>
+          </div>
+
+          <div className="stations-map-timeline__slider-wrap">
+            <input
+              type="range"
+              className="stations-map-timeline__slider"
+              min={0}
+              max={maxIndex}
+              step={1}
+              value={clampedIndex}
+              onChange={handleSliderChange}
+              aria-valuemin={0}
+              aria-valuemax={maxIndex}
+              aria-valuenow={clampedIndex}
+              aria-valuetext={currentLabel}
+              style={{ '--timeline-progress': `${sliderPercent}%` } as CSSProperties}
+            />
+            <div className="stations-map-timeline__range-labels">
+              <span>{steps[0].label}</span>
+              <span>{steps[steps.length - 1].label}</span>
+            </div>
+          </div>
+
+          <div className="stations-map-timeline__actions">
+            <BUTWideButton type="button" width="fill" onClick={handlePlayToggle} aria-pressed={isPlaying}>
+              {isPlaying ? 'Pause' : clampedIndex >= maxIndex ? 'Replay' : 'Play'}
+            </BUTWideButton>
+            <BUTWideButton type="button" width="fill" colorVariant="primary" onClick={handleRestart}>
+              From start
+            </BUTWideButton>
+          </div>
+        </>
+      )}
     </section>
   )
 }

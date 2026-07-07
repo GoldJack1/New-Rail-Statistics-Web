@@ -272,7 +272,7 @@ const StationsPage: React.FC<StationsPageProps> = ({ initialMode = 'view' }) => 
       <div className="stations-page">
         <div className="stations-loading">
           <div className="loading-spinner"></div>
-          <p>Loading data from Cloud Database...</p>
+          <p>Loading stations. This may take a few moments.</p>
         </div>
       </div>
     )

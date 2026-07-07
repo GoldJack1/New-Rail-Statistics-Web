@@ -227,7 +227,7 @@ const StationsMapPage: React.FC = () => {
       <div className="stations-page stations-map-page">
         <div className="stations-loading">
           <div className="loading-spinner" aria-hidden="true" />
-          <p>Loading data from Cloud Database...</p>
+          <p>Loading stations. This may take a few moments.</p>
         </div>
       </div>
     )

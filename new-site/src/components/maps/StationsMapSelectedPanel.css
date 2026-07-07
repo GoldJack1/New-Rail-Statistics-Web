@@ -4,7 +4,7 @@
     gap: var(--space-lg);
     min-height: 0;
     max-height: 100%;
-    overflow-x: hidden;
+    overflow-x: visible;
     overflow-y: auto;
     box-sizing: border-box;
 }
@@ -49,6 +49,7 @@
   width: 100%;
   min-width: 0;
   max-width: 100%;
+  overflow: visible;
 }
 
 .stations-map-selected-panel__details {

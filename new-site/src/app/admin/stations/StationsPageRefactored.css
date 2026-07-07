@@ -12,7 +12,6 @@
     width: 100%;
     max-width: 100%;
     min-width: 0;
-    overflow-x: clip;
 }
 
 .stations-toolbar-band {
@@ -20,7 +19,8 @@
     isolation: isolate;
     margin-bottom: 10px;
     padding-top: var(--space-md);
-    padding-bottom: var(--space-sm);
+    padding-bottom: calc(var(--space-sm) + 6px);
+    overflow-x: clip;
 }
 
 .stations-toolbar-band::before {
@@ -143,6 +143,7 @@
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
     padding: var(--space-lg) 0;
+    overflow: visible;
 }
 
 .sidebar-section-title {
@@ -163,6 +164,8 @@
 /* Search Section */
 .search-container {
     position: relative;
+    overflow: visible;
+    min-width: 0;
 }
 
 .search-input-shell {
@@ -239,12 +242,15 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-lg);
+    overflow: visible;
 }
 
 .filter-group {
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
+    min-width: 0;
+    overflow: visible;
 }
 
 .filter-label {
@@ -320,7 +326,7 @@
     min-height: auto;
     display: flex;
     flex-direction: column;
-    overflow-x: clip;
+    overflow-x: visible;
     overflow-y: visible;
     max-height: none;
     height: auto;
@@ -375,13 +381,14 @@
     min-width: 0;
     max-width: 100%;
     box-sizing: border-box;
-    overflow-x: clip;
+    overflow: visible;
 }
 
 .stations-page-grid > .rs-station-card-stack {
     width: 100%;
     min-width: 0;
     max-width: 100%;
+    overflow: visible;
 }
 
 /* ========================================
@@ -514,7 +521,7 @@
         padding-left: 0;
         padding-right: 0;
         min-width: 0;
-        overflow: hidden;
+        overflow: visible;
     }
 
     .stations-network-tabs-wrap--mobile .sidebar-section-title--subsection {
@@ -537,7 +544,7 @@
         padding-right: 0;
         margin-left: 0;
         margin-right: 0;
-        overflow-x: clip;
+        overflow-x: visible;
     }
 
     .stations-sidebar {
@@ -550,6 +557,7 @@
         background-color: var(--bg-secondary);
         border: 0;
         border-radius: 0;
+        overflow: visible;
     }
 
     .stations-toolbar-band + .stations-content .stations-sidebar .sidebar-section:first-child {
@@ -626,7 +634,7 @@
         width: 100%;
         min-width: 0;
         max-width: 100%;
-        overflow-x: clip;
+        overflow-x: visible;
         overflow-y: visible;
         max-height: none;
         height: auto;

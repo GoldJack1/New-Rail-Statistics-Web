@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import {
@@ -219,7 +220,12 @@ export function StationsOsmMap({
   timelineShowUndatedAtMax = true,
   liteMode = false,
 }: StationsOsmMapProps) {
-  const mapContainerRef = useRef<HTMLDivElement>(null)
+  const mapContainerRef = useRef<HTMLDivElement | null>(null)
+  const [mapContainerNode, setMapContainerNode] = useState<HTMLDivElement | null>(null)
+  const assignMapContainer = useCallback((node: HTMLDivElement | null) => {
+    mapContainerRef.current = node
+    setMapContainerNode(node)
+  }, [])
   const mapRef = useRef<L.Map | null>(null)
   const tileLayersRef = useRef<MapTileLayerRefs | null>(null)
   const markersLayerRef = useRef<L.LayerGroup | null>(null)
@@ -584,6 +590,25 @@ export function StationsOsmMap({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [addStationMode])
 
+  const zoomControls = (
+    <div className="stations-osm-map__zoom-control">
+      <BUTCircleButton
+        type="button"
+        ariaLabel="Zoom in"
+        icon={<ZoomInIcon />}
+        disabled={zoomBounds != null && zoomBounds.zoom >= zoomBounds.max}
+        onClick={handleZoomIn}
+      />
+      <BUTCircleButton
+        type="button"
+        ariaLabel="Zoom out"
+        icon={<ZoomOutIcon />}
+        disabled={zoomBounds != null && zoomBounds.zoom <= zoomBounds.min}
+        onClick={handleZoomOut}
+      />
+    </div>
+  )
+
   return (
     <div
       className={[
@@ -594,23 +619,8 @@ export function StationsOsmMap({
         .filter(Boolean)
         .join(' ')}
     >
-      <div ref={mapContainerRef} className="stations-osm-map__canvas" aria-label="Map" />
-      <div className="stations-osm-map__zoom-control">
-        <BUTCircleButton
-          type="button"
-          ariaLabel="Zoom in"
-          icon={<ZoomInIcon />}
-          disabled={zoomBounds != null && zoomBounds.zoom >= zoomBounds.max}
-          onClick={handleZoomIn}
-        />
-        <BUTCircleButton
-          type="button"
-          ariaLabel="Zoom out"
-          icon={<ZoomOutIcon />}
-          disabled={zoomBounds != null && zoomBounds.zoom <= zoomBounds.min}
-          onClick={handleZoomOut}
-        />
-      </div>
+      <div ref={assignMapContainer} className="stations-osm-map__canvas" aria-label="Map" />
+      {mapContainerNode ? createPortal(zoomControls, mapContainerNode) : null}
       {addStationMode && (
         <p className="stations-osm-map__add-mode-hint" role="status">
           Click the map to add a station · Esc to exit
