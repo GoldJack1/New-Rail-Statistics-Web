@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "outDir": "lib",
+    "sourceMap": true,
+    "strict": true,
+    "target": "ES2022",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "baseUrl": "..",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  },
+  "compileOnSave": true,
+  "include": ["src", "../src/server/exportStationSnapshots.ts", "../src/services/stationFirestoreMapper.ts", "../src/constants/stationCollections.ts", "../src/utils/yearlyPassengers.ts", "../src/utils/stationsTableColumnCatalog.ts", "../src/utils/lightRailStationFields.ts", "../src/utils/mapLeanStation.ts", "../src/types/stationsCdn.ts", "../src/types/index.ts"]
+}

@@ -15,6 +15,7 @@ import {
   type ScheduledJobStationPayload
 } from '@/utils/scheduledJobPendingMatch'
 import ScheduledServerJobFirestoreSync, { type ServerScheduledJobDetail } from '@/contexts/ScheduledServerJobFirestoreSync'
+import { requestStationCdnExportAfterPublish } from '@/services/stationsCdnService'
 import type { StationCollectionId } from '@/constants/stationCollections'
 import { migratePendingEntryTarget } from '@/utils/pendingChangesByCollection'
 
@@ -255,6 +256,9 @@ export const PendingStationChangesProvider: React.FC<{ children: React.ReactNode
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('railstats-stations-refetch'))
       }
+      void requestStationCdnExportAfterPublish().catch((exportError) => {
+        console.warn('Station CDN export after scheduled publish failed:', exportError)
+      })
     },
     [clearTrackedScheduledServerJob]
   )

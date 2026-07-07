@@ -16,6 +16,7 @@ import {
   getScheduledStationPublishJobMergeSource
 } from '../services/firebase'
 import { writeScheduledPublishAtMs, writeScheduleSavedFingerprint } from '../utils/scheduledPublishStorage'
+import { requestStationCdnExportAfterPublish } from '../services/stationsCdnService'
 import { computePendingChangesFingerprint } from '../utils/pendingChangesFingerprint'
 import { toDatetimeLocalValue } from '../utils/datetimeLocal'
 import { useAuth } from '../contexts/AuthContext'
@@ -224,6 +225,9 @@ export function usePendingChangesPublishFlow({
         }
 
         await refetch()
+        void requestStationCdnExportAfterPublish().catch((exportError) => {
+          console.warn('Station CDN export after publish failed:', exportError)
+        })
         if (clearsAllPending) {
           onPublishSuccess?.()
         }
