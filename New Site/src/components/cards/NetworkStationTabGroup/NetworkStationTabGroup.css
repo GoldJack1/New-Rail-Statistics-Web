@@ -1,0 +1,53 @@
+.network-station-tab-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: stretch;
+  max-width: 100%;
+}
+
+.network-station-tab-group__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.network-station-tab-group__dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.35);
+}
+
+@media (max-width: 639px) {
+  .network-station-tab-group {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    width: 100%;
+    min-width: 0;
+    padding-bottom: var(--space-xs);
+    gap: var(--space-sm);
+  }
+
+  .network-station-tab-group::-webkit-scrollbar {
+    height: 0;
+  }
+
+  .network-station-tab-group .rs-button--tab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    scroll-snap-align: start;
+    width: auto;
+    min-width: 0;
+  }
+
+  .network-station-tab-group .rs-button--tab.rs-button--width-fixed {
+    min-width: 0;
+  }
+}

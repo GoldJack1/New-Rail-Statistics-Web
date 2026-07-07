@@ -1,0 +1,60 @@
+.ds-icons-page {
+  background-color: var(--bg-tertiary);
+}
+
+.ds-icons {
+  padding: var(--space-lg) 0 var(--space-4xl) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xl);
+}
+
+.ds-icons__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: var(--space-lg);
+  align-items: stretch;
+}
+
+.ds-icons__icon-tile {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  color: var(--text-primary);
+}
+
+.ds-icons__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ds-icons__icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.ds-icons__label {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+@media (max-width: 1023px) {
+  .ds-icons {
+    padding: var(--space-md) 0 var(--space-3xl) 0;
+  }
+}
+
+@media (max-width: 639px) {
+  .ds-icons__grid {
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: var(--space-md);
+  }
+}

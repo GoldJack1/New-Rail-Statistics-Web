@@ -1,0 +1,418 @@
+/*
+ * Design tokens — ported 1:1 from Old Website `src/styles/index.css`.
+ * Font files are now loaded via next/font/local (see app/fonts.ts) instead of
+ * manual @font-face rules; the generated font CSS variables (--ff-geologica,
+ * --ff-aronetiv, --ff-aronetiv-normal) are applied on <html> in layout.tsx and
+ * consumed below by --font-body / --font-aronetiv / --font-aronetiv-normal.
+ */
+
+/* CSS Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: var(--font-body);
+    font-weight: 400;
+    line-height: normal;
+    /* CRSV = 1 uses cursive style (self-hosted variable font) */
+    -webkit-font-variation-settings: 'CRSV' 1, 'MONO' 0, 'slnt' 0;
+    font-variation-settings: 'CRSV' 1, 'MONO' 0, 'slnt' 0;
+}
+
+/* CSS Custom Properties for Theming */
+:root {
+    --font-body: var(--ff-geologica), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-aronetiv: var(--ff-aronetiv), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-aronetiv-normal: var(--ff-aronetiv-normal), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+    /* Light Theme Colors */
+    --bg-primary: hsl(0 0% 96%);
+    --bg-secondary: hsl(0 0% 91%);
+    --bg-tertiary: hsl(0 0% 82%);
+    --text-primary: #000000;
+    --text-secondary: hsl(0 0% 25%);
+    --text-disabled: hsl(0 0% 45%);
+    --border-color: transparent;
+    --accent-bright: #E50000;
+    --accent-strong: #CC0000;
+    --accent-base: #B20016;
+    --accent-deep: #990000;
+    --accent-darkest: #7F0000;
+    --accent-color: var(--accent-base);
+    --accent-hover: var(--text-primary);
+    --accent-pressed: var(--accent-deep);
+    --accent-light: var(--bg-secondary);
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+    /* Consistent Spacing System */
+    --space-xs: 0.25rem;    /* 4px */
+    --space-sm: 0.5rem;     /* 8px */
+    --space-md: 0.75rem;    /* 12px */
+    --space-lg: 1rem;       /* 16px */
+    --space-xl: 1.5rem;     /* 24px */
+    --space-2xl: 2rem;      /* 32px */
+    --space-3xl: 3rem;      /* 48px */
+    --space-4xl: 4rem;      /* 64px */
+
+    /* Border Radius */
+    --radius-sm: 0.375rem;  /* 6px */
+    --radius-md: 0.5rem;    /* 8px */
+    --radius-lg: 0.75rem;   /* 12px */
+    --radius-xl: 1rem;      /* 16px */
+
+    /* Typography Scale */
+    --text-xs: 0.75rem;     /* 12px */
+    --text-sm: 0.875rem;    /* 14px */
+    --text-base: 1rem;      /* 16px */
+    --text-lg: 1.125rem;    /* 18px */
+    --text-xl: 1.25rem;     /* 20px */
+    --text-2xl: 1.5rem;     /* 24px */
+    --text-3xl: 1.875rem;   /* 30px */
+    --text-4xl: 2.25rem;    /* 36px */
+    --text-5xl: 3rem;       /* 48px */
+
+    /* Layout breakpoints (use in @media as max-width; lg − 1 = 1023, sm − 1 = 639) */
+    --breakpoint-sm: 640px;
+    --breakpoint-lg: 1024px;
+
+    /* Container Max Widths */
+    --container-sm: 640px;
+    --container-md: 768px;
+    --container-lg: 1024px;
+    --container-xl: 1280px;
+    --container-2xl: 1536px;
+    --container-3xl: 1920px;
+}
+
+/* Active color-scheme for Safari/WebKit form controls, scrollbars, and system UI hints */
+html[data-theme='light'],
+html:not([data-theme]) {
+    color-scheme: light;
+}
+
+html[data-theme='dark'] {
+    color-scheme: dark;
+}
+
+/* Dark Theme Colors */
+[data-theme="dark"] {
+    --bg-primary: hsl(0 0% 20%);
+    --bg-secondary: hsl(0 0% 15%);
+    --bg-tertiary: hsl(0 0% 10%);
+    --text-primary: #ffffff;
+    --text-secondary: hsl(0 0% 75%);
+    --text-disabled: hsl(0 0% 55%);
+    --border-color: transparent;
+    --accent-bright: #E50000;
+    --accent-strong: #CC0000;
+    --accent-base: #B20016;
+    --accent-deep: #990000;
+    --accent-darkest: #7F0000;
+    --accent-color: var(--accent-base);
+    --accent-hover: var(--text-primary);
+    --accent-pressed: var(--accent-deep);
+    --accent-light: var(--bg-secondary);
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+}
+
+/* Base Styles */
+html {
+    scroll-behavior: smooth;
+    /* Offset scroll targets (anchor links, scrollIntoView, hash nav) by the fixed header height */
+    scroll-padding-top: calc(4rem + env(safe-area-inset-top, 0px));
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+    width: 100%;
+    overflow-x: hidden;
+    overflow-y: scroll;
+    /* Match header/footer chrome (--bg-primary) so the rubber-band overscroll zone (which paints
+     * with this colour, not .app's) doesn't flash a mismatched shade above/below them. The tertiary
+     * "gutter" look during normal scrolling still comes from #root/.app/.main-content/.container below. */
+    background-color: var(--bg-primary);
+}
+
+@media (max-width: 639px) {
+    html {
+        scroll-padding-top: calc(3.5rem + env(safe-area-inset-top, 0px));
+    }
+}
+
+body {
+    font-family: var(--font-body);
+    font-weight: 400;
+    -webkit-font-variation-settings: 'CRSV' 1, 'MONO' 0, 'slnt' 0;
+    font-variation-settings: 'CRSV' 1, 'MONO' 0, 'slnt' 0;
+    line-height: normal;
+    color: var(--text-primary);
+    /* iOS Safari uses body (not html) for rubber-band overscroll; match header/footer chrome
+     * (--bg-primary) here for the same reason as the html rule above. */
+    background-color: var(--bg-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
+    width: 100%;
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+/* Touch and Mobile Optimizations */
+* {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+}
+
+/* Typography helpers */
+.font-aronetiv {
+    font-family: var(--font-aronetiv);
+    -webkit-font-variation-settings: normal;
+    font-variation-settings: normal;
+}
+
+/*
+ * Global widow/orphan handling:
+ * let the browser choose better line breaks for body/headline copy.
+ */
+h1, h2, h3, h4, h5, h6, p, li, blockquote, figcaption {
+    text-wrap: pretty;
+}
+
+.font-aronetiv-normal {
+    font-family: var(--font-aronetiv-normal);
+    -webkit-font-variation-settings: normal;
+    font-variation-settings: normal;
+}
+
+button, a, input, select, textarea {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    touch-action: manipulation;
+}
+
+/* Improve touch targets */
+button, a, input, select, textarea, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+}
+
+/* Footer: text links + logout — keep inline row, not 44×44 boxes */
+.site-footer a.site-footer-link,
+.site-footer button.site-footer-logout {
+    min-height: unset;
+    min-width: unset;
+}
+
+.universal-header a.header-nav-link {
+    min-height: unset;
+    min-width: unset;
+}
+
+/* App Layout */
+#root {
+    width: 100%;
+    background-color: var(--bg-tertiary);
+}
+
+.app {
+    width: 100%;
+    background-color: var(--bg-tertiary);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    background-color: var(--bg-tertiary);
+}
+
+/*
+ * iOS in-tab Safari: stretch body → #root so .app (flex:1) + footer margin-top:auto fill the viewport.
+ */
+@supports (-webkit-touch-callout: none) {
+    @media (max-width: 1199px) {
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100dvh;
+            min-height: -webkit-fill-available;
+        }
+
+        #root {
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+    }
+}
+
+/* Container */
+.container {
+    max-width: var(--container-2xl);
+    margin: 0 auto;
+    padding: 0 var(--space-2xl);
+    width: 100%;
+    background-color: var(--bg-tertiary);
+}
+
+/* Container responsive breakpoints */
+@media (max-width: 1023px) {
+    .container {
+        padding: 0 var(--space-xl);
+    }
+}
+
+@media (max-width: 639px) {
+    .container {
+        padding: 0 var(--space-lg);
+    }
+}
+
+/*
+ * Full-bleed page modifier: used by detail-style pages (Privacy, EULA, and — in Phase 2 —
+ * Migration, Pending Changes Review, New Station, Station Details) whose own inner layout
+ * manages its own width/padding, so the outer `.container` box shouldn't letterbox them.
+ */
+.container.container--station-details {
+    max-width: none !important;
+    width: 100vw;
+    margin: 0 !important;
+    padding-top: 0;
+    padding-bottom: var(--space-xl);
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+@media (max-width: 1023px) {
+    .container--station-details {
+        padding-top: 0;
+    }
+}
+
+@media (max-width: 639px) {
+    .container--station-details {
+        padding-top: 0;
+    }
+}
+
+/* Reduce motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .feature:hover {
+    transform: none !important;
+  }
+
+}
+
+/*
+ * iOS Safari zooms focused inputs when computed font-size is under ~16px.
+ * Keep common text-like controls at 16px on narrow viewports (checkbox/radio exempt via attribute selectors).
+ */
+@media (max-width: 639px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]):not([type="range"]):not([type="color"]),
+    textarea,
+    select {
+        font-size: max(1rem, var(--text-base));
+    }
+}
+
+/* Visually hidden; still exposed to password managers (Apple Passwords, etc.) for OTP + username linking */
+.autofill-bridge-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    clip-path: inset(50%);
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+/* Focus styles for accessibility */
+button:focus,
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+}
+
+/* Print styles */
+@media print {
+    /* Hide interactive elements when printing */
+}
+
+/*
+ * App layout shell — ported from Old Website `src/styles/App.css`.
+ * Flex shell: .app (column, full viewport min-height) → fixed Header | .app-main | .app-footer
+ */
+.main-content.app-main {
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+    padding-top: calc(4rem + env(safe-area-inset-top, 0px));
+    min-height: 100vh;
+    min-height: 100lvh;
+    min-width: 0;
+}
+
+@media (max-width: 639px) {
+    .main-content.app-main {
+        padding-top: calc(3.5rem + env(safe-area-inset-top, 0px));
+        min-height: 100vh;
+        min-height: 100lvh;
+    }
+}
+
+/* Match +5px header padding where .safari-toolbar-tint is shown */
+@supports (-webkit-touch-callout: none) {
+    @media (max-width: 1199px) {
+        .main-content.app-main {
+            padding-top: calc(4rem + env(safe-area-inset-top, 0px) + 5px);
+            min-height: 100vh;
+            min-height: 100lvh;
+        }
+    }
+
+    @media (max-width: 639px) {
+        .main-content.app-main {
+            padding-top: calc(3.5rem + env(safe-area-inset-top, 0px) + 5px);
+            min-height: 100vh;
+            min-height: 100lvh;
+        }
+    }
+}
+
+.main-content.app-main.app-main--stations-layout {
+    flex: 1 0 auto;
+    min-height: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+}

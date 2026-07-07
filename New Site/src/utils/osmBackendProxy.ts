@@ -1,0 +1,15 @@
+/**
+ * Use the same-origin `/api/osm-tile` Route Handler (app/api/osm-tile/route.ts)
+ * instead of hitting tile.openstreetmap.org directly from the browser.
+ * Strict CSPs (e.g. img-src 'self' data:) and embedded browsers still allow this.
+ *
+ * - Production builds: on by default.
+ * - Opt out: NEXT_PUBLIC_USE_OSM_PROXY=false (e.g. static export without the route handler).
+ * - Dev server: off unless NEXT_PUBLIC_USE_OSM_PROXY=true.
+ */
+export function shouldUseOsmBackendProxy(): boolean {
+  const flag = process.env.NEXT_PUBLIC_USE_OSM_PROXY
+  if (flag === 'false') return false
+  if (flag === 'true') return true
+  return process.env.NODE_ENV === 'production'
+}

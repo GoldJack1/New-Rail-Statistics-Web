@@ -1,0 +1,190 @@
+/*
+ * Layout: .app > Header | main.app-main | footer.site-footer.app-footer — no extra wrapper.
+ * .app / .app-main use page canvas colours; the footer bar uses --bg-primary.
+ */
+.site-footer.app-footer {
+  margin-top: auto;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  --footer-pad-y: var(--space-2xl);
+  /* padding-bottom adds safe-area-inset-bottom on top of the design padding so the footer
+   * background visually fills into the iPhone home indicator zone. Resolves to 0 on devices
+   * without a home indicator (desktop, older iPhones), so no media query is needed. */
+  padding: var(--footer-pad-y) 0 calc(var(--footer-pad-y) + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-disabled);
+  font-size: var(--text-sm);
+  font-family: 'Geologica Cursive', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.site-footer-inner {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0 calc(var(--space-2xl) + env(safe-area-inset-right, 0px)) 0
+    calc(var(--space-2xl) + env(safe-area-inset-left, 0px));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-md);
+  box-sizing: border-box;
+}
+
+.site-footer-primary-row {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-md);
+  flex-wrap: nowrap;
+}
+
+.site-footer-primary-row p {
+  margin: 0;
+}
+
+.site-footer-links {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-lg);
+}
+
+.site-footer-links--logged-in-row {
+  width: auto;
+  justify-content: flex-end;
+}
+
+.site-footer-links--base-row {
+  width: auto;
+  justify-content: flex-end;
+}
+
+.site-footer-secondary-row {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border-color);
+}
+
+.site-footer-link {
+  color: var(--text-disabled);
+  text-decoration: none;
+}
+
+.site-footer-link:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+/* Match <a.site-footer-link> box model so Log out sits on the same line/baseline */
+.site-footer-logout {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  color: inherit;
+  text-decoration: none;
+  -webkit-appearance: none;
+  appearance: none;
+  display: inline;
+  vertical-align: baseline;
+}
+
+.site-footer-logout:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+.site-footer-theme-toggle {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  line-height: inherit;
+  color: inherit;
+  display: inline;
+  vertical-align: baseline;
+  min-width: unset;
+  min-height: unset;
+}
+
+.site-footer-theme-toggle__icon {
+  width: 1em;
+  height: 1em;
+  vertical-align: text-bottom;
+  position: relative;
+  top: -2px;
+}
+
+.site-footer-theme-toggle__icon--sun {
+  top: -1.5px;
+}
+
+.site-footer-theme-toggle:hover {
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+/* Match header / page horizontal padding at design breakpoints */
+@media (max-width: 1023px) {
+  .site-footer {
+    --footer-pad-y: var(--space-xl);
+  }
+
+  .site-footer-inner {
+    padding: 0 calc(var(--space-xl) + env(safe-area-inset-right, 0px)) 0
+      calc(var(--space-xl) + env(safe-area-inset-left, 0px));
+  }
+
+  .site-footer-links {
+    gap: var(--space-md);
+  }
+}
+
+@media (max-width: 639px) {
+  .site-footer {
+    --footer-pad-y: var(--space-lg);
+    font-size: var(--text-xs);
+  }
+
+  .site-footer-inner {
+    padding: 0 calc(var(--space-lg) + env(safe-area-inset-right, 0px)) 0
+      calc(var(--space-lg) + env(safe-area-inset-left, 0px));
+    gap: var(--space-sm);
+  }
+
+  .site-footer-links {
+    flex-wrap: wrap;
+    gap: var(--space-sm) var(--space-md);
+  }
+
+  .site-footer-links--logged-in-row {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .site-footer-secondary-row {
+    justify-content: flex-start;
+    padding-top: var(--space-sm);
+  }
+
+  .site-footer-primary-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
+  }
+}

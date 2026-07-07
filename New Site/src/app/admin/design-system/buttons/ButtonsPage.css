@@ -1,0 +1,328 @@
+.ds-buttons-page {
+  background-color: var(--bg-tertiary);
+}
+
+.ds-buttons {
+  padding: var(--space-lg) 0 var(--space-4xl) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xl);
+}
+
+.ds-buttons__section h2 {
+  font-size: var(--text-2xl);
+  margin-bottom: var(--space-sm);
+}
+
+.ds-buttons__section > p {
+  color: var(--text-secondary);
+  margin-bottom: var(--space-lg);
+}
+
+.ds-buttons__controls-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-lg);
+}
+
+.ds-buttons__matrix {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-lg);
+}
+
+.ds-buttons__matrix-title {
+  text-transform: none;
+}
+
+.ds-buttons__state-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.ds-buttons__toggle-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.ds-buttons__toggle-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.ds-buttons__toggle-row {
+  display: grid;
+  grid-template-columns: minmax(6.5rem, auto) repeat(3, auto);
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.ds-buttons__toggle-row > .ds-buttons__variant-label {
+  min-width: 0;
+}
+
+.ds-buttons__state-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-sm);
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
+}
+
+.ds-buttons__state-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-md);
+}
+
+.ds-buttons__state-detail {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.ds-buttons__state-detail-title {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.ds-buttons__value-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  word-break: break-word;
+}
+
+.ds-buttons__value-block strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.ds-buttons__variant-label {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  min-width: 4.75rem;
+  text-transform: capitalize;
+}
+
+.ds-buttons__card {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-secondary);
+  padding: var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.ds-buttons__card h3 {
+  font-size: var(--text-lg);
+  color: var(--text-primary);
+}
+
+.ds-buttons__name-preview {
+  margin-top: -0.25rem;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.ds-buttons__meta {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.ds-buttons__visit-states {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.ds-buttons__prompt-textarea {
+  width: 100%;
+  min-height: 320px;
+  resize: vertical;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: var(--space-md);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+}
+
+.ds-buttons__card--span-2 {
+  grid-column: span 2;
+}
+
+.ds-buttons__card--full {
+  grid-column: 1 / -1;
+}
+
+.ds-buttons__icon-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+.ds-buttons__state-row--inputs {
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.ds-buttons__state-row--inputs > .ds-buttons__txtinp-slot {
+  flex: 1 1 220px;
+  min-width: 200px;
+  max-width: 260px;
+}
+
+.ds-buttons__ddm-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-md);
+}
+
+.ds-buttons__ddm-cell {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.ds-buttons__text-card-row {
+  display: grid;
+  grid-template-columns: minmax(5rem, auto) repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: var(--space-md);
+}
+
+.ds-buttons__text-card-row .ds-buttons__variant-label {
+  align-self: center;
+}
+
+.ds-buttons__text-card-slot {
+  min-width: 0;
+}
+
+.ds-buttons__text-card-fixed {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.ds-buttons__text-card-fixed-slot {
+  width: 325px;
+  max-width: 100%;
+}
+
+.ds-buttons__text-card-flex-slot {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ds-buttons__selection-dot-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-md);
+}
+
+.ds-buttons__selection-dot-cell {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  align-items: flex-start;
+}
+
+.ds-buttons__selection-dot-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.ds-buttons__selection-dot-toggle-card {
+  width: min(420px, 100%);
+}
+
+@media (max-width: 1023px) {
+  .ds-buttons__state-row--inputs > .ds-buttons__txtinp-slot {
+    flex-basis: 200px;
+    min-width: 180px;
+    max-width: 240px;
+  }
+
+  .ds-buttons__ddm-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ds-buttons__text-card-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-sm);
+  }
+
+  .ds-buttons__text-card-fixed {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ds-buttons__selection-dot-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ds-buttons__selection-dot-toggle {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 1023px) {
+  .ds-buttons {
+    padding: var(--space-md) 0 var(--space-3xl) 0;
+  }
+
+  .ds-buttons__variant-label {
+    min-width: 4.25rem;
+  }
+
+  .ds-buttons__controls-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ds-buttons__card--span-2 {
+    grid-column: auto;
+  }
+
+  .ds-buttons__card--full {
+    grid-column: auto;
+  }
+
+}
+
+@media (max-width: 639px) {
+  .ds-buttons {
+    gap: var(--space-2xl);
+  }
+
+  .ds-buttons__card {
+    padding: var(--space-lg);
+  }
+}

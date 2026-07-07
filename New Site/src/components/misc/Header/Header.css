@@ -1,0 +1,443 @@
+/*
+ * iOS Safari 26+ (in-browser): toolbar / status-area tint often ignores <meta name="theme-color">
+ * and samples position:fixed elements within ~4px of the top with a solid background-color.
+ * Our header uses backdrop-filter, which can yield a dark or mismatched sample. This layer is
+ * plain --bg-primary only, sits under .universal-header (z-index), and matches the bar visually.
+ * Ref: https://github.com/andesco/safari-color-tinting — https://jahir.dev/blog/safari-toolbar
+ */
+.safari-toolbar-tint {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    min-height: 12px;
+    height: max(12px, env(safe-area-inset-top, 0px));
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: none;
+    /* Must be background-color (not only backdrop) for Safari’s sampler */
+    background-color: var(--bg-primary);
+    z-index: 1000;
+    pointer-events: none;
+    /* Own compositing layer: reduces fixed-header drift / tearing during iOS scroll */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+}
+
+/* WebKit touch (iPhone / iPad Safari); wide max-width so iPad in-tab Safari still gets the strip */
+@supports (-webkit-touch-callout: none) {
+    @media (max-width: 1199px) {
+        .safari-toolbar-tint {
+            display: block;
+        }
+    }
+}
+
+/* Universal Header — logo + main nav (footer mirrors the same links) */
+.universal-header {
+    /* Opaque fill so status-bar region isn’t only backdrop-filter (Safari can look washed out there) */
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
+    position: fixed;
+    /*
+     * iOS Safari: pull the fixed layer up by the top inset, then add 2× inset as padding.
+     * Net effect: toolbar still starts below the notch, but the header box (and its background)
+     * extends into the area behind the status bar so the tint reaches the physical top of the screen.
+     */
+    top: calc(-1 * env(safe-area-inset-top, 0px));
+    left: 0;
+    right: 0;
+    z-index: 1001;
+    padding-top: calc(env(safe-area-inset-top, 0px) + env(safe-area-inset-top, 0px));
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    /* Pin fixed layer during iOS overscroll / visual-viewport quirks */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+/* Offset below .safari-toolbar-tint (same visibility as tint) */
+@supports (-webkit-touch-callout: none) {
+    @media (max-width: 1199px) {
+        .universal-header {
+            padding-top: calc(env(safe-area-inset-top, 0px) + env(safe-area-inset-top, 0px) + 5px);
+        }
+    }
+}
+
+.header-inner {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.header-container {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0 var(--space-2xl);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    height: 4rem;
+    box-sizing: border-box;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--space-sm);
+    min-width: 0;
+}
+
+.logo--mobile {
+    align-items: center;
+    gap: var(--space-sm);
+    min-width: 0;
+    flex: 1;
+}
+
+.logo-link--mobile-title {
+    display: block;
+    min-width: 0;
+    flex: 1;
+    text-decoration: none;
+    color: inherit;
+}
+
+.header-page-title-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+    max-width: 100%;
+    line-height: 1;
+}
+
+.header-page-title {
+    font-family: 'Geologica Cursive', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-variation-settings: 'CRSV' 1, 'wght' 600;
+    font-size: var(--text-lg);
+    color: var(--text-primary);
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.header-page-title__beta {
+    flex-shrink: 0;
+    align-self: center;
+    transform: translateY(0.06em);
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+    min-width: 0;
+}
+
+/* Visible at all breakpoints: single row; narrow viewports scroll horizontally */
+.header-nav {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.header-nav-links {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--space-md);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.header-nav-links::-webkit-scrollbar {
+    height: 0;
+}
+
+.header-nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-shrink: 0;
+    line-height: 1;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    font-weight: 400;
+    font-variation-settings: 'CRSV' 1, 'wght' 400;
+    font-family: 'Geologica Cursive', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.header-nav-link:hover {
+    color: var(--accent-bright);
+}
+
+/* Current route: primary text (black in light theme, white in dark) */
+.header-nav-link--active,
+.header-nav-link--active:hover {
+    color: var(--text-primary);
+}
+
+.header-nav-link .rs-beta-tag {
+    align-self: center;
+    transform: translateY(0.06em);
+}
+
+.header-menu-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-sm);
+    margin: 0;
+    border: none;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    line-height: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.header-menu-toggle:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
+.header-menu-toggle__bars {
+    position: relative;
+    display: block;
+    width: 18px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+.header-menu-toggle__bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    border-radius: 1px;
+    background-color: currentColor;
+    transform-origin: center;
+    transition:
+        transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.2s ease;
+}
+
+.header-menu-toggle__bar:nth-child(1) {
+    top: 0;
+}
+
+.header-menu-toggle__bar:nth-child(2) {
+    top: 6px;
+}
+
+.header-menu-toggle__bar:nth-child(3) {
+    top: 12px;
+}
+
+.header-menu-toggle[aria-expanded='true'] .header-menu-toggle__bar:nth-child(1) {
+    transform: translateY(6px) rotate(45deg);
+}
+
+.header-menu-toggle[aria-expanded='true'] .header-menu-toggle__bar:nth-child(2) {
+    opacity: 0;
+    transform: scaleX(0);
+}
+
+.header-menu-toggle[aria-expanded='true'] .header-menu-toggle__bar:nth-child(3) {
+    transform: translateY(-6px) rotate(-45deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .header-menu-toggle__bar {
+        transition-duration: 0.01ms;
+    }
+}
+
+.header-mobile-panel {
+    display: none;
+}
+
+.header-mobile-panel-inner {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.header-mobile-nav-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.header-nav--mobile .header-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-md);
+}
+
+.header-nav--mobile .header-nav-link:hover {
+    background: var(--bg-secondary);
+}
+
+.logo-link {
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.logo {
+    font-family: 'Geologica Cursive', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-variation-settings: 'CRSV' 1, 'wght' 600;
+    font-size: var(--text-lg);
+    height: 100%;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    color: var(--text-primary);
+    transition: color 0.3s ease;
+}
+
+.logo-text {
+    line-height: normal;
+}
+
+.logo:hover {
+    color: var(--text-secondary);
+}
+
+/*
+ * Mobile title row shares .logo — must override .logo { display: flex } so the block stays
+ * hidden above the phone breakpoint (later .logo wins over a lone .logo--mobile rule).
+ */
+.logo.logo--mobile {
+    display: none;
+}
+
+/* Station collection toggle (Production / Sandbox) — used elsewhere if needed */
+.station-collection-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    white-space: nowrap;
+}
+
+.station-collection-toggle-label {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+}
+
+.station-collection-select {
+    font-size: var(--text-sm);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    cursor: pointer;
+    min-height: 32px;
+}
+
+.station-collection-select:focus {
+    border-color: var(--accent-color);
+    outline: none;
+}
+
+.station-collection-select:hover {
+    outline: none;
+}
+
+@media (max-width: 1023px) {
+    .header-container {
+        padding: 0 var(--space-xl);
+        height: 4rem;
+    }
+
+    .logo {
+        font-size: var(--text-lg);
+        min-height: 44px;
+    }
+
+    .header-nav-links {
+        gap: var(--space-sm);
+    }
+}
+
+@media (max-width: 639px) {
+    .header-container {
+        padding: 0 var(--space-lg);
+        height: 3.5rem;
+    }
+
+    .logo {
+        font-size: var(--text-base);
+        min-height: 40px;
+    }
+
+    .header-nav-links {
+        gap: var(--space-sm);
+    }
+
+    /* Narrow: page title + hamburger; inline nav hidden */
+    .logo-link--full {
+        display: none;
+    }
+
+    .logo.logo--mobile {
+        display: flex;
+    }
+
+    .header-nav--desktop {
+        display: none;
+    }
+
+    .header-menu-toggle {
+        display: inline-flex;
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .header-mobile-panel {
+        display: grid;
+        grid-template-rows: 0fr;
+        transition: grid-template-rows 0.22s ease;
+    }
+
+    .universal-header--menu-open .header-mobile-panel {
+        grid-template-rows: 1fr;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .header-mobile-panel-inner {
+        min-height: 0;
+    }
+
+    .header-nav--mobile {
+        padding: var(--space-xs) 0 var(--space-sm);
+    }
+
+    .header-mobile-nav-list li + li {
+        margin-top: 2px;
+    }
+}
