@@ -3,9 +3,10 @@ import { useStationCollection } from '@/contexts/StationCollectionContext'
 import { calculateStats } from '@/services/localData'
 import {
   bootstrapStationsData,
+  ensureMapStationDetailsLoaded,
   getCollectionError,
-  getFullStationById,
   getMergedNetworkStations,
+  getMergedNetworkStationDetails,
   getSandboxStations,
   invalidateStationsCache,
   isAnyNetworkCollectionLoading,
@@ -13,11 +14,13 @@ import {
   isCollectionLoading,
   isCollectionRefreshing,
   loadAllNetworkStationsProgressive,
+  resolveMapStationDetails,
   getStationsStoreRevision,
   subscribeStationsData,
 } from '@/services/stationsDataService'
 import type { Station, StationStats, UseStationsReturn } from '@/types'
-import { buildFullStationIndex, resolveFullStationFromCache } from '@/utils/mapLeanStation'
+import { buildFullStationIndex } from '@/utils/mapLeanStation'
+import { getStationMapKey, getStationNetworkCollectionId } from '@/utils/stationAreaSlug'
 
 const SERVER_STATION_SNAPSHOT = {
   stations: [] as Station[],
@@ -53,8 +56,10 @@ export interface UseStationsMapReturn {
   loading: boolean
   isRefreshing: boolean
   error: string | null
+  dataRevision: number
   refetch: () => void
   resolveStation: (station: Station) => Station
+  loadStationDetails: (station: Station) => Promise<void>
 }
 
 export const useStations = (): UseStationsReturn => {
@@ -142,7 +147,7 @@ export const useStationsMap = (): UseStationsMapReturn => {
       }
     }
     const leanStations = isSandbox ? getSandboxStations('lean') : getMergedNetworkStations('lean')
-    const fullStations = isSandbox ? getSandboxStations('full') : getMergedNetworkStations('full')
+    const fullStations = isSandbox ? getSandboxStations('full') : getMergedNetworkStationDetails()
     const stations = leanStations.length > 0 ? leanStations : fullStations
     const loading = isSandbox
       ? isCollectionLoading('newsandboxstations1')
@@ -170,13 +175,13 @@ export const useStationsMap = (): UseStationsMapReturn => {
   }, [isSandbox, networkView])
 
   const resolveStation = useCallback(
-    (station: Station) => {
-      const full = getFullStationById(station.id)
-      if (full) return full
-      return resolveFullStationFromCache(station, snapshot.fullById)
-    },
-    [snapshot.fullById]
+    (station: Station) => resolveMapStationDetails(station),
+    [revision]
   )
+
+  const loadStationDetails = useCallback(async (station: Station) => {
+    await ensureMapStationDetailsLoaded(station)
+  }, [])
 
   return useMemo(
     () => ({
@@ -184,10 +189,12 @@ export const useStationsMap = (): UseStationsMapReturn => {
       loading: snapshot.loading,
       isRefreshing: snapshot.isRefreshing,
       error: snapshot.error,
+      dataRevision: revision,
       refetch,
       resolveStation,
+      loadStationDetails,
     }),
-    [snapshot, refetch, resolveStation]
+    [snapshot, revision, refetch, resolveStation, loadStationDetails]
   )
 }
 

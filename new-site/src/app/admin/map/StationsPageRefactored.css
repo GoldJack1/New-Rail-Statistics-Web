@@ -359,12 +359,15 @@
 /* Station Cards Grid */
 .stations-page-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 350px), 1fr));
     gap: var(--space-lg);
     margin-bottom: 0;
     flex: 0 0 auto;
     align-content: start; /* Align cards to top */
     align-items: start; /* Prevent grid items from stretching to equal row height */
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 /* ========================================
@@ -589,8 +592,14 @@
     }
     
     .stations-page-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
         gap: var(--space-md);
+    }
+
+    .stations-page-grid > .rs-station-card-stack {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
     }
     
     .stations-pagination {

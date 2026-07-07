@@ -33,12 +33,37 @@ describe('mapLeanStation', () => {
     expect(lean.sourceCollectionId).toBe('stations_gbnr')
   })
 
-  it('resolves full station details from cache by id', () => {
+  it('resolves full station details from cache by collection-scoped map key', () => {
     const lean = toMapLeanStation(sampleStation)
     const fullById = buildFullStationIndex([sampleStation])
     const resolved = resolveFullStationFromCache(lean, fullById)
     expect(resolved.yearlyPassengers).toEqual({ '2023': 1000 })
     expect(resolved.borough).toBe('Westminster')
+  })
+
+  it('does not resolve the wrong network when Firestore ids overlap', () => {
+    const superTramLean = toMapLeanStation({
+      ...sampleStation,
+      id: 'st-1',
+      stationName: 'Supertram Stop',
+      sourceCollectionId: 'lightrail_GBSHEFFSUPERTRAM',
+      stnarea: 'GBSHEFFSUPERTRAM',
+    })
+    const gbnrFull = sampleStation
+    const superTramFull = {
+      ...sampleStation,
+      id: 'st-1',
+      stationName: 'Supertram Stop',
+      sourceCollectionId: 'lightrail_GBSHEFFSUPERTRAM' as const,
+      stnarea: 'GBSHEFFSUPERTRAM',
+      yearlyPassengers: { '2023': 42 },
+    }
+
+    const fullById = buildFullStationIndex([gbnrFull, superTramFull])
+    const resolved = resolveFullStationFromCache(superTramLean, fullById)
+
+    expect(resolved.stationName).toBe('Supertram Stop')
+    expect(resolved.yearlyPassengers).toEqual({ '2023': 42 })
   })
 
   it('merges network batches in name order', () => {

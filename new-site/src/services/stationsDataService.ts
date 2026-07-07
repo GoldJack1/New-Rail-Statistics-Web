@@ -31,7 +31,9 @@ import {
   type StationsIndexedDbEntry,
 } from '@/services/stationsIndexedDb'
 import type { Station } from '@/types'
-import { mergeNetworkCollections, toMapLeanStation } from '@/utils/mapLeanStation'
+import { isLightRailStop } from '@/utils/stationCardForNetwork'
+import { mergeNetworkCollections, toMapLeanStation, buildFullStationIndex } from '@/utils/mapLeanStation'
+import { getStationMapKey, getStationNetworkCollectionId } from '@/utils/stationAreaSlug'
 
 const FIREBASE_TIMEOUT_MS = 12_000
 const SANDBOX_COLLECTION: StationCollectionId = SANDBOX_COLLECTION_ID
@@ -293,6 +295,74 @@ export function getMergedNetworkStations(detailLevel: StationFetchDetailLevel = 
       stations: getCollectionStations(collectionId, detailLevel),
     }))
   )
+}
+
+/** Best available station rows for map side-panel detail (full, else list). */
+export function getMergedNetworkStationDetails(): Station[] {
+  const full = getMergedNetworkStations('full')
+  if (full.length > 0) return full
+  return getMergedNetworkStations('list')
+}
+
+export function buildMergedNetworkStationDetailIndex(): Map<string, Station> {
+  return buildFullStationIndex(getMergedNetworkStationDetails())
+}
+
+export function resolveMapStationDetails(
+  station: Station,
+  detailByKey: Map<string, Station> = buildMergedNetworkStationDetailIndex()
+): Station {
+  const cached = detailByKey.get(getStationMapKey(station))
+  if (cached) return cached
+
+  const collectionId = getStationNetworkCollectionId(station)
+  if (collectionId) {
+    const fromStore = getFullStationById(station.id, collectionId)
+    if (fromStore) return fromStore
+  }
+
+  return station
+}
+
+function mapStationDetailsFingerprint(station: Station): string {
+  return [
+    station.county ?? '',
+    station.country ?? '',
+    station.borough ?? '',
+    station.tiploc ?? '',
+    station.linesServed ?? '',
+    station.yearlyPassengers ? 'p' : '',
+  ].join('|')
+}
+
+export function mapStationDetailsUpgraded(before: Station, after: Station): boolean {
+  return mapStationDetailsFingerprint(after) !== mapStationDetailsFingerprint(before)
+}
+
+export function hasUsableMapStationDetails(station: Station): boolean {
+  const resolved = resolveMapStationDetails(station)
+  if (mapStationDetailsUpgraded(station, resolved)) return true
+  if (isLightRailStop(resolved)) {
+    return Boolean(resolved.linesServed?.trim() || resolved.borough?.trim() || resolved.county?.trim())
+  }
+  return Boolean(
+    resolved.county?.trim() ||
+      resolved.country?.trim() ||
+      resolved.borough?.trim() ||
+      resolved.tiploc?.trim() ||
+      resolved.yearlyPassengers
+  )
+}
+
+export async function ensureMapStationDetailsLoaded(station: Station): Promise<void> {
+  const collectionId = getStationNetworkCollectionId(station)
+  if (!collectionId) return
+  if (hasUsableMapStationDetails(station)) return
+
+  await ensureCollectionLoaded(collectionId, { detailLevel: 'list', force: false })
+  if (hasUsableMapStationDetails(station)) return
+
+  await ensureCollectionLoaded(collectionId, { detailLevel: 'full', force: false })
 }
 
 export function isAnyNetworkCollectionLoading(): boolean {
@@ -612,9 +682,16 @@ export function getSandboxStations(detailLevel: StationFetchDetailLevel = 'full'
   return getCollectionStations(SANDBOX_COLLECTION, detailLevel)
 }
 
-export function getFullStationById(stationId: string): Station | null {
-  for (const collectionId of [...NETWORK_COLLECTION_IDS, SANDBOX_COLLECTION]) {
-    const state = getState(collectionId)
+export function getFullStationById(
+  stationId: string,
+  collectionId?: StationCollectionId | null
+): Station | null {
+  const searchOrder: StationCollectionId[] = collectionId
+    ? [collectionId]
+    : [...NETWORK_COLLECTION_IDS, SANDBOX_COLLECTION]
+
+  for (const id of searchOrder) {
+    const state = getState(id)
     const match =
       state.full.find((station) => station.id === stationId) ??
       state.list.find((station) => station.id === stationId)

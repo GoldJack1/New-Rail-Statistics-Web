@@ -19,6 +19,8 @@ interface StationsMapTimelineProps {
   onStepIndexChange: (index: number) => void
   isPlaying: boolean
   onPlayingChange: (playing: boolean) => void
+  modeEnabled: boolean
+  onModeEnabledChange: (enabled: boolean) => void
 }
 
 function getCutoffForStep(steps: SuperTramTimelineStep[], index: number): number | null {
@@ -33,6 +35,8 @@ export function StationsMapTimeline({
   onStepIndexChange,
   isPlaying,
   onPlayingChange,
+  modeEnabled,
+  onModeEnabledChange,
 }: StationsMapTimelineProps) {
   const steps = useMemo(() => buildSuperTramTimelineSteps(stations), [stations])
   const maxIndex = Math.max(0, steps.length - 1)
@@ -87,6 +91,32 @@ export function StationsMapTimeline({
     onPlayingChange(false)
     onStepIndexChange(0)
   }, [onStepIndexChange, onPlayingChange])
+
+  const handleEnableTimeline = useCallback(() => {
+    onModeEnabledChange(true)
+    onStepIndexChange(Math.max(0, steps.length - 1))
+  }, [onModeEnabledChange, onStepIndexChange, steps.length])
+
+  const handleDisableTimeline = useCallback(() => {
+    onPlayingChange(false)
+    onModeEnabledChange(false)
+  }, [onModeEnabledChange, onPlayingChange])
+
+  if (!modeEnabled) {
+    return (
+      <section className="stations-map-timeline" aria-label="Network opening timeline">
+        <div className="stations-map-timeline__header">
+          <h2 className="stations-map-timeline__title">Opening timeline</h2>
+          <p className="stations-map-timeline__intro">
+            All stops are shown on the map. Enable timeline mode to replay how the network opened over time.
+          </p>
+        </div>
+        <BUTWideButton type="button" width="fill" onClick={handleEnableTimeline}>
+          Enable timeline mode
+        </BUTWideButton>
+      </section>
+    )
+  }
 
   if (steps.length === 0) {
     return (
@@ -150,6 +180,9 @@ export function StationsMapTimeline({
           From start
         </BUTWideButton>
       </div>
+      <button type="button" className="stations-map-timeline__disable" onClick={handleDisableTimeline}>
+        Turn off timeline mode
+      </button>
     </section>
   )
 }

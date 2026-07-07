@@ -27,11 +27,11 @@ export const StationsCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   const runBootstrap = useCallback(
     (force = false) => {
       void bootstrapStationsData({ isSandbox, networkView, detailLevel: 'lean', force }).then(() => {
-        if (isSandbox || isLiteDataMode) return
+        if (isSandbox) return
         void loadAllNetworkStationsProgressive({ detailLevel: 'list', force: false })
       })
     },
-    [isSandbox, isLiteDataMode, networkView]
+    [isSandbox, networkView]
   )
 
   useEffect(() => {
@@ -42,10 +42,9 @@ export const StationsCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     const onRefetch = () => {
       invalidateStationsCache()
       void bootstrapStationsData({ isSandbox, networkView, detailLevel: 'lean', force: true }).then(() => {
+        void loadAllNetworkStationsProgressive({ detailLevel: 'list', force: true })
         if (isLiteDataMode) return
-        void loadAllNetworkStationsProgressive({ detailLevel: 'list', force: true }).then(() =>
-          loadAllNetworkStationsProgressive({ detailLevel: 'full', force: true })
-        )
+        void loadAllNetworkStationsProgressive({ detailLevel: 'full', force: true })
       })
     }
     window.addEventListener('railstats-stations-refetch', onRefetch)

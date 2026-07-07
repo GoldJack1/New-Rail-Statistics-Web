@@ -18,6 +18,18 @@
     text-align: center;
 }
 
+.stations-map-selected-panel__loading {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+    line-height: 1.4;
+}
+
+.stations-map-selected-panel .rs-station-text-card--light-rail .light-rail-line-strip {
+    width: 100%;
+    margin: 12px 0 0;
+}
+
 .stations-map-selected-panel__pending {
     margin: 0;
     padding: var(--space-sm) var(--space-md);
@@ -33,7 +45,10 @@
 }
 
 .stations-map-selected-panel .rs-station-card-stack {
-    flex-shrink: 0;
+  flex-shrink: 0;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .stations-map-selected-panel__details {

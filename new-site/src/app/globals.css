@@ -233,6 +233,7 @@ button, a, input, select, textarea, [role="button"] {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    min-height: 100dvh;
 }
 
 .main-content {
@@ -245,20 +246,13 @@ button, a, input, select, textarea, [role="button"] {
 }
 
 /*
- * iOS in-tab Safari: stretch body → #root so .app (flex:1) + footer margin-top:auto fill the viewport.
+ * iOS in-tab Safari: use fill-available height on the app shell so the footer
+ * (margin-top: auto) sits on the viewport bottom with its background intact.
  */
 @supports (-webkit-touch-callout: none) {
     @media (max-width: 1199px) {
-        body {
-            display: flex;
-            flex-direction: column;
-            min-height: 100dvh;
+        .app {
             min-height: -webkit-fill-available;
-        }
-
-        #root {
-            flex: 1 1 auto;
-            min-height: 0;
         }
     }
 }
@@ -409,8 +403,6 @@ textarea:focus {
     display: flex;
     flex-direction: column;
     padding-top: var(--app-header-offset);
-    min-height: 100vh;
-    min-height: 100lvh;
     min-width: 0;
 }
 
@@ -435,30 +427,11 @@ body:has(.rs-page-top-header) {
     background-color: var(--bg-secondary);
 }
 
-@media (max-width: 639px) {
-    .main-content.app-main {
-        min-height: 100vh;
-        min-height: 100lvh;
-    }
-}
-
 /* Match +5px header padding where .safari-toolbar-tint is shown */
 @supports (-webkit-touch-callout: none) {
     @media (max-width: 1199px) {
         :root {
             --app-header-safari-extra: 5px;
-        }
-
-        .main-content.app-main {
-            min-height: 100vh;
-            min-height: 100lvh;
-        }
-    }
-
-    @media (max-width: 639px) {
-        .main-content.app-main {
-            min-height: 100vh;
-            min-height: 100lvh;
         }
     }
 }
@@ -469,4 +442,13 @@ body:has(.rs-page-top-header) {
     display: flex;
     flex-direction: column;
     overflow: visible;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+}
+
+@media (max-width: 639px) {
+    .main-content.app-main.app-main--stations-layout {
+        overflow-x: clip;
+    }
 }

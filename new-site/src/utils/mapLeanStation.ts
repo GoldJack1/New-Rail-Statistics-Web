@@ -1,5 +1,6 @@
 import type { NetworkCollectionId } from '@/constants/stationCollections'
 import type { Station } from '@/types'
+import { getStationMapKey } from './stationAreaSlug'
 
 /** Fields sufficient for map markers and SuperTram timeline filtering. */
 export type MapLeanStation = Pick<
@@ -48,11 +49,11 @@ export function resolveFullStationFromCache(
   station: Station,
   fullById: Map<string, Station>
 ): Station {
-  return fullById.get(station.id) ?? station
+  return fullById.get(getStationMapKey(station)) ?? station
 }
 
 export function buildFullStationIndex(stations: Station[]): Map<string, Station> {
-  return new Map(stations.map((station) => [station.id, station]))
+  return new Map(stations.map((station) => [getStationMapKey(station), station]))
 }
 
 export function mergeNetworkCollections(

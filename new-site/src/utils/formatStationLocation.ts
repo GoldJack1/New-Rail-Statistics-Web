@@ -71,3 +71,28 @@ export function formatStationLocationDisplay(params: {
   return ''
 }
 
+/** Map side-panel copy — falls back to locale/borough for light-rail lean rows. */
+export function formatMapPanelLocationDisplay(station: StationLocaleParts & {
+  stationName?: string
+  sourceCollectionId?: string | null
+  stnarea?: string | null
+}): string {
+  const direct = formatStationLocationDisplay(station)
+  if (direct) return direct
+
+  const locale = formatStationLocaleDisplay(station)
+  if (locale) return locale
+
+  const borough = (station.borough ?? '').trim()
+  if (borough) return borough
+
+  if (
+    station.sourceCollectionId === 'lightrail_GBSHEFFSUPERTRAM' ||
+    station.stnarea?.trim().toUpperCase() === 'GBSHEFFSUPERTRAM'
+  ) {
+    return 'South Yorkshire'
+  }
+
+  return ''
+}
+

@@ -8,7 +8,8 @@ import { isLightRailStop } from '../../utils/stationCardForNetwork'
 import { BUTWideButton } from '../buttons'
 import { NETWORK_LABELS, isNetworkCollection } from '../../constants/stationCollections'
 import { buildStationPath, getStationNetworkCollectionId } from '../../utils/stationAreaSlug'
-import { formatStationLocationDisplay } from '../../utils/formatStationLocation'
+import { formatMapPanelLocationDisplay } from '../../utils/formatStationLocation'
+import { parseLightRailLinesServed } from '../../utils/lightRailStationFields'
 import { usePendingStationChanges } from '../../contexts/PendingStationChangesContext'
 import type { Station } from '../../types'
 import './StationsMapSelectedPanel.css'
@@ -16,6 +17,7 @@ import './StationsMapSelectedPanel.css'
 interface StationsMapSelectedPanelProps {
   station: Station | null
   isPendingNew?: boolean
+  detailsLoading?: boolean
 }
 
 function formatDetail(value: string | null | undefined): string {
@@ -41,7 +43,7 @@ function getLatestPassengerEntry(
 }
 
 const StationsMapSelectedPanel = forwardRef<HTMLElement, StationsMapSelectedPanelProps>(
-  ({ station, isPendingNew = false }, ref) => {
+  ({ station, isPendingNew = false, detailsLoading = false }, ref) => {
     const router = useRouter()
     const { pendingChanges } = usePendingStationChanges()
 
@@ -54,6 +56,12 @@ const StationsMapSelectedPanel = forwardRef<HTMLElement, StationsMapSelectedPane
       () => (station ? getLatestPassengerEntry(station.yearlyPassengers) : null),
       [station]
     )
+    const locationDisplay = station ? formatMapPanelLocationDisplay(station) : ''
+    const lightRailLines = useMemo(
+      () => (station ? parseLightRailLinesServed(station.linesServed ?? '') : []),
+      [station]
+    )
+    const isLightRail = station ? isLightRailStop(station) : false
 
     const stationPath = station ? buildStationPath(station, collectionId ?? undefined) : null
     const openStation = () => {
@@ -85,17 +93,22 @@ const StationsMapSelectedPanel = forwardRef<HTMLElement, StationsMapSelectedPane
           </p>
         ) : (
           <>
-            {isLightRailStop(station) ? (
+            {detailsLoading && (
+              <p className="stations-map-selected-panel__loading" role="status">
+                Loading station details…
+              </p>
+            )}
+            {isLightRail ? (
               <LightRailStopCard
                 station={station}
-                locationDisplay={formatStationLocationDisplay(station)}
+                locationDisplay={locationDisplay}
                 onCardClick={openStation}
                 onInfoClick={openStation}
               />
             ) : (
               <StationCard
                 station={station}
-                locationDisplay={formatStationLocationDisplay(station)}
+                locationDisplay={locationDisplay}
                 onCardClick={openStation}
                 onInfoClick={openStation}
               />
@@ -115,19 +128,38 @@ const StationsMapSelectedPanel = forwardRef<HTMLElement, StationsMapSelectedPane
                   <dd>{networkLabel}</dd>
                 </div>
               )}
-              <div className="stations-map-selected-panel__row">
-                <dt>CRS code</dt>
-                <dd>{formatDetail(station.crsCode)}</dd>
-              </div>
-              <div className="stations-map-selected-panel__row">
-                <dt>TIPLOC</dt>
-                <dd>{formatDetail(station.tiploc)}</dd>
-              </div>
-              {passengerEntry && (
-                <div className="stations-map-selected-panel__row">
-                  <dt>Passengers ({passengerEntry.year})</dt>
-                  <dd>{passengerEntry.value}</dd>
-                </div>
+              {isLightRail ? (
+                <>
+                  {lightRailLines.length > 0 && (
+                    <div className="stations-map-selected-panel__row">
+                      <dt>Lines</dt>
+                      <dd>{lightRailLines.join(', ')}</dd>
+                    </div>
+                  )}
+                  {station.dateOpened?.trim() && (
+                    <div className="stations-map-selected-panel__row">
+                      <dt>Opened</dt>
+                      <dd>{formatDetail(station.dateOpened)}</dd>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="stations-map-selected-panel__row">
+                    <dt>CRS code</dt>
+                    <dd>{formatDetail(station.crsCode)}</dd>
+                  </div>
+                  <div className="stations-map-selected-panel__row">
+                    <dt>TIPLOC</dt>
+                    <dd>{formatDetail(station.tiploc)}</dd>
+                  </div>
+                  {passengerEntry && (
+                    <div className="stations-map-selected-panel__row">
+                      <dt>Passengers ({passengerEntry.year})</dt>
+                      <dd>{passengerEntry.value}</dd>
+                    </div>
+                  )}
+                </>
               )}
               <div className="stations-map-selected-panel__row">
                 <dt>Coordinates</dt>

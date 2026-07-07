@@ -18,7 +18,12 @@ import {
 import { useStationCollection } from '@/contexts/StationCollectionContext'
 import { usePendingStationChanges } from '@/contexts/PendingStationChangesContext'
 import { useStationsMap } from '@/hooks/useStations'
-import { getStationMapKey } from '@/utils/stationAreaSlug'
+import {
+  ensureCollectionLoaded,
+  mapStationDetailsUpgraded,
+  resolveMapStationDetails,
+} from '@/services/stationsDataService'
+import { getStationMapKey, getStationNetworkCollectionId } from '@/utils/stationAreaSlug'
 import { mergePendingNewStationsForMap } from '@/utils/pendingMapStations'
 import { isValidStationCoordinate } from '@/utils/stationCoordinates'
 import { countPendingChangesForCollection } from '@/utils/pendingChangesByCollection'
@@ -48,12 +53,15 @@ const StationsMapPage: React.FC = () => {
   const isAdminMode = useStationAdminMode()
   const { collectionId, networkView, setNetworkView, isSandbox } = useStationCollection()
   const { pendingChanges } = usePendingStationChanges()
-  const { stations, loading, error, refetch, resolveStation } = useStationsMap()
+  const { stations, loading, error, refetch, resolveStation, loadStationDetails, dataRevision } =
+    useStationsMap()
   const { shouldGateAllNetworks, isLiteMode, enableFullMapOverride } = useDevicePerformanceTier(networkView)
   const [selectedStation, setSelectedStation] = useState<Station | null>(null)
   const [isAddStationMode, setIsAddStationMode] = useState(false)
   const [timelineStepIndex, setTimelineStepIndex] = useState(0)
   const [timelinePlaying, setTimelinePlaying] = useState(false)
+  const [timelineModeEnabled, setTimelineModeEnabled] = useState(false)
+  const [stationDetailsLoading, setStationDetailsLoading] = useState(false)
   const panelRef = useRef<HTMLElement>(null)
 
   const showSuperTramTimeline = networkView === LIGHTRAIL_COLLECTION_ID
@@ -71,15 +79,25 @@ const StationsMapPage: React.FC = () => {
   useEffect(() => {
     if (!selectedStation) return
     const resolved = resolveStation(selectedStation)
-    if (resolved !== selectedStation) {
+    if (mapStationDetailsUpgraded(selectedStation, resolved)) {
       setSelectedStation(resolved)
     }
-  }, [stations, selectedStation, resolveStation])
+  }, [dataRevision, selectedStation, resolveStation])
+
+  useEffect(() => {
+    if (isSandbox || networkView === 'all') return
+    if (!isNetworkCollection(networkView)) return
+    void ensureCollectionLoaded(networkView, { detailLevel: 'list', force: false })
+  }, [networkView, isSandbox])
 
   useEffect(() => {
     if (!selectedStation) return
     if (networkView === 'all') return
-    if (selectedStation.sourceCollectionId !== networkView) {
+    const stationNetwork = getStationNetworkCollectionId(
+      selectedStation,
+      isNetworkCollection(networkView) ? networkView : undefined
+    )
+    if (stationNetwork !== networkView) {
       setSelectedStation(null)
     }
   }, [networkView, selectedStation])
@@ -98,8 +116,17 @@ const StationsMapPage: React.FC = () => {
   const handleStationSelect = useCallback(
     (station: Station) => {
       setSelectedStation(resolveStation(station))
+      setStationDetailsLoading(true)
+      const selectionKey = getStationMapKey(station)
+      void loadStationDetails(station).finally(() => {
+        setStationDetailsLoading(false)
+        setSelectedStation((current) => {
+          if (!current || getStationMapKey(current) !== selectionKey) return current
+          return resolveMapStationDetails(current)
+        })
+      })
     },
-    [resolveStation]
+    [loadStationDetails, resolveStation]
   )
 
   const handleStationClear = useCallback(() => {
@@ -165,12 +192,16 @@ const StationsMapPage: React.FC = () => {
   }, [showSuperTramTimeline, superTramTimelineSteps, timelineStepIndex])
 
   useEffect(() => {
+    setTimelineModeEnabled(false)
+    setTimelinePlaying(false)
     if (!showSuperTramTimeline) {
-      setTimelinePlaying(false)
       return
     }
     setTimelineStepIndex(Math.max(0, superTramTimelineSteps.length - 1))
   }, [showSuperTramTimeline, superTramTimelineSteps.length])
+
+  const activeTimelineCutoffMs = timelineModeEnabled ? timelineCutoffMs : null
+  const activeTimelineShowUndatedAtMax = timelineModeEnabled ? timelineShowUndatedAtMax : true
 
   const selectedStationIsPending = Boolean(
     selectedStation && pendingNewKeys.has(getStationMapKey(selectedStation))
@@ -275,8 +306,8 @@ const StationsMapPage: React.FC = () => {
                 addStationMode={isAddStationMode}
                 onAddStationModeChange={setIsAddStationMode}
                 onAddStationAtLocation={handleAddStationAtLocation}
-                timelineCutoffMs={timelineCutoffMs}
-                timelineShowUndatedAtMax={timelineShowUndatedAtMax}
+                timelineCutoffMs={activeTimelineCutoffMs}
+                timelineShowUndatedAtMax={activeTimelineShowUndatedAtMax}
                 liteMode={isLiteMode}
               />
             )}
@@ -289,11 +320,14 @@ const StationsMapPage: React.FC = () => {
                 onStepIndexChange={setTimelineStepIndex}
                 isPlaying={timelinePlaying}
                 onPlayingChange={setTimelinePlaying}
+                modeEnabled={timelineModeEnabled}
+                onModeEnabledChange={setTimelineModeEnabled}
               />
             )}
             <StationsMapSelectedPanel
               station={selectedStation}
               isPendingNew={selectedStationIsPending}
+              detailsLoading={stationDetailsLoading}
             />
           </aside>
         </div>

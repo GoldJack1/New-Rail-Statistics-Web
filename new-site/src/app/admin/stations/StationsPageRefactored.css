@@ -9,6 +9,10 @@
     display: flex;
     flex-direction: column;
     background-color: var(--bg-tertiary);
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: clip;
 }
 
 .stations-toolbar-band {
@@ -93,6 +97,7 @@
     margin: 0 auto;
     padding: 0 var(--space-2xl) 0 var(--space-2xl);
     width: 100%;
+    min-width: 0;
     box-sizing: border-box;
     /* Remove height constraints for natural scrolling */
     min-height: auto;
@@ -315,7 +320,8 @@
     min-height: auto;
     display: flex;
     flex-direction: column;
-    overflow: visible;
+    overflow-x: clip;
+    overflow-y: visible;
     max-height: none;
     height: auto;
     overscroll-behavior: auto;
@@ -359,12 +365,23 @@
 /* Station Cards Grid */
 .stations-page-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 350px), 1fr));
     gap: var(--space-lg);
     margin-bottom: 0;
     flex: 0 0 auto;
     align-content: start; /* Align cards to top */
     align-items: start; /* Prevent grid items from stretching to equal row height */
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: clip;
+}
+
+.stations-page-grid > .rs-station-card-stack {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
 }
 
 /* ========================================
@@ -433,11 +450,48 @@
    RESPONSIVE DESIGN
    ======================================== */
 
+/* Tablet and below: stack filters above results (no 320px + main squeeze) */
+@media (max-width: 1023px) {
+    .stations-content {
+        grid-template-columns: 1fr;
+        gap: 0;
+        min-width: 0;
+        width: 100%;
+        max-width: none;
+        padding-left: var(--space-xl);
+        padding-right: var(--space-xl);
+        box-sizing: border-box;
+    }
+
+    .stations-sidebar {
+        order: 1;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .stations-page .stations-main {
+        order: 2;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .stations-sidebar-add-station--desktop {
+        display: none;
+    }
+}
+
 /* Mobile */
 @media (max-width: 639px) {
     .stations-toolbar-band {
         margin-bottom: 0;
         padding-bottom: 0;
+    }
+
+    .stations-toolbar-band::before {
+        left: 0;
+        width: 100%;
+        transform: none;
     }
 
     .stations-toolbar-band + .stations-content {
@@ -468,9 +522,7 @@
     }
 
     .stations-admin-controls-wrap,
-    .stations-network-tabs-wrap--toolbar,
-    .stations-sandbox-banner,
-    .stations-content {
+    .stations-sandbox-banner {
         padding-left: var(--space-lg);
         padding-right: var(--space-lg);
     }
@@ -481,23 +533,19 @@
     }
 
     .stations-content {
-        grid-template-columns: 1fr;
-        gap: 0;
-        min-height: auto;
+        padding-left: 0;
+        padding-right: 0;
+        margin-left: 0;
+        margin-right: 0;
+        overflow-x: clip;
     }
-    
+
     .stations-sidebar {
         order: 1;
     }
 
-    .stations-sidebar-add-station--desktop {
-        display: none;
-    }
-
     .stations-sidebar .sidebar-section {
         margin: 0 0 23px 0;
-        margin-left: calc(var(--space-lg) * -1);
-        margin-right: calc(var(--space-lg) * -1);
         padding: 16px var(--space-lg);
         background-color: var(--bg-secondary);
         border: 0;
@@ -571,32 +619,44 @@
     .mobile-filters-content-inner .county-london-toggle {
         margin-top: 10px;
     }
-    
+
     .stations-page .stations-main {
         order: 2;
-        align-self: start;
+        align-self: stretch;
         width: 100%;
-        overflow: visible;
+        min-width: 0;
+        max-width: 100%;
+        overflow-x: clip;
+        overflow-y: visible;
         max-height: none;
         height: auto;
         display: flex;
         flex-direction: column;
+        padding: var(--space-lg);
+        box-sizing: border-box;
     }
-    
+
     .stations-controls {
         flex-direction: column;
         align-items: stretch;
     }
-    
+
     .stations-page-grid {
-        grid-template-columns: 1fr;
+        width: 100%;
+        max-width: 100%;
+        grid-template-columns: minmax(0, 1fr);
         gap: var(--space-md);
+        padding: 0;
+        margin: 0;
     }
-    
+
     .stations-pagination {
         margin-top: 25px;
         margin-bottom: 0;
         padding-top: 0;
+        padding-left: 0;
+        padding-right: 0;
+        box-sizing: border-box;
     }
 
     .pagination-control-row {

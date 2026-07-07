@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import '../../../components/maps/leafletDarkTiles.css'
-import { useTheme } from '../../../hooks/useTheme'
+import { useTheme, readThemeFromDocument } from '../../../hooks/useTheme'
 import { addThemeTileLayersToMap, swapThemeTileLayers, type MapTileLayerRefs } from '../../../utils/mapTileLayers'
 
 // Precise circle marker: center is exactly the station coordinates (no anchor ambiguity)
@@ -55,7 +55,7 @@ export function StationLocationMapView({
       return
     }
     const map = L.map(mapRef.current).setView(center, DEFAULT_ZOOM)
-    const layers = addThemeTileLayersToMap(map, themeKey)
+    const layers = addThemeTileLayersToMap(map, readThemeFromDocument())
     tileLayersRef.current = layers
     const marker = L.circleMarker(center, PRECISE_MARKER_OPTIONS)
     marker.addTo(map)

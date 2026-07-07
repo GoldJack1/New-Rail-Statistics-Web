@@ -1,18 +1,30 @@
 .rs-station-card-action-bar {
   display: flex;
   align-items: stretch;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   height: 40px;
   border-bottom: 1px solid var(--border-color);
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
+.rs-station-card-action-bar .rs-visit-button,
 .rs-station-card-action-bar__visit.rs-visit-button {
+  display: flex;
   height: 40px;
-  flex: 1;
-  min-width: 0;
+  flex: 1 1 0;
+  min-width: 0 !important;
+  max-width: 100%;
   width: auto;
   padding: 0 18px 0 12px;
   align-items: center;
   justify-content: flex-start;
   font-size: 13px;
+}
+
+.rs-station-card-action-bar .rs-button--square {
+  flex: 0 0 40px;
 }
 

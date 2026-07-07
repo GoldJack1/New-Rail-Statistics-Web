@@ -131,6 +131,7 @@
         height: 100%;
         max-height: 100%;
         min-height: 0;
+        min-width: 0;
         padding: var(--space-lg);
         border-top: 1px solid var(--border-color);
         background-color: var(--bg-secondary);
@@ -138,6 +139,11 @@
         overflow-y: auto;
         overscroll-behavior: contain;
         box-sizing: border-box;
+    }
+
+    .stations-map-page .stations-map-side-panel > * {
+        min-width: 0;
+        max-width: 100%;
     }
 }
 
@@ -199,6 +205,7 @@
     .stations-map-page .stations-map-side-panel {
         height: auto;
         max-height: none;
+        min-width: 0;
         scroll-margin-top: var(--stations-map-app-header);
     }
 

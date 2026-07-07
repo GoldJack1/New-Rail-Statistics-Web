@@ -15,14 +15,14 @@ import {
   NETWORK_MAP_FALLBACK_COLOR,
   PENDING_NEW_STATION_MAP_COLOR,
 } from '../../constants/stationNetworkMapColors'
-import { useTheme } from '../../hooks/useTheme'
+import { useTheme, readThemeFromDocument } from '../../hooks/useTheme'
 import { getStationNetworkCollectionId, getStationMapKey } from '../../utils/stationAreaSlug'
 import { isValidStationCoordinate } from '../../utils/stationCoordinates'
 import {
   createSuperTramMapDivIcon,
   isSuperTramMapStop,
 } from '../../utils/superTramMapMarker'
-import { getMarkerHitRadius, getMarkerVisualRadius, getSuperTramIconOuterDiameter, MARKER_STROKE } from '../../utils/mapMarkerSizing'
+import { getMarkerHitRadius, getMarkerVisualRadius, MARKER_STROKE } from '../../utils/mapMarkerSizing'
 import { addThemeTileLayersToMap, swapThemeTileLayers, type MapTileLayerRefs } from '../../utils/mapTileLayers'
 import { isStationVisibleAtTimelineCutoff } from '../../utils/superTramTimeline'
 import { LIGHTRAIL_COLLECTION_ID } from '../../utils/lightRailStationFields'
@@ -60,7 +60,7 @@ const MOBILE_MAP_MEDIA = '(max-width: 639px)'
 const LITE_MOVEEND_DEBOUNCE_MS = 150
 
 type StationMarkerPair = {
-  hit: L.CircleMarker
+  hit: L.CircleMarker | L.Marker
   visual: L.CircleMarker | L.Marker
   kind: 'circle' | 'supertram-logo'
 }
@@ -145,19 +145,21 @@ function getStationMarkerColor(
 
 function setMarkerTimelineVisibility(marker: StationMarkerPair, visible: boolean): void {
   const opacity = visible ? 1 : 0
+
+  if (marker.kind === 'supertram-logo') {
+    const iconMarker = marker.visual as L.Marker
+    iconMarker.setOpacity(opacity)
+    const element = iconMarker.getElement()
+    if (element) {
+      element.style.pointerEvents = visible ? 'auto' : 'none'
+    }
+    return
+  }
+
   marker.hit.setStyle({
     fillOpacity: visible ? 0.001 : 0,
     interactive: visible,
   })
-
-  if (marker.kind === 'supertram-logo') {
-    const element = (marker.visual as L.Marker).getElement()
-    if (element) {
-      element.style.opacity = String(opacity)
-      element.style.pointerEvents = 'none'
-    }
-    return
-  }
 
   const circleMarker = marker.visual as L.CircleMarker
   circleMarker.setStyle({
@@ -177,24 +179,19 @@ function applyMarkerStyle(
   const { visual, hit } = getMarkerRadii(isSelected, mobile)
   const isPendingNew = pendingNewStationKeys.has(getStationMapKey(station))
 
-  const hitRadius =
-    marker.kind === 'supertram-logo'
-      ? Math.max(hit, getSuperTramIconOuterDiameter(isSelected, mobile) / 2)
-      : hit
-
-  marker.hit.setStyle({
-    radius: hitRadius,
-    fillOpacity: 0.001,
-    stroke: false,
-    weight: 0,
-  })
-
   if (marker.kind === 'supertram-logo') {
     const iconMarker = marker.visual as L.Marker
     iconMarker.setIcon(createSuperTramMapDivIcon(isSelected, mobile, isPendingNew))
     iconMarker.setZIndexOffset(isSelected ? 1000 : 0)
     return
   }
+
+  marker.hit.setStyle({
+    radius: hit,
+    fillOpacity: 0.001,
+    stroke: false,
+    weight: 0,
+  })
 
   const circleMarker = marker.visual as L.CircleMarker
   circleMarker.setStyle({
@@ -329,12 +326,30 @@ export function StationsOsmMap({
         const latLng: L.LatLngTuple = [station.latitude, station.longitude]
         const isPendingNew = pendingNewStationKeys.has(getStationMapKey(station))
         const useSuperTramLogo = isSuperTramMapStop(station, networkView)
-        const hitRadius = useSuperTramLogo
-          ? Math.max(hit, getSuperTramIconOuterDiameter(false, mobileMarkers) / 2)
-          : hit
+
+        if (useSuperTramLogo) {
+          const logoMarker = L.marker(latLng, {
+            icon: createSuperTramMapDivIcon(false, mobileMarkers, isPendingNew),
+            interactive: true,
+            keyboard: false,
+          })
+
+          logoMarker.on('click', (event) => {
+            L.DomEvent.stopPropagation(event)
+            onStationSelectRef.current(station)
+          })
+
+          layerGroup.addLayer(logoMarker)
+          markersByIdRef.current.set(getStationMapKey(station), {
+            hit: logoMarker,
+            visual: logoMarker,
+            kind: 'supertram-logo',
+          })
+          return
+        }
 
         const hitMarker = L.circleMarker(latLng, {
-          radius: hitRadius,
+          radius: hit,
           fillColor: '#000000',
           fillOpacity: 0.001,
           stroke: false,
@@ -342,38 +357,27 @@ export function StationsOsmMap({
           className: 'stations-osm-map__hit-target',
         })
 
-        const visualMarker = useSuperTramLogo
-          ? L.marker(latLng, {
-              icon: createSuperTramMapDivIcon(false, mobileMarkers, isPendingNew),
-              interactive: false,
-              keyboard: false,
-            })
-          : L.circleMarker(latLng, {
-              radius: getMarkerRadii(false, mobileMarkers).visual,
-              fillColor: getStationMarkerColor(station, networkView, pendingNewStationKeys),
-              color: '#ffffff',
-              weight: 2,
-              fillOpacity: 0.95,
-              interactive: false,
-              className: 'stations-osm-map__visual-target',
-            })
+        const visualMarker = L.circleMarker(latLng, {
+          radius: getMarkerRadii(false, mobileMarkers).visual,
+          fillColor: getStationMarkerColor(station, networkView, pendingNewStationKeys),
+          color: '#ffffff',
+          weight: 2,
+          fillOpacity: 0.95,
+          interactive: false,
+          className: 'stations-osm-map__visual-target',
+        })
 
         hitMarker.on('click', (event) => {
           L.DomEvent.stopPropagation(event)
           onStationSelectRef.current(station)
         })
 
-        if (useSuperTramLogo) {
-          layerGroup.addLayer(visualMarker)
-          layerGroup.addLayer(hitMarker)
-        } else {
-          layerGroup.addLayer(hitMarker)
-          layerGroup.addLayer(visualMarker)
-        }
+        layerGroup.addLayer(hitMarker)
+        layerGroup.addLayer(visualMarker)
         markersByIdRef.current.set(getStationMapKey(station), {
           hit: hitMarker,
           visual: visualMarker,
-          kind: useSuperTramLogo ? 'supertram-logo' : 'circle',
+          kind: 'circle',
         })
       })
       layerGroup.addTo(map)
@@ -386,7 +390,7 @@ export function StationsOsmMap({
     if (!mapContainerRef.current) return
 
     const map = L.map(mapContainerRef.current, { zoomControl: false }).setView(DEFAULT_CENTER, DEFAULT_ZOOM)
-    tileLayersRef.current = addThemeTileLayersToMap(map, themeKey)
+    tileLayersRef.current = addThemeTileLayersToMap(map, readThemeFromDocument())
     mapRef.current = map
 
     const syncZoomBounds = () => {

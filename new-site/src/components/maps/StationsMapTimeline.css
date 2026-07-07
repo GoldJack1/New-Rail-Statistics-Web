@@ -26,6 +26,30 @@
     color: var(--text-secondary);
 }
 
+.stations-map-timeline__intro {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    line-height: 1.45;
+}
+
+.stations-map-timeline__disable {
+    align-self: center;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--text-secondary);
+    text-decoration: underline;
+    cursor: pointer;
+    font: inherit;
+    font-size: var(--text-xs);
+}
+
+.stations-map-timeline__disable:hover {
+    color: var(--text-primary);
+}
+
 .stations-map-timeline__empty {
     margin: 0;
     font-size: var(--text-sm);
@@ -119,6 +143,7 @@
     flex-direction: column;
     gap: var(--space-lg);
     min-height: 0;
+    min-width: 0;
     max-height: 100%;
     overflow-x: hidden;
     overflow-y: auto;
@@ -126,8 +151,8 @@
 }
 
 .stations-map-side-panel .stations-map-selected-panel {
-    flex: 1 1 auto;
-    min-height: 0;
+    flex: 0 0 auto;
+    min-height: min-content;
     max-height: none;
     overflow: visible;
     padding: 0;

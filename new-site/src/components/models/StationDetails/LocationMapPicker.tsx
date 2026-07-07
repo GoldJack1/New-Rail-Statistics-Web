@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import '../../../components/maps/leafletDarkTiles.css'
-import { useTheme } from '../../../hooks/useTheme'
+import { useTheme, readThemeFromDocument } from '../../../hooks/useTheme'
 import { addThemeTileLayersToMap, swapThemeTileLayers, type MapTileLayerRefs } from '../../../utils/mapTileLayers'
 import { useOsmBackendProxy } from '../../../utils/osmBackendProxy'
 import TXTINPIconWideButtonSearch from '../../textInputs/special/TXTINPIconWideButtonSearch'
@@ -109,7 +109,7 @@ export function LocationMapPicker({
   useEffect(() => {
     if (!mapRef.current) return
     const map = L.map(mapRef.current).setView(center, DEFAULT_ZOOM)
-    tileLayersRef.current = addThemeTileLayersToMap(map, themeKey)
+    tileLayersRef.current = addThemeTileLayersToMap(map, readThemeFromDocument())
     mapInstanceRef.current = map
     if (hasValidCoords) {
       const marker = L.marker([latitude, longitude], { draggable: true, icon: CIRCLE_ICON })

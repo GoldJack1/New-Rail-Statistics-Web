@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Suspense } from 'react'
 import { geologica, aronetiv, aronetivNormal } from './fonts'
+import { ThemeProvider } from '@/contexts/ThemeContext'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { StationCollectionProvider } from '@/contexts/StationCollectionContext'
 import { StationsCacheProvider } from '@/contexts/StationsCacheContext'
@@ -119,25 +120,27 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: NO_FLASH_THEME_SCRIPT }} />
       </head>
       <body>
-        <AuthProvider>
-          <StationCollectionProvider>
-            <StationsCacheProvider>
-              <PendingStationChangesProvider>
-              <ServiceWorkerRegistration />
-              <div className="app">
-                <Header />
-                <AppMain>
-                  <Suspense fallback={null}>{children}</Suspense>
-                </AppMain>
-                <Suspense fallback={null}>
-                  <Footer />
-                  <FirebaseAnalytics />
-                </Suspense>
-              </div>
-              </PendingStationChangesProvider>
-            </StationsCacheProvider>
-          </StationCollectionProvider>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <StationCollectionProvider>
+              <StationsCacheProvider>
+                <PendingStationChangesProvider>
+                  <ServiceWorkerRegistration />
+                  <div className="app">
+                    <Header />
+                    <AppMain>
+                      <Suspense fallback={null}>{children}</Suspense>
+                    </AppMain>
+                    <Suspense fallback={null}>
+                      <Footer />
+                      <FirebaseAnalytics />
+                    </Suspense>
+                  </div>
+                </PendingStationChangesProvider>
+              </StationsCacheProvider>
+            </StationCollectionProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   )
