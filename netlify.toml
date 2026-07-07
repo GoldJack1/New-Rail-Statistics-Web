@@ -1,18 +1,18 @@
-# Monorepo layout: the Next.js app lives in "New Site/". Netlify clones the repo
-# root, so base must point at that subdirectory or builds publish the wrong folder
-# (MIGRATION_PLAN.md only) and every route 404s.
+# Next.js app lives in new-site/ (monorepo). Netlify clones the repo root, so base
+# must point at that subdirectory. Do NOT set publish — @netlify/plugin-nextjs sets
+# the correct output; publishing raw .next as static files causes site-wide 404s.
+#
+# Netlify UI (Site configuration → Build & deploy → Build settings):
+#   Base directory, Package directory, Build command, Publish directory — all EMPTY.
+# If any of those are filled in, they can override this file and break routing.
 [build]
-  base = "New Site"
-  command = "npm run build"
-  publish = ".next"
+  base = "new-site"
+  command = "npm ci && npm run build"
 
 [build.environment]
   NODE_VERSION = "20"
-  NODE_ENV = "production"
   NETLIFY = "true"
 
-# Compiles App Router pages, Route Handlers (app/api/*), and middleware into
-# Netlify Functions/Edge — no manual [[redirects]] for /api/osm-tile etc.
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
