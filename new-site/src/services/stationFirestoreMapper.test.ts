@@ -41,4 +41,42 @@ describe('stationFirestoreMapper', () => {
 
     expect(station.platforms).toBe('2')
   })
+
+  it('maps province on list detail for NI Translink stations', () => {
+    const station = mapFirestoreDocToStation(
+      'ni-1',
+      {
+        stationname: 'Belfast Grand Central',
+        CrsCode: 'BFG',
+        stnarea: 'NITRANSLINK',
+        country: 'Northern Ireland',
+        county: 'Antrim',
+        province: 'Ulster',
+        location: [54.5952, -5.9407],
+      },
+      'stations_nitranslink',
+      'list'
+    )
+
+    expect(station.province).toBe('Ulster')
+  })
+
+  it('reads Province with capital P on list detail', () => {
+    const station = mapFirestoreDocToStation(
+      'ie-1',
+      {
+        stationname: 'Cork Kent',
+        CrsCode: 'CKC',
+        stnarea: 'ROIIRERAIL',
+        country: 'Ireland',
+        county: 'Cork',
+        Province: 'Munster',
+        location: [51.9034, -8.4599],
+      },
+      'stations_roiirerail',
+      'list'
+    )
+
+    expect(station.province).toBe('Munster')
+  })
 })

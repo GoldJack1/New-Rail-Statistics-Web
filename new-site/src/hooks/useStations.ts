@@ -6,13 +6,11 @@ import {
   ensureMapStationDetailsLoaded,
   getCollectionError,
   getMergedNetworkStations,
+  getMergedNetworkStationsForDisplay,
   getMergedNetworkStationDetails,
-  getSandboxStations,
   invalidateStationsCache,
   isAnyNetworkCollectionLoading,
   isAnyNetworkCollectionRefreshing,
-  isCollectionLoading,
-  isCollectionRefreshing,
   loadAllNetworkStationsProgressive,
   resolveMapStationDetails,
   getStationsStoreRevision,
@@ -20,7 +18,6 @@ import {
 } from '@/services/stationsDataService'
 import type { Station, StationStats, UseStationsReturn } from '@/types'
 import { buildFullStationIndex } from '@/utils/mapLeanStation'
-import { getStationMapKey, getStationNetworkCollectionId } from '@/utils/stationAreaSlug'
 
 const SERVER_STATION_SNAPSHOT = {
   stations: [] as Station[],
@@ -35,10 +32,7 @@ const SERVER_STATION_SNAPSHOT = {
   } satisfies StationStats,
 }
 
-function buildStationsError(isSandbox: boolean): string | null {
-  if (isSandbox) {
-    return getCollectionError('newsandboxstations1')
-  }
+function buildStationsError(): string | null {
   for (const message of [
     getCollectionError('stations_gbnr'),
     getCollectionError('stations_nitranslink'),
@@ -63,7 +57,7 @@ export interface UseStationsMapReturn {
 }
 
 export const useStations = (): UseStationsReturn => {
-  const { isSandbox, networkView } = useStationCollection()
+  const { networkView } = useStationCollection()
   const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
@@ -78,36 +72,24 @@ export const useStations = (): UseStationsReturn => {
 
   const snapshot = useMemo(() => {
     if (!hydrated) return SERVER_STATION_SNAPSHOT
-    const fullStations = isSandbox ? getSandboxStations('full') : getMergedNetworkStations('full')
-    const listStations = isSandbox ? getSandboxStations('list') : getMergedNetworkStations('list')
-    const leanStations = isSandbox ? getSandboxStations('lean') : getMergedNetworkStations('lean')
-    const stations =
-      fullStations.length > 0
-        ? fullStations
-        : listStations.length > 0
-          ? listStations
-          : leanStations
-    const loading = isSandbox
-      ? isCollectionLoading('newsandboxstations1')
-      : isAnyNetworkCollectionLoading() && stations.length === 0
-    const isRefreshing = isSandbox
-      ? isCollectionRefreshing('newsandboxstations1')
-      : isAnyNetworkCollectionRefreshing()
-    const error = stations.length === 0 ? buildStationsError(isSandbox) : null
+    const stations = getMergedNetworkStationsForDisplay()
+    const loading = isAnyNetworkCollectionLoading() && stations.length === 0
+    const isRefreshing = isAnyNetworkCollectionRefreshing()
+    const error = stations.length === 0 ? buildStationsError() : null
     return { stations, loading, isRefreshing, error }
-  }, [hydrated, isSandbox, revision])
+  }, [hydrated, revision])
 
   const deferredStations = useDeferredValue(snapshot.stations)
   const stats = useMemo(() => calculateStats(deferredStations), [deferredStations])
 
   const refetch = useCallback(() => {
     invalidateStationsCache()
-    void bootstrapStationsData({ isSandbox, networkView, detailLevel: 'lean', force: true }).then(() =>
+    void bootstrapStationsData({ networkView, detailLevel: 'lean', force: true }).then(() =>
       loadAllNetworkStationsProgressive({ detailLevel: 'list', force: true }).then(() =>
         loadAllNetworkStationsProgressive({ detailLevel: 'full', force: true })
       )
     )
-  }, [isSandbox, networkView])
+  }, [networkView])
 
   return useMemo(
     () => ({
@@ -123,7 +105,7 @@ export const useStations = (): UseStationsReturn => {
 }
 
 export const useStationsMap = (): UseStationsMapReturn => {
-  const { isSandbox, networkView } = useStationCollection()
+  const { networkView } = useStationCollection()
   const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
@@ -146,16 +128,12 @@ export const useStationsMap = (): UseStationsMapReturn => {
         error: null,
       }
     }
-    const leanStations = isSandbox ? getSandboxStations('lean') : getMergedNetworkStations('lean')
-    const fullStations = isSandbox ? getSandboxStations('full') : getMergedNetworkStationDetails()
+    const leanStations = getMergedNetworkStations('lean')
+    const fullStations = getMergedNetworkStationDetails()
     const stations = leanStations.length > 0 ? leanStations : fullStations
-    const loading = isSandbox
-      ? isCollectionLoading('newsandboxstations1')
-      : isAnyNetworkCollectionLoading() && stations.length === 0
-    const isRefreshing = isSandbox
-      ? isCollectionRefreshing('newsandboxstations1')
-      : isAnyNetworkCollectionRefreshing()
-    const error = stations.length === 0 ? buildStationsError(isSandbox) : null
+    const loading = isAnyNetworkCollectionLoading() && stations.length === 0
+    const isRefreshing = isAnyNetworkCollectionRefreshing()
+    const error = stations.length === 0 ? buildStationsError() : null
     return {
       stations,
       fullById: buildFullStationIndex(fullStations),
@@ -163,16 +141,16 @@ export const useStationsMap = (): UseStationsMapReturn => {
       isRefreshing,
       error,
     }
-  }, [hydrated, isSandbox, revision])
+  }, [hydrated, revision])
 
   const refetch = useCallback(() => {
     invalidateStationsCache()
-    void bootstrapStationsData({ isSandbox, networkView, detailLevel: 'lean', force: true }).then(() =>
+    void bootstrapStationsData({ networkView, detailLevel: 'lean', force: true }).then(() =>
       loadAllNetworkStationsProgressive({ detailLevel: 'list', force: true }).then(() =>
         loadAllNetworkStationsProgressive({ detailLevel: 'full', force: true })
       )
     )
-  }, [isSandbox, networkView])
+  }, [networkView])
 
   const resolveStation = useCallback(
     (station: Station) => resolveMapStationDetails(station),

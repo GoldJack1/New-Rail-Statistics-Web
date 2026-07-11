@@ -43,7 +43,7 @@ export function usePendingChangesPublishFlow({
   onPublishSuccess
 }: UsePendingChangesPublishFlowOptions) {
   const { user } = useAuth()
-  const { collectionId, networkView, isSandbox } = useStationCollection()
+  const { collectionId, networkView } = useStationCollection()
   const {
     pendingChanges,
     clearPendingChange,
@@ -55,7 +55,6 @@ export function usePendingChangesPublishFlow({
   } = usePendingStationChanges()
 
   const scopedPendingChanges = useMemo(() => {
-    if (isSandbox) return filterPendingChangesForCollection(pendingChanges, collectionId)
     if (networkView === 'all') {
       const merged: typeof pendingChanges = {}
       for (const id of NETWORK_COLLECTION_IDS) {
@@ -64,7 +63,7 @@ export function usePendingChangesPublishFlow({
       return merged
     }
     return filterPendingChangesForCollection(pendingChanges, collectionId)
-  }, [pendingChanges, collectionId, networkView, isSandbox])
+  }, [pendingChanges, collectionId, networkView])
 
   const passwordReauthActionRef = useRef<'publish' | 'schedule' | 'cancelSchedule' | null>(null)
   const pendingScheduleMsRef = useRef<number | null>(null)

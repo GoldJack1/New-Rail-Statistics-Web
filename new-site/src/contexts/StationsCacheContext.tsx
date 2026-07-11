@@ -16,7 +16,7 @@ import {
 } from '@/utils/deviceCapability'
 
 export const StationsCacheProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isSandbox, networkView } = useStationCollection()
+  const { networkView } = useStationCollection()
   const [isLiteDataMode, setIsLiteDataMode] = useState(false)
 
   useEffect(() => {
@@ -26,12 +26,10 @@ export const StationsCacheProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const runBootstrap = useCallback(
     (force = false) => {
-      void bootstrapStationsData({ isSandbox, networkView, detailLevel: 'lean', force }).then(() => {
-        if (isSandbox) return
-        void loadAllNetworkStationsProgressive({ detailLevel: 'list', force: false })
-      })
+      void loadAllNetworkStationsProgressive({ detailLevel: 'list', force })
+      void bootstrapStationsData({ networkView, detailLevel: 'lean', force })
     },
-    [isSandbox, networkView]
+    [networkView]
   )
 
   useEffect(() => {
@@ -41,7 +39,7 @@ export const StationsCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     const onRefetch = () => {
       invalidateStationsCache()
-      void bootstrapStationsData({ isSandbox, networkView, detailLevel: 'lean', force: true }).then(() => {
+      void bootstrapStationsData({ networkView, detailLevel: 'lean', force: true }).then(() => {
         void loadAllNetworkStationsProgressive({ detailLevel: 'list', force: true })
         if (isLiteDataMode) return
         void loadAllNetworkStationsProgressive({ detailLevel: 'full', force: true })
@@ -49,10 +47,10 @@ export const StationsCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     }
     window.addEventListener('railstats-stations-refetch', onRefetch)
     return () => window.removeEventListener('railstats-stations-refetch', onRefetch)
-  }, [isLiteDataMode, isSandbox, networkView])
+  }, [isLiteDataMode, networkView])
 
   useEffect(() => {
-    if (isSandbox || isLiteDataMode) return
+    if (isLiteDataMode) return
 
     const runFullLoad = () => {
       const hasListData = NETWORK_COLLECTION_IDS.every(
@@ -72,7 +70,7 @@ export const StationsCacheProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const timer = window.setTimeout(runFullLoad, 6_000)
     return () => window.clearTimeout(timer)
-  }, [isLiteDataMode, isSandbox, networkView])
+  }, [isLiteDataMode, networkView])
 
   return <>{children}</>
 }

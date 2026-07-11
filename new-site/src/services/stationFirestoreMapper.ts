@@ -158,6 +158,11 @@ function extractCoordinatesFromFirestoreData(data: Record<string, unknown>): {
   return { latitude, longitude }
 }
 
+function readProvince(data: Record<string, unknown>): string | null {
+  const province = data.province ?? data.Province ?? null
+  return province != null && province !== '' ? String(province).trim() : null
+}
+
 function readBorough(data: Record<string, unknown>): string | null {
   let borough: string | null = (data.borough ?? data.Borough ?? null) as string | null
   if (borough == null) {
@@ -223,6 +228,7 @@ export function mapFirestoreDocToStation(
   const fareZoneRaw = data.fareZone ?? data.fare_zone ?? data.FareZone ?? data['Fare Zone'] ?? data.farezone
   const fareZone = fareZoneRaw != null && fareZoneRaw !== '' ? String(fareZoneRaw) : null
   const borough = readBorough(data)
+  const province = readProvince(data)
 
   const baseStation: Station = {
     id: docId,
@@ -236,6 +242,7 @@ export function mapFirestoreDocToStation(
     toc: data.TOC || data.toc ? String(data.TOC || data.toc) : null,
     stnarea: data.stnarea || data.STNAREA ? String(data.stnarea || data.STNAREA) : null,
     borough,
+    province,
     fareZone,
     yearlyPassengers: extractYearlyPassengersFromFirestoreData(data),
     urlSlug: String(data.urlSlug ?? '').trim() || null,

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import type { Station } from '../../types'
+import type { Station } from '../types'
 import {
   filterStations,
+  getAvailableStationSearchModes,
   getDefaultStationFilterSelections,
   getStationFilterOptions,
   sortStations,
@@ -43,6 +44,7 @@ describe('stationSearchFiltering', () => {
       country: 'England',
       county: 'North Yorkshire',
       toc: 'LNER',
+      borough: 'York',
       fareZone: 'Outside',
       yearlyPassengers: { '2023': 500 },
     }),
@@ -53,10 +55,17 @@ describe('stationSearchFiltering', () => {
       country: 'Wales',
       county: 'South Glamorgan',
       toc: 'Transport for Wales',
+      borough: 'Cardiff',
       fareZone: 'Outside',
       yearlyPassengers: { '2023': 300 },
     }),
   ]
+
+  it('splits borough options into london and non-london lists', () => {
+    const options = getStationFilterOptions(stations)
+    expect(options.boroughs).toEqual(['Westminster'])
+    expect(options.otherBoroughs).toEqual(['Cardiff', 'York'])
+  })
 
   it('returns all stations with default all-selected filters', () => {
     const options = getStationFilterOptions(stations)
@@ -88,18 +97,59 @@ describe('stationSearchFiltering', () => {
       countries: options.countries,
       counties: ['Greater London'],
       boroughs: ['Westminster'],
+      allBoroughs: options.otherBoroughs,
       fareZones: options.fareZones,
     }
     const londonOnlyResults = filterStations(stations, '', selections, options)
     expect(londonOnlyResults.map((station) => station.id)).toEqual(['1'])
 
-    const multiCountySelections = { ...selections, counties: ['Greater London', 'North Yorkshire'] }
+    const multiCountySelections = {
+      ...selections,
+      counties: ['Greater London', 'North Yorkshire'],
+    }
     const multiCountyResults = filterStations(stations, '', multiCountySelections, options)
     expect(multiCountyResults.map((station) => station.id)).toEqual(['1', '2'])
+  })
+
+  it('filters by borough across all networks with the general borough filter', () => {
+    const options = getStationFilterOptions(stations)
+    const defaults = getDefaultStationFilterSelections(options)
+    const selections = {
+      ...defaults,
+      allBoroughs: ['York'],
+    }
+    const results = filterStations(stations, '', selections, options)
+    expect(results.map((station) => station.id)).toEqual(['2'])
   })
 
   it('sorts stations by passenger count descending', () => {
     const sorted = sortStations(stations, 'passengers-desc')
     expect(sorted.map((station) => station.id)).toEqual(['2', '3', '1'])
+  })
+
+  it('filters by station name only in name search mode', () => {
+    const options = getStationFilterOptions(stations)
+    const defaults = getDefaultStationFilterSelections(options)
+    const byName = filterStations(stations, 'york', defaults, options, 'name')
+    expect(byName.map((station) => station.id)).toEqual(['2'])
+
+    const byCrsAsName = filterStations(stations, 'yrk', defaults, options, 'name')
+    expect(byCrsAsName).toHaveLength(0)
+  })
+
+  it('filters by CRS code in crs search mode', () => {
+    const options = getStationFilterOptions(stations)
+    const defaults = getDefaultStationFilterSelections(options)
+    const results = filterStations(stations, 'bks', defaults, options, 'crs')
+    expect(results.map((station) => station.id)).toEqual(['1'])
+  })
+
+  it('exposes CRS and TIPLOC tabs only for supported network views', () => {
+    expect(getAvailableStationSearchModes('all')).toEqual(['name', 'crs', 'tiploc'])
+    expect(getAvailableStationSearchModes('stations_gbnr')).toEqual(['name', 'crs', 'tiploc'])
+    expect(getAvailableStationSearchModes('stations_nitranslink')).toEqual(['name', 'crs'])
+    expect(getAvailableStationSearchModes('stations_roiirerail')).toEqual(['name', 'crs'])
+    expect(getAvailableStationSearchModes('stations_gbheritage')).toEqual(['name'])
+    expect(getAvailableStationSearchModes('lightrail_GBSHEFFSUPERTRAM')).toEqual(['name'])
   })
 })

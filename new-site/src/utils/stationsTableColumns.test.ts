@@ -169,14 +169,24 @@ describe('stationsTableColumns', () => {
     expect(getTableColumnValue(station, 'latestPassengers')).toBe('12345')
   })
 
-  it('formats locale for GB stations', () => {
+  it('formats locale for GB stations to match card layout', () => {
     const station = baseStation({
       country: 'England',
       county: 'South Yorkshire',
       borough: 'Park Hill',
     })
 
-    expect(getTableColumnValue(station, 'locale')).toBe('England, South Yorkshire (Park Hill)')
+    expect(getTableColumnValue(station, 'locale')).toBe('Park Hill, South Yorkshire, England')
+  })
+
+  it('formats locale for Irish Rail stations to match card layout', () => {
+    const station = baseStation({
+      country: 'Ireland',
+      county: 'Cork',
+      sourceCollectionId: 'stations_roiirerail',
+    })
+
+    expect(getTableColumnValue(station, 'locale')).toBe('Munster, Cork, Ireland')
   })
 })
 

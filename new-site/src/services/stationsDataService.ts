@@ -1,7 +1,6 @@
 import {
   DEFAULT_NETWORK_COLLECTION_ID,
   NETWORK_COLLECTION_IDS,
-  SANDBOX_COLLECTION_ID,
   type NetworkCollectionId,
   type NetworkViewFilter,
   type StationCollectionId,
@@ -36,7 +35,6 @@ import { mergeNetworkCollections, toMapLeanStation, buildFullStationIndex } from
 import { getStationMapKey, getStationNetworkCollectionId } from '@/utils/stationAreaSlug'
 
 const FIREBASE_TIMEOUT_MS = 12_000
-const SANDBOX_COLLECTION: StationCollectionId = SANDBOX_COLLECTION_ID
 
 type CollectionLoadState = {
   full: Station[]
@@ -79,6 +77,46 @@ function resolveCollectionStations(
     return state.list.length > 0 ? state.list : state.full.length > 0 ? state.full : state.lean
   }
   return state.lean.length > 0 ? state.lean : state.list.length > 0 ? state.list : state.full
+}
+
+function hasLoadedDetailLevel(
+  state: CollectionLoadState,
+  detailLevel: StationFetchDetailLevel
+): boolean {
+  if (detailLevel === 'full') return state.full.length > 0
+  if (detailLevel === 'list') return state.list.length > 0
+  return state.lean.length > 0
+}
+
+export function stationHasLocaleDetail(station: Station): boolean {
+  return Boolean(
+    station.county?.trim() ||
+      station.country?.trim() ||
+      station.borough?.trim() ||
+      station.province?.trim()
+  )
+}
+
+export function shouldReplaceFullWithList(full: Station[], list: Station[]): boolean {
+  if (full.length === 0) return true
+  const fullHasLocale = full.some(stationHasLocaleDetail)
+  const listHasLocale = list.some(stationHasLocaleDetail)
+  return listHasLocale && !fullHasLocale
+}
+
+function patchListCollectionState(
+  collectionId: StationCollectionId,
+  stations: Station[],
+  fetchedAt: number
+): void {
+  const state = getState(collectionId)
+  patchState(collectionId, {
+    list: stations,
+    lean: stations.map(toMapLeanStation),
+    ...(shouldReplaceFullWithList(state.full, stations) ? { full: stations } : {}),
+    fetchedAt,
+    error: null,
+  })
 }
 
 function getState(collectionId: StationCollectionId): CollectionLoadState {
@@ -228,12 +266,7 @@ async function loadMergedBundleIntoCollections(detailLevel: StationFetchDetailLe
             error: null,
           })
         } else if (detailLevel === 'list') {
-          patchState(collectionId, {
-            list: stations,
-            lean: stations.map(toMapLeanStation),
-            fetchedAt,
-            error: null,
-          })
+          patchListCollectionState(collectionId, stations, fetchedAt)
         } else {
           patchState(collectionId, {
             lean: stations,
@@ -245,13 +278,15 @@ async function loadMergedBundleIntoCollections(detailLevel: StationFetchDetailLe
 
       if (loadedCollections === 0) return false
 
-      await Promise.all(
-        NETWORK_COLLECTION_IDS.map(async (collectionId) => {
-          const stations = grouped.get(collectionId) ?? []
-          if (stations.length === 0) return
-          await writeStationsToIndexedDb(collectionId, stations, fetchedAt, manifest.version)
-        })
-      )
+      if (detailLevel !== 'lean') {
+        await Promise.all(
+          NETWORK_COLLECTION_IDS.map(async (collectionId) => {
+            const stations = grouped.get(collectionId) ?? []
+            if (stations.length === 0) return
+            await writeStationsToIndexedDb(collectionId, stations, fetchedAt, manifest.version)
+          })
+        )
+      }
 
       await writeManifestVersionToIndexedDb(manifest.version)
       return true
@@ -297,6 +332,15 @@ export function getMergedNetworkStations(detailLevel: StationFetchDetailLevel = 
   )
 }
 
+/** Prefer list rows for card/table locale fields; avoids stale lean rows cached in `full`. */
+export function getMergedNetworkStationsForDisplay(): Station[] {
+  const list = getMergedNetworkStations('list')
+  if (list.length > 0) return list
+  const full = getMergedNetworkStations('full')
+  if (full.length > 0) return full
+  return getMergedNetworkStations('lean')
+}
+
 /** Best available station rows for map side-panel detail (full, else list). */
 export function getMergedNetworkStationDetails(): Station[] {
   const full = getMergedNetworkStations('full')
@@ -329,6 +373,7 @@ function mapStationDetailsFingerprint(station: Station): string {
     station.county ?? '',
     station.country ?? '',
     station.borough ?? '',
+    station.province ?? '',
     station.tiploc ?? '',
     station.linesServed ?? '',
     station.yearlyPassengers ? 'p' : '',
@@ -412,12 +457,7 @@ async function persistCollection(
 
   if (detailLevel === 'list') {
     await writeStationsToIndexedDb(collectionId, stations, fetchedAt, manifestVersion)
-    patchState(collectionId, {
-      list: stations,
-      lean: stations.map(toMapLeanStation),
-      fetchedAt,
-      error: null,
-    })
+    patchListCollectionState(collectionId, stations, fetchedAt)
     return
   }
 
@@ -449,7 +489,7 @@ export async function ensureCollectionLoaded(
 
   const task = (async () => {
     const state = getState(collectionId)
-    const hasTargetData = resolveCollectionStations(state, detailLevel).length > 0
+    const hasTargetData = hasLoadedDetailLevel(state, detailLevel)
     const hasFullData = state.full.length > 0
     const hasListData = state.list.length > 0
     const hadData = hasTargetData || hasFullData || hasListData
@@ -513,7 +553,7 @@ export async function ensureCollectionLoaded(
 
     if (
       !force &&
-      hasTargetData &&
+      hasLoadedDetailLevel(state, detailLevel) &&
       state.fetchedAt != null &&
       isIndexedDbEntryFresh(
         {
@@ -615,12 +655,11 @@ export async function loadAllNetworkStationsProgressive(options?: {
 }
 
 export async function bootstrapStationsData(options: {
-  isSandbox: boolean
   networkView: NetworkViewFilter
   detailLevel?: StationFetchDetailLevel
   force?: boolean
 }): Promise<void> {
-  const { isSandbox, networkView, detailLevel = 'list', force = false } = options
+  const { networkView, detailLevel = 'list', force = false } = options
 
   if (process.env.NEXT_PUBLIC_USE_LOCAL_DATA_ONLY === 'true') {
     const localStations = await fetchLocalStations()
@@ -644,13 +683,8 @@ export async function bootstrapStationsData(options: {
     return
   }
 
-  if (!isSandbox && !force) {
+  if (!force) {
     await hydrateAllNetworkCollectionsFromIndexedDb()
-  }
-
-  if (isSandbox) {
-    await ensureCollectionLoaded(SANDBOX_COLLECTION, { detailLevel, force })
-    return
   }
 
   if (networkView !== 'all') {
@@ -678,17 +712,13 @@ export function invalidateStationsCache(): void {
   notify()
 }
 
-export function getSandboxStations(detailLevel: StationFetchDetailLevel = 'full'): Station[] {
-  return getCollectionStations(SANDBOX_COLLECTION, detailLevel)
-}
-
 export function getFullStationById(
   stationId: string,
   collectionId?: StationCollectionId | null
 ): Station | null {
   const searchOrder: StationCollectionId[] = collectionId
     ? [collectionId]
-    : [...NETWORK_COLLECTION_IDS, SANDBOX_COLLECTION]
+    : [...NETWORK_COLLECTION_IDS]
 
   for (const id of searchOrder) {
     const state = getState(id)

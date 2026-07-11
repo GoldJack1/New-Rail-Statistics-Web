@@ -1,15 +1,30 @@
 .network-station-tab-group {
-  display: inline-flex;
-  flex-wrap: wrap;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   gap: var(--space-sm);
   align-items: stretch;
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
-  overflow: visible;
+  box-sizing: border-box;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.network-station-tab-group::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .stations-network-tabs-wrap,
 .stations-network-tabs-wrap--toolbar,
 .stations-network-tabs-wrap--mobile {
+  min-width: 0;
   overflow: visible;
 }
 
@@ -27,35 +42,38 @@
   box-shadow: 0 0 0 1px rgb(255 255 255 / 0.35);
 }
 
-@media (max-width: 639px) {
+.network-station-tab-group .rs-button--tab {
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  white-space: nowrap;
+  width: auto;
+  min-width: max-content;
+}
+
+@media (max-width: 1023px) {
   .network-station-tab-group {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overflow-y: visible;
-    -webkit-overflow-scrolling: touch;
-    scroll-snap-type: x mandatory;
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
-    padding-bottom: 10px;
-    gap: var(--space-sm);
+    scroll-padding-inline: var(--space-lg);
+    padding: 4px var(--space-lg) 12px;
   }
 
-  .network-station-tab-group::-webkit-scrollbar {
-    height: 0;
+  .network-station-tab-group::before,
+  .network-station-tab-group::after {
+    content: '';
+    flex: 0 0 1px;
+  }
+
+  .stations-network-tabs-wrap--toolbar {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 639px) {
+  .network-station-tab-group {
+    scroll-snap-type: x mandatory;
   }
 
   .network-station-tab-group .rs-button--tab {
-    flex: 0 0 auto;
-    white-space: nowrap;
     scroll-snap-align: start;
-    width: auto;
-    min-width: 0;
-  }
-
-  .network-station-tab-group .rs-button--tab.rs-button--width-fixed {
-    min-width: 0;
   }
 }

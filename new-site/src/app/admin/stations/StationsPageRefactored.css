@@ -17,10 +17,11 @@
 .stations-toolbar-band {
     position: relative;
     isolation: isolate;
+    flex-shrink: 0;
     margin-bottom: 10px;
     padding-top: var(--space-md);
     padding-bottom: calc(var(--space-sm) + 6px);
-    overflow-x: clip;
+    overflow: visible;
 }
 
 .stations-toolbar-band::before {
@@ -35,9 +36,7 @@
     background-color: var(--bg-secondary);
 }
 
-.stations-admin-controls-wrap,
-.stations-network-tabs-wrap,
-.stations-sandbox-banner {
+.stations-network-tabs-wrap {
     max-width: var(--container-3xl);
     width: 100%;
     margin-left: auto;
@@ -45,23 +44,12 @@
     padding-left: var(--space-2xl);
     padding-right: var(--space-2xl);
     box-sizing: border-box;
+    min-width: 0;
+    overflow: visible;
 }
 
-.stations-admin-controls-wrap {
-    margin-bottom: var(--space-md);
-}
-
-.stations-admin-controls-wrap:last-child,
-.stations-network-tabs-wrap:last-child,
-.stations-sandbox-banner:last-child {
+.stations-network-tabs-wrap:last-child {
     margin-bottom: 0;
-}
-
-.stations-sandbox-banner {
-    padding-top: 0;
-    padding-bottom: 0;
-    color: var(--text-secondary);
-    font-size: var(--font-size-sm);
 }
 
 .stations-network-tabs-wrap--mobile {
@@ -114,28 +102,22 @@
     min-height: 0;
 }
 
-.stations-sidebar-admin-actions {
-    display: grid;
-    gap: var(--space-sm);
-    width: 100%;
-    margin-bottom: var(--space-md);
-    padding: 0 var(--space-lg);
-    box-sizing: border-box;
+.stations-sidebar-panel-section__title {
+    margin-top: 0;
 }
 
-.stations-sidebar-assign-headers,
-.stations-sidebar-add-station {
-    width: 100%;
+.station-admin-controls-card.station-admin-controls-card--sidebar {
+  grid-template-columns: 1fr;
+  width: 100%;
+  background-color: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-.stations-sidebar-add-station {
-    margin-bottom: 0;
-}
-
-@media (min-width: 640px) {
-    .stations-sidebar-add-station--desktop {
-        display: block;
-    }
+.station-admin-controls-action-button {
+  min-width: 0;
 }
 
 .sidebar-section {
@@ -172,8 +154,15 @@
     width: 100%;
 }
 
+.stations-search-mode-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin-top: var(--space-md);
+}
+
 .search-filters-spacer {
-    height: 20px;
+    height: var(--space-2xl);
 }
 
 .mobile-filters-toggle {
@@ -188,16 +177,47 @@
     display: none;
 }
 
+.stations-mobile-sort-heading {
+    display: none;
+}
+
 .mobile-filters-content {
     display: block;
 }
 
+.stations-filters-heading-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+}
+
+.stations-filters-heading-row .sidebar-section-title--subsection {
+    margin: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.stations-reset-filters-button {
+    flex-shrink: 0;
+}
+
 @media (min-width: 1024px) {
     .mobile-filters-content--sort {
-        margin-top: var(--space-md);
+        margin-top: var(--space-sm);
+        margin-bottom: var(--space-2xl);
     }
 
     .mobile-filters-content--sort .sidebar-section-title--subsection {
+        margin-top: 0;
+    }
+
+    .mobile-filters-content--filters {
+        margin-top: 0;
+    }
+
+    .mobile-filters-content--filters .stations-filters-heading-row .sidebar-section-title--subsection {
         margin-top: 0;
     }
 }
@@ -401,7 +421,7 @@
     align-items: center;
     gap: 0;
     margin-top: 25px;
-    margin-bottom: 0;
+    margin-bottom: var(--space-xl);
     padding-top: 0;
     border-top: 1px solid var(--border-color);
 }
@@ -483,8 +503,10 @@
         max-width: 100%;
     }
 
-    .stations-sidebar-add-station--desktop {
-        display: none;
+    .stations-network-tabs-wrap--toolbar {
+        max-width: none;
+        padding-left: 0;
+        padding-right: 0;
     }
 }
 
@@ -528,13 +550,6 @@
         margin-top: 0;
     }
 
-    .stations-admin-controls-wrap,
-    .stations-sandbox-banner {
-        padding-left: var(--space-lg);
-        padding-right: var(--space-lg);
-    }
-
-    .stations-admin-controls-wrap,
     .stations-sidebar .sidebar-section {
         box-sizing: border-box;
     }
@@ -578,10 +593,27 @@
 
     .stations-mobile-filters-heading {
         display: block;
-        margin: var(--space-lg) 0 var(--space-md);
+        margin: var(--space-2xl) 0 var(--space-md);
+    }
+
+    .stations-mobile-sort-heading {
+        display: block;
+        margin: var(--space-2xl) 0 var(--space-md);
     }
 
     .mobile-filters-content--filters .mobile-filters-content-inner > .sidebar-section-title--subsection {
+        display: none;
+    }
+
+    .mobile-filters-content--filters .stations-filters-heading-row .sidebar-section-title--subsection {
+        display: none;
+    }
+
+    .mobile-filters-content--filters .stations-filters-heading-row {
+        justify-content: flex-end;
+    }
+
+    .mobile-filters-content--sort .mobile-filters-content-inner > .sidebar-section-title--subsection {
         display: none;
     }
 
@@ -660,7 +692,7 @@
 
     .stations-pagination {
         margin-top: 25px;
-        margin-bottom: 0;
+        margin-bottom: var(--space-xl);
         padding-top: 0;
         padding-left: 0;
         padding-right: 0;
@@ -674,6 +706,45 @@
     .pagination-page-buttons {
         gap: 0;
     }
+}
+
+/* ========================================
+   TABLE MODE — fill viewport height
+   ======================================== */
+
+.stations-page.stations-page--table-mode .stations-main {
+    display: flex;
+    flex-direction: column;
+    min-height: min(70dvh, 960px);
+}
+
+.stations-page.stations-page--table-mode .stations-table-panel {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0;
+}
+
+/* Horizontal scroll only — vertical scroll stays on the page */
+.stations-page.stations-page--table-mode .stations-table-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: visible;
+    overscroll-behavior: auto;
+}
+
+.stations-page.stations-page--table-mode .stations-table-wrap--virtualized {
+    max-height: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.stations-page.stations-page--table-mode .stations-pagination {
+    flex-shrink: 0;
+    margin-top: var(--space-md);
+    margin-bottom: var(--space-lg);
 }
 
 /* ========================================

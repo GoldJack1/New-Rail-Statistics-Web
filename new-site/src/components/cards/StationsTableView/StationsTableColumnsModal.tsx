@@ -109,14 +109,37 @@ const StationsTableColumnsModal: React.FC<StationsTableColumnsModalProps> = ({
             className="modal-close"
             ariaLabel="Close"
             onClick={onClose}
+            colorVariant="secondary"
             icon={<X size={24} weight="regular" aria-hidden />}
           />
         </div>
 
         <div className="modal-body stations-table-columns-modal__body">
-          <p className="stations-table-columns-modal__intro">
-            Choose what each table column shows. Header 1 is the leftmost column, Header 2 is next, and so on.
-          </p>
+          <div className="stations-table-columns-modal__toolbar">
+            <p className="stations-table-columns-modal__intro">
+              Choose what each table column shows. Header 1 is the leftmost column, Header 2 is next, and so on.
+            </p>
+            <div className="stations-table-columns-modal__toolbar-actions">
+              <BUTWideButton
+                type="button"
+                width="hug"
+                colorVariant="secondary"
+                onClick={handleAddColumn}
+                disabled={!canAddColumn}
+              >
+                Add column
+              </BUTWideButton>
+              <BUTWideButton
+                type="button"
+                width="hug"
+                colorVariant="secondary"
+                onClick={handleRemoveColumn}
+                disabled={!canRemoveColumn}
+              >
+                Remove column
+              </BUTWideButton>
+            </div>
+          </div>
 
           <ul className="stations-table-columns-modal__list">
             {draftSlots.map((slot, index) => {
@@ -146,39 +169,20 @@ const StationsTableColumnsModal: React.FC<StationsTableColumnsModalProps> = ({
             })}
           </ul>
 
-          <div className="stations-table-columns-modal__column-actions">
-            <BUTWideButton
-              type="button"
-              width="hug"
-              onClick={handleAddColumn}
-              disabled={!canAddColumn}
-            >
-              Add column
-            </BUTWideButton>
-            <BUTWideButton
-              type="button"
-              width="hug"
-              onClick={handleRemoveColumn}
-              disabled={!canRemoveColumn}
-            >
-              Remove column
-            </BUTWideButton>
-          </div>
-
           <p className="stations-table-columns-modal__note">
             Showing {draftSlots.length} of {MAX_TABLE_COLUMN_SLOT_COUNT} columns ({DEFAULT_TABLE_COLUMN_SLOT_COUNT} by default). Changes reset when you reload the page.
           </p>
         </div>
 
         <div className="stations-table-columns-modal__footer">
-          <BUTWideButton type="button" width="hug" onClick={handleResetDefaults}>
+          <BUTWideButton type="button" width="hug" colorVariant="red-action" onClick={handleResetDefaults}>
             Reset defaults
           </BUTWideButton>
           <div className="stations-table-columns-modal__footer-actions">
-            <BUTWideButton type="button" width="hug" onClick={onClose}>
+            <BUTWideButton type="button" width="hug" colorVariant="secondary" onClick={onClose}>
               Cancel
             </BUTWideButton>
-            <BUTWideButton type="button" width="hug" colorVariant="accent" onClick={handleApply}>
+            <BUTWideButton type="button" width="hug" colorVariant="green-action" onClick={handleApply}>
               Apply headers
             </BUTWideButton>
           </div>

@@ -9,6 +9,7 @@ import { useStationListPipeline } from '@/hooks/useStationListPipeline'
 import { useDebounce } from '@/hooks/useDebounce'
 import {
   BUTLeftRoundedCircleButton,
+  BUTOperatorChip,
   BUTRightRoundedCircleButton,
   BUTSquareButton,
   BUTTextNumberSquareButton,
@@ -24,6 +25,7 @@ import StationsTableView from '@/components/cards/StationsTableView/StationsTabl
 import StationsTableColumnsModal from '@/components/cards/StationsTableView/StationsTableColumnsModal'
 import { isLightRailStop } from '@/utils/stationCardForNetwork'
 import StationAdminControls from '@/components/cards/StationAdminControls/StationAdminControls'
+import StationAdminViewControls from '@/components/cards/StationAdminControls/StationAdminViewControls'
 import NetworkStationTabGroup from '@/components/cards/NetworkStationTabGroup/NetworkStationTabGroup'
 import { formatStationLocationDisplay } from '@/utils/formatStationLocation'
 import { NETWORK_COLLECTION_IDS } from '@/constants/stationCollections'
@@ -31,7 +33,7 @@ import type { NetworkViewFilter } from '@/constants/stationCollections'
 import { countPendingChangesForCollection } from '@/utils/pendingChangesByCollection'
 import { useStationCollection } from '@/contexts/StationCollectionContext'
 import { usePendingStationChanges } from '@/contexts/PendingStationChangesContext'
-import { buildStationPath } from '@/utils/stationAreaSlug'
+import { buildStationPath, getStationMapKey } from '@/utils/stationAreaSlug'
 import { pathnameForReviewPendingSource } from '@/utils/reviewPendingNavigation'
 import { useStationAdminMode } from '@/hooks/useStationAdminMode'
 import { useStationCollectionFieldSchema } from '@/hooks/useStationCollectionFieldSchema'
@@ -53,6 +55,10 @@ import {
   isOnlyGreaterLondonSelected,
   type SortOption,
   type StationFilterSelections,
+  type StationSearchMode,
+  getAvailableStationSearchModes,
+  getStationSearchPlaceholder,
+  normalizeStationSearchInput,
 } from '@/utils/stationSearchFiltering'
 import './StationsPageRefactored.css'
 import TXTINPBUTIconWideButtonSearch from '@/components/textInputButtons/special/TXTINPBUTIconWideButtonSearch'
@@ -77,11 +83,13 @@ const StationsPage: React.FC<StationsPageProps> = ({ initialMode = 'view' }) => 
   const searchParams = useSearchParams()
   const routerLocation = { pathname, search: searchParams.toString() ? `?${searchParams}` : '' }
   const [searchTerm, setSearchTerm] = useState('')
+  const [searchMode, setSearchMode] = useState<StationSearchMode>('name')
   const [filterSelections, setFilterSelections] = useState<StationFilterSelections>({
     tocs: [],
     countries: [],
     counties: [],
     boroughs: [],
+    allBoroughs: [],
     fareZones: [],
   })
   const [hasUserInteractedWithFilters, setHasUserInteractedWithFilters] = useState(false)
@@ -95,7 +103,7 @@ const StationsPage: React.FC<StationsPageProps> = ({ initialMode = 'view' }) => 
   const [viewportWidth, setViewportWidth] = useState(() =>
     typeof window === 'undefined' ? 1280 : window.innerWidth
   )
-  const { collectionId, networkView, setNetworkView, isSandbox, setSandbox } = useStationCollection()
+  const { collectionId, networkView, setNetworkView } = useStationCollection()
   const [tableColumnSlots, setTableColumnSlots] = useState<StationsTableColumnSlot[]>(() =>
     getDefaultTableColumnSlots(networkView)
   )
@@ -107,13 +115,14 @@ const StationsPage: React.FC<StationsPageProps> = ({ initialMode = 'view' }) => 
   }, [])
   const getDisplayModeSnapshot = useCallback(() => readStationAdminDisplayMode(), [])
   const storedDisplayMode = useSyncExternalStore(subscribeDisplayMode, getDisplayModeSnapshot, () => 'cards' as const)
-  const adminDisplayMode: StationAdminDisplayMode =
-    isAdminMode && storedDisplayMode === 'table' ? 'table' : 'cards'
+  const adminDisplayMode: StationAdminDisplayMode = storedDisplayMode
+  const isMobileStationsLayout = viewportWidth < 640
+  const effectiveDisplayMode: StationAdminDisplayMode = isMobileStationsLayout ? 'cards' : adminDisplayMode
   const handleDisplayModeChange = useCallback((mode: StationAdminDisplayMode) => {
+    if (isMobileStationsLayout && mode === 'table') return
     writeStationAdminDisplayMode(mode)
-  }, [])
+  }, [isMobileStationsLayout])
   const pendingChangesCount = useMemo(() => {
-    if (isSandbox) return countPendingChangesForCollection(pendingChanges, collectionId)
     if (networkView === 'all') {
       return NETWORK_COLLECTION_IDS.reduce(
         (sum, id) => sum + countPendingChangesForCollection(pendingChanges, id),
@@ -121,13 +130,12 @@ const StationsPage: React.FC<StationsPageProps> = ({ initialMode = 'view' }) => 
       )
     }
     return countPendingChangesForCollection(pendingChanges, collectionId)
-  }, [pendingChanges, collectionId, networkView, isSandbox])
+  }, [pendingChanges, collectionId, networkView])
   const isAdminPanelVisible = initialMode === 'edit' || isAdminMode
   const tableHeaderSchemaCollectionId = useMemo(() => {
     if (networkView === 'all') return null
-    if (isSandbox) return collectionId
     return networkView
-  }, [networkView, isSandbox, collectionId])
+  }, [networkView])
   const { fieldSchema: tableHeaderFieldSchema, loading: tableHeaderSchemaLoading } =
     useStationCollectionFieldSchema(tableHeaderSchemaCollectionId)
   const tableHeaderFieldSchemaForModal = useMemo(() => {
@@ -148,7 +156,26 @@ const StationsPage: React.FC<StationsPageProps> = ({ initialMode = 'view' }) => 
     setIsEditMode(false)
   }, [initialMode, isAdminMode])
 
+  useEffect(() => {
+    if (isAdminMode) return
+    setFilterSelections((current) =>
+      current.fareZones.length === 0 ? current : { ...current, fareZones: [] }
+    )
+  }, [isAdminMode])
+
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
+  const availableSearchModes = useMemo(
+    () => getAvailableStationSearchModes(networkView),
+    [networkView]
+  )
+
+  useEffect(() => {
+    setSearchMode((current) => (availableSearchModes.includes(current) ? current : 'name'))
+  }, [availableSearchModes])
+
+  useEffect(() => {
+    setSearchTerm((current) => normalizeStationSearchInput(current, searchMode))
+  }, [searchMode])
 
   const {
     uniqueValues,
@@ -160,23 +187,24 @@ const StationsPage: React.FC<StationsPageProps> = ({ initialMode = 'view' }) => 
     loadedStations,
     pendingChanges,
     networkView,
-    isSandbox,
     debouncedSearchTerm,
+    searchMode,
     filterSelections,
     hasUserInteractedWithFilters,
     sortOption,
     tableSort,
-    adminDisplayMode,
+    adminDisplayMode: effectiveDisplayMode,
   })
 
-  const CARD_ITEMS_PER_PAGE = 20
-  const itemsPerPage = CARD_ITEMS_PER_PAGE
+  const CARD_ITEMS_PER_PAGE = 24
+  const TABLE_ITEMS_PER_PAGE = 100
+  const itemsPerPage = effectiveDisplayMode === 'table' ? TABLE_ITEMS_PER_PAGE : CARD_ITEMS_PER_PAGE
   const totalPages = Math.ceil(sortedStations.length / itemsPerPage)
   const paginatedStations = sortedStations.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   )
-  const tableStations = sortedStations
+  const tableStations = paginatedStations
   const handleStationNavigate = useCallback(
     (station: (typeof sortedStations)[number]) => {
       router.push(isEditMode ? `/admin/stations/${buildStationPath(station, collectionId)}/edit` : `/stations/${buildStationPath(station, collectionId)}`)
@@ -251,9 +279,135 @@ const StationsPage: React.FC<StationsPageProps> = ({ initialMode = 'view' }) => 
     updateFilterSelection('counties', ['Greater London'])
   }, [defaultSelections.counties, boroughFilterEnabled, updateFilterSelection])
 
+  const resetAllFilters = useCallback(() => {
+    setFilterSelections({
+      tocs: [],
+      countries: [],
+      counties: [],
+      boroughs: [],
+      allBoroughs: [],
+      fareZones: [],
+    })
+    setHasUserInteractedWithFilters(false)
+  }, [])
+
+  const sortControls = (
+    <div className="sort-section">
+      <BUTDDMList
+        items={SORT_DDM_OPTIONS.map((option) => option.label)}
+        filterName="Sort"
+        selectionMode="single"
+        selectedPositions={[Math.max(0, SORT_DDM_OPTIONS.findIndex((option) => option.value === sortOption))]}
+        onSelectionChanged={(selectedPositions) => {
+          const selectedIndex = selectedPositions[0]
+          if (typeof selectedIndex !== 'number') return
+          const selectedSortOption = SORT_DDM_OPTIONS[selectedIndex]
+          if (selectedSortOption) {
+            setSortOption(selectedSortOption.value)
+          }
+        }}
+        colorVariant="primary"
+      />
+    </div>
+  )
+
+  const filterControls = (
+    <div className="filters-grid">
+      <div className="filter-group">
+        <label className="filter-label">TOC</label>
+        <BUTDDMListActionDual
+          items={uniqueValues.tocs}
+          filterName="TOCs"
+          selectionMode="multi"
+          selectedPositions={getSelectedPositions(uniqueValues.tocs, effectiveSelections.tocs)}
+          onSelectionChanged={(_, selectedItems) => updateFilterSelection('tocs', selectedItems)}
+          colorVariant="primary"
+        />
+      </div>
+
+      <div className="filter-group">
+        <label className="filter-label">Country</label>
+        <BUTDDMListActionDual
+          items={uniqueValues.countries}
+          filterName="Countries"
+          selectionMode="multi"
+          selectedPositions={getSelectedPositions(uniqueValues.countries, effectiveSelections.countries)}
+          onSelectionChanged={(_, selectedItems) => updateFilterSelection('countries', selectedItems)}
+          colorVariant="primary"
+        />
+      </div>
+
+      <div className="filter-group">
+        <label className="filter-label">County</label>
+        <BUTDDMListActionDual
+          items={uniqueValues.counties}
+          filterName="Counties"
+          selectionMode="multi"
+          selectedPositions={getSelectedPositions(uniqueValues.counties, effectiveSelections.counties)}
+          onSelectionChanged={(_, selectedItems) => updateFilterSelection('counties', selectedItems)}
+          colorVariant="primary"
+        />
+      </div>
+
+      {uniqueValues.otherBoroughs.length > 0 && (
+        <div className="filter-group">
+          <label className="filter-label">Borough</label>
+          <BUTDDMListActionDual
+            items={uniqueValues.otherBoroughs}
+            filterName="Boroughs"
+            selectionMode="multi"
+            selectedPositions={getSelectedPositions(uniqueValues.otherBoroughs, effectiveSelections.allBoroughs)}
+            onSelectionChanged={(_, selectedItems) => updateFilterSelection('allBoroughs', selectedItems)}
+            colorVariant="primary"
+          />
+        </div>
+      )}
+
+      <div className="filter-group">
+        <div className="county-london-toggle">
+          <span className="county-london-toggle__label">London Borough Filter</span>
+          <TOGToggleVisited
+            checked={boroughFilterEnabled}
+            onChange={() => toggleLondonBoroughFilter()}
+            ariaLabel="London Borough Filter"
+            className="county-london-toggle__control"
+          />
+        </div>
+      </div>
+
+      {boroughFilterEnabled && (
+        <div className="filter-group">
+          <label className="filter-label">London Borough</label>
+          <BUTDDMListActionDual
+            items={uniqueValues.boroughs}
+            filterName="London Boroughs"
+            selectionMode="multi"
+            selectedPositions={getSelectedPositions(uniqueValues.boroughs, effectiveSelections.boroughs)}
+            onSelectionChanged={(_, selectedItems) => updateFilterSelection('boroughs', selectedItems)}
+            colorVariant="primary"
+          />
+        </div>
+      )}
+
+      {isAdminMode && (
+        <div className="filter-group">
+          <label className="filter-label">Fare Zone</label>
+          <BUTDDMListActionDual
+            items={uniqueValues.fareZones}
+            filterName="Fare Zones"
+            selectionMode="multi"
+            selectedPositions={getSelectedPositions(uniqueValues.fareZones, effectiveSelections.fareZones)}
+            onSelectionChanged={(_, selectedItems) => updateFilterSelection('fareZones', selectedItems)}
+            colorVariant="primary"
+          />
+        </div>
+      )}
+    </div>
+  )
+
   useEffect(() => {
     setCurrentPage(1)
-  }, [debouncedSearchTerm, effectiveSelections, sortOption, collectionId, networkView, tableSort, adminDisplayMode])
+  }, [debouncedSearchTerm, effectiveSelections, sortOption, collectionId, networkView, tableSort, effectiveDisplayMode])
 
   useEffect(() => {
     setTableColumnSlots(getDefaultTableColumnSlots(networkView))
@@ -295,7 +449,14 @@ const StationsPage: React.FC<StationsPageProps> = ({ initialMode = 'view' }) => 
   }
 
   return (
-    <div className="stations-page">
+    <div
+      className={[
+        'stations-page',
+        effectiveDisplayMode === 'table' ? 'stations-page--table-mode' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
       <PageTopHeader
         title="Station Database"
         subtitle={
@@ -307,75 +468,52 @@ const StationsPage: React.FC<StationsPageProps> = ({ initialMode = 'view' }) => 
       <div
         className={[
           'stations-toolbar-band',
-          !isAdminPanelVisible && !isSandbox ? 'stations-toolbar-band--desktop-only' : '',
+          !isAdminPanelVisible ? 'stations-toolbar-band--desktop-only' : '',
         ]
           .filter(Boolean)
           .join(' ')}
       >
-        {isAdminPanelVisible && (
-          <div className="stations-admin-controls-wrap">
-            <StationAdminControls
-              isEditMode={isEditMode}
-              isSandbox={isSandbox}
-              displayMode={adminDisplayMode}
-              pendingChangesCount={pendingChangesCount}
-              onModeChange={(mode) => setIsEditMode(mode === 'edit')}
-              onDisplayModeChange={handleDisplayModeChange}
-              onSandboxChange={setSandbox}
-              onOpenPendingChanges={() =>
-                router.push(`/admin/stations/pending-review?from=${encodeURIComponent(pathnameForReviewPendingSource(routerLocation))}`)
-              }
-              onAddStation={() => router.push('/admin/stations/new')}
-            />
-          </div>
-        )}
-        {!isSandbox && (
-          <div className="stations-network-tabs-wrap stations-network-tabs-wrap--toolbar">
-            <NetworkStationTabGroup
-              value={networkView}
-              onChange={(view: NetworkViewFilter) => setNetworkView(view)}
-            />
-          </div>
-        )}
-        {isSandbox && (
-          <p className="stations-sandbox-banner" role="status">
-            Sandbox mode — viewing test data in newsandboxstations1
-          </p>
-        )}
+        <div className="stations-network-tabs-wrap stations-network-tabs-wrap--toolbar">
+          <NetworkStationTabGroup
+            value={networkView}
+            onChange={(view: NetworkViewFilter) => setNetworkView(view)}
+          />
+        </div>
       </div>
 
       {/* Main Content */}
       <div className="stations-content">
         {/* Sidebar */}
         <aside className="stations-sidebar">
+          {isAdminPanelVisible && (
+            <div className="sidebar-section stations-sidebar-admin-section">
+              <h2 className="sidebar-section-title stations-sidebar-panel-section__title">Admin</h2>
+              <StationAdminControls
+                isEditMode={isEditMode}
+                pendingChangesCount={pendingChangesCount}
+                onModeChange={(mode) => setIsEditMode(mode === 'edit')}
+                onOpenPendingChanges={() =>
+                  router.push(
+                    `/admin/stations/pending-review?from=${encodeURIComponent(pathnameForReviewPendingSource(routerLocation))}`
+                  )
+                }
+                onAddStation={() => router.push('/admin/stations/new')}
+                className="station-admin-controls-card--sidebar"
+              />
+            </div>
+          )}
+          <div className="sidebar-section stations-sidebar-view-section">
+            <h2 className="sidebar-section-title stations-sidebar-panel-section__title">View</h2>
+            <StationAdminViewControls
+              displayMode={effectiveDisplayMode}
+              onDisplayModeChange={handleDisplayModeChange}
+              onAssignHeaders={() => setIsTableColumnsModalOpen(true)}
+              tableModeDisabled={isMobileStationsLayout}
+              className="station-admin-controls-card--sidebar"
+            />
+          </div>
           {/* Search + Filters + Sort */}
           <div className="sidebar-section">
-            {isAdminPanelVisible && (
-              <div className="stations-sidebar-admin-actions">
-                {adminDisplayMode === 'table' && (
-                  <div className="stations-sidebar-assign-headers">
-                    <BUTWideButton
-                      type="button"
-                      width="fill"
-                      onClick={() => setIsTableColumnsModalOpen(true)}
-                    >
-                      Assign headers
-                    </BUTWideButton>
-                  </div>
-                )}
-                {isEditMode && (
-                  <div className="stations-sidebar-add-station stations-sidebar-add-station--desktop">
-                    <BUTWideButton
-                      type="button"
-                      width="fill"
-                      onClick={() => router.push('/admin/stations/new')}
-                    >
-                      + Add new station
-                    </BUTWideButton>
-                  </div>
-                )}
-              </div>
-            )}
             <h2 className="sidebar-section-title sidebar-section-title--subsection">Search</h2>
             <div className="search-container">
               <TXTINPBUTIconWideButtonSearch
@@ -383,30 +521,43 @@ const StationsPage: React.FC<StationsPageProps> = ({ initialMode = 'view' }) => 
                 name="station-search"
                 icon={<MagnifyingGlass size={16} aria-hidden />}
                 value={searchTerm}
-                onChange={setSearchTerm}
+                onChange={(value) => setSearchTerm(normalizeStationSearchInput(value, searchMode))}
                 onClear={() => setSearchTerm('')}
                 className="search-input-shell"
-                placeholder="Search stations..."
+                placeholder={getStationSearchPlaceholder(searchMode)}
                 autoComplete="off"
                 colorVariant="primary"
                 showClear
               />
             </div>
+            {availableSearchModes.length > 1 ? (
+              <div className="stations-search-mode-chips" role="group" aria-label="Search by">
+                {availableSearchModes.map((mode) => (
+                  <BUTOperatorChip
+                    key={mode}
+                    instantAction
+                    colorVariant="primary"
+                    width="hug"
+                    state={searchMode === mode ? 'pressed' : 'active'}
+                    onClick={() => setSearchMode(mode)}
+                    aria-label={
+                      mode === 'name'
+                        ? 'Search by station name'
+                        : mode === 'crs'
+                          ? 'Search by CRS code'
+                          : 'Search by TIPLOC code'
+                    }
+                  >
+                    {mode === 'name' ? 'Name' : mode === 'crs' ? 'CRS' : 'TIPLOC'}
+                  </BUTOperatorChip>
+                ))}
+              </div>
+            ) : null}
             <div className="search-filters-spacer" aria-hidden="true" />
-            <h2 className="sidebar-section-title sidebar-section-title--subsection stations-mobile-filters-heading">
-              Filters
+            <h2 className="sidebar-section-title sidebar-section-title--subsection stations-mobile-sort-heading">
+              Sort
             </h2>
             <div className="mobile-filters-toggle-row">
-              <BUTWideButton
-                type="button"
-                width="fill"
-                className="mobile-filters-toggle"
-                onClick={() => setIsMobileFiltersExpanded((prev) => !prev)}
-                aria-expanded={isMobileFiltersExpanded}
-                aria-controls="stations-mobile-only-filters"
-              >
-                {isMobileFiltersExpanded ? 'Hide Filters' : 'Show Filters'}
-              </BUTWideButton>
               <BUTWideButton
                 type="button"
                 width="fill"
@@ -417,96 +568,23 @@ const StationsPage: React.FC<StationsPageProps> = ({ initialMode = 'view' }) => 
               >
                 {isMobileSortExpanded ? 'Hide Sort' : 'Show Sort'}
               </BUTWideButton>
+              <BUTWideButton
+                type="button"
+                width="fill"
+                className="mobile-filters-toggle"
+                onClick={() => setIsMobileFiltersExpanded((prev) => !prev)}
+                aria-expanded={isMobileFiltersExpanded}
+                aria-controls="stations-mobile-only-filters"
+              >
+                {isMobileFiltersExpanded ? 'Hide Filters' : 'Show Filters'}
+              </BUTWideButton>
             </div>
-            {!isSandbox && (
-              <div className="stations-network-tabs-wrap stations-network-tabs-wrap--mobile">
-                <h2 className="sidebar-section-title sidebar-section-title--subsection">Network</h2>
-                <NetworkStationTabGroup
-                  value={networkView}
-                  onChange={(view: NetworkViewFilter) => setNetworkView(view)}
-                />
-              </div>
-            )}
-
-            <div
-              id="stations-mobile-only-filters"
-              className={`mobile-filters-content mobile-filters-content--filters ${isMobileFiltersExpanded ? 'mobile-filters-content--expanded' : ''}`}
-            >
-              <div className="mobile-filters-content-inner">
-                <h2 className="sidebar-section-title sidebar-section-title--subsection">Filters</h2>
-                <div className="filters-grid">
-                  <div className="filter-group">
-                    <label className="filter-label">TOC</label>
-                    <BUTDDMListActionDual
-                      items={uniqueValues.tocs}
-                      filterName="TOCs"
-                      selectionMode="multi"
-                      selectedPositions={getSelectedPositions(uniqueValues.tocs, effectiveSelections.tocs)}
-                      onSelectionChanged={(_, selectedItems) => updateFilterSelection('tocs', selectedItems)}
-                      colorVariant="primary"
-                    />
-                  </div>
-
-                  <div className="filter-group">
-                    <label className="filter-label">Country</label>
-                    <BUTDDMListActionDual
-                      items={uniqueValues.countries}
-                      filterName="Countries"
-                      selectionMode="multi"
-                      selectedPositions={getSelectedPositions(uniqueValues.countries, effectiveSelections.countries)}
-                      onSelectionChanged={(_, selectedItems) => updateFilterSelection('countries', selectedItems)}
-                      colorVariant="primary"
-                    />
-                  </div>
-
-                  <div className="filter-group">
-                    <label className="filter-label">County</label>
-                    <BUTDDMListActionDual
-                      items={uniqueValues.counties}
-                      filterName="Counties"
-                      selectionMode="multi"
-                      selectedPositions={getSelectedPositions(uniqueValues.counties, effectiveSelections.counties)}
-                      onSelectionChanged={(_, selectedItems) => updateFilterSelection('counties', selectedItems)}
-                      colorVariant="primary"
-                    />
-                    <div className="county-london-toggle">
-                      <span className="county-london-toggle__label">London Borough Filter</span>
-                      <TOGToggleVisited
-                        checked={boroughFilterEnabled}
-                        onChange={() => toggleLondonBoroughFilter()}
-                        ariaLabel="London Borough Filter"
-                        className="county-london-toggle__control"
-                      />
-                    </div>
-                  </div>
-
-                  {boroughFilterEnabled && (
-                    <div className="filter-group">
-                      <label className="filter-label">Borough</label>
-                      <BUTDDMListActionDual
-                        items={uniqueValues.boroughs}
-                        filterName="Boroughs"
-                        selectionMode="multi"
-                        selectedPositions={getSelectedPositions(uniqueValues.boroughs, effectiveSelections.boroughs)}
-                        onSelectionChanged={(_, selectedItems) => updateFilterSelection('boroughs', selectedItems)}
-                        colorVariant="primary"
-                      />
-                    </div>
-                  )}
-
-                  <div className="filter-group">
-                    <label className="filter-label">Fare Zone</label>
-                    <BUTDDMListActionDual
-                      items={uniqueValues.fareZones}
-                      filterName="Fare Zones"
-                      selectionMode="multi"
-                      selectedPositions={getSelectedPositions(uniqueValues.fareZones, effectiveSelections.fareZones)}
-                      onSelectionChanged={(_, selectedItems) => updateFilterSelection('fareZones', selectedItems)}
-                      colorVariant="primary"
-                    />
-                  </div>
-                </div>
-              </div>
+            <div className="stations-network-tabs-wrap stations-network-tabs-wrap--mobile">
+              <h2 className="sidebar-section-title sidebar-section-title--subsection">Network</h2>
+              <NetworkStationTabGroup
+                value={networkView}
+                onChange={(view: NetworkViewFilter) => setNetworkView(view)}
+              />
             </div>
 
             <div
@@ -515,23 +593,32 @@ const StationsPage: React.FC<StationsPageProps> = ({ initialMode = 'view' }) => 
             >
               <div className="mobile-filters-content-inner">
                 <h2 className="sidebar-section-title sidebar-section-title--subsection">Sort</h2>
-                <div className="sort-section">
-                  <BUTDDMList
-                    items={SORT_DDM_OPTIONS.map((option) => option.label)}
-                    filterName="Sort"
-                    selectionMode="single"
-                    selectedPositions={[Math.max(0, SORT_DDM_OPTIONS.findIndex((option) => option.value === sortOption))]}
-                    onSelectionChanged={(selectedPositions) => {
-                      const selectedIndex = selectedPositions[0]
-                      if (typeof selectedIndex !== 'number') return
-                      const selectedSortOption = SORT_DDM_OPTIONS[selectedIndex]
-                      if (selectedSortOption) {
-                        setSortOption(selectedSortOption.value)
-                      }
-                    }}
-                    colorVariant="primary"
-                  />
+                {sortControls}
+              </div>
+            </div>
+
+            <h2 className="sidebar-section-title sidebar-section-title--subsection stations-mobile-filters-heading">
+              Filters
+            </h2>
+
+            <div
+              id="stations-mobile-only-filters"
+              className={`mobile-filters-content mobile-filters-content--filters ${isMobileFiltersExpanded ? 'mobile-filters-content--expanded' : ''}`}
+            >
+              <div className="mobile-filters-content-inner">
+                <div className="stations-filters-heading-row">
+                  <h2 className="sidebar-section-title sidebar-section-title--subsection">Filters</h2>
+                  <BUTWideButton
+                    type="button"
+                    width="hug"
+                    className="stations-reset-filters-button"
+                    onClick={resetAllFilters}
+                    disabled={!hasUserInteractedWithFilters}
+                  >
+                    Reset all
+                  </BUTWideButton>
                 </div>
+                {filterControls}
               </div>
             </div>
           </div>
@@ -539,7 +626,7 @@ const StationsPage: React.FC<StationsPageProps> = ({ initialMode = 'view' }) => 
 
         {/* Main Content */}
         <main className="stations-main">
-          {adminDisplayMode === 'table' ? (
+          {effectiveDisplayMode === 'table' ? (
             <StationsTableView
               stations={tableStations}
               sort={tableSort}
@@ -557,16 +644,16 @@ const StationsPage: React.FC<StationsPageProps> = ({ initialMode = 'view' }) => 
                   onInfoClick: () => handleStationNavigate(station),
                 }
                 return isLightRailStop(station) ? (
-                  <LightRailStopCard key={station.id} {...cardProps} />
+                  <LightRailStopCard key={getStationMapKey(station)} {...cardProps} />
                 ) : (
-                  <StationCard key={station.id} {...cardProps} />
+                  <StationCard key={getStationMapKey(station)} {...cardProps} />
                 )
               })}
             </div>
           )}
 
           {/* Pagination */}
-          {adminDisplayMode !== 'table' && totalPages > 1 && (
+          {totalPages > 1 && (
             <div className="stations-pagination">
               <div className="pagination-control-row">
                 <BUTLeftRoundedCircleButton

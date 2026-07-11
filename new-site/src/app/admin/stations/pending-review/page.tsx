@@ -26,9 +26,8 @@ const ReviewPendingChangesPage: React.FC = () => {
   const location = { pathname, search: searchParams.toString() ? `?${searchParams}` : '', state: null as unknown }
   const { loading, error, refetch } = useStations()
   const { pendingChanges } = usePendingStationChanges()
-  const { collectionId, networkView, isSandbox } = useStationCollection()
+  const { collectionId, networkView } = useStationCollection()
   const pendingCount = useMemo(() => {
-    if (isSandbox) return countPendingChangesForCollection(pendingChanges, collectionId)
     if (networkView === 'all') {
       return NETWORK_COLLECTION_IDS.reduce(
         (sum, id) => sum + countPendingChangesForCollection(pendingChanges, id),
@@ -36,7 +35,7 @@ const ReviewPendingChangesPage: React.FC = () => {
       )
     }
     return countPendingChangesForCollection(pendingChanges, collectionId)
-  }, [pendingChanges, collectionId, networkView, isSandbox])
+  }, [pendingChanges, collectionId, networkView])
   const collectionLabel = getStationCollectionDisplayLabel(collectionId)
   const [reviewTab, setReviewTab] = useState<PendingReviewPageTab>('pending')
   const [pageActionBarApi, setPageActionBarApi] = useState<PendingReviewPageActionBarApi | null>(null)

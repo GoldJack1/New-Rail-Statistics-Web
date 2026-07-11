@@ -349,7 +349,7 @@ export function mapStationDetailFieldsFromFirestore(
     nlc: readFirestoreString(data, 'nlc', 'NLC'),
     gauge: readFirestoreString(data, 'guage', 'Guage'),
     minConnectionTime: readFirestoreString(data, 'min-connection-time', 'minConnectionTime'),
-    province: readFirestoreString(data, 'province'),
+    province: readFirestoreString(data, 'province', 'Province'),
     postEirCode: readFirestoreString(data, 'post-eir_code'),
     stepFreeCode:
       readFirestoreString(data, LIGHT_RAIL_DOC_FIELDS.isStepFree, 'IsStepFree')

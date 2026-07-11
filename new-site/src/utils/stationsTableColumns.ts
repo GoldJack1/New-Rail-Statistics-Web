@@ -1,6 +1,6 @@
 import type { Station } from '../types'
 import { isLightRailStop } from './stationCardForNetwork'
-import { formatStationLocaleDisplay } from './formatStationLocation'
+import { formatStationLocationDisplay } from './formatStationLocation'
 import { formatFareZoneDisplay } from './formatFareZone'
 import { parseStoredDateForSort } from './dateDdMmYyyy'
 import { readStationUrl } from './stationUrlField'
@@ -49,7 +49,7 @@ export function getTableColumnValue(station: Station, column: StationsTableColum
     case 'county':
       return (station.county ?? '').trim()
     case 'locale':
-      return formatStationLocaleDisplay(station)
+      return formatStationLocationDisplay(station)
     case 'stnarea':
       return (station.stnarea ?? '').trim()
     case 'borough':

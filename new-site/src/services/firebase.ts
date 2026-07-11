@@ -235,7 +235,6 @@ export {
   SANDBOX_COLLECTION_ID,
   STATION_COLLECTION_DISPLAY_LABELS,
   STATION_NETWORK_STORAGE_KEY,
-  STATION_SANDBOX_STORAGE_KEY,
   STATION_COLLECTION_STORAGE_KEY,
   DEFAULT_NETWORK_COLLECTION_ID,
   DEFAULT_NETWORK_VIEW,
@@ -279,11 +278,7 @@ import {
 function syncDerivedCollectionStorage(): void {
   if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') return
   try {
-    const collectionId = deriveCollectionId(
-      getStationNetworkView(),
-      getStationNetworkId(),
-      getStationSandboxMode()
-    )
+    const collectionId = deriveCollectionId(getStationNetworkView(), getStationNetworkId())
     window.localStorage.setItem(STATION_COLLECTION_STORAGE_KEY, collectionId)
   } catch {
     // ignore
@@ -296,7 +291,6 @@ function readLegacyCollectionStorage(): StationCollectionId | null {
   }
   try {
     const stored = window.localStorage.getItem(STATION_COLLECTION_STORAGE_KEY)
-    if (stored === SANDBOX_COLLECTION_ID) return SANDBOX_COLLECTION_ID
     if (stored != null && isNetworkCollection(stored)) return stored
     if (stored === 'stations2603') return 'stations_gbnr'
   } catch {
@@ -360,52 +354,20 @@ export const setStationNetworkView = (view: NetworkViewFilter): void => {
   }
 }
 
-/** Read whether admin sandbox mode is enabled. */
-export const getStationSandboxMode = (): boolean => {
-  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
-    return false
-  }
-  try {
-    const stored = window.localStorage.getItem(STATION_SANDBOX_STORAGE_KEY)
-    if (stored === 'true' || stored === 'false') return stored === 'true'
-    const legacy = readLegacyCollectionStorage()
-    if (legacy === SANDBOX_COLLECTION_ID) return true
-  } catch {
-    // ignore
-  }
-  return false
-}
-
-/** Persist sandbox mode and sync derived collection id. */
-export const setStationSandboxMode = (enabled: boolean): void => {
-  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') return
-  try {
-    window.localStorage.setItem(STATION_SANDBOX_STORAGE_KEY, enabled ? 'true' : 'false')
-    syncDerivedCollectionStorage()
-  } catch {
-    // ignore
-  }
-}
-
-/** Read the currently active station collection (network or sandbox). */
+/** Read the currently active station collection. */
 export const getStationCollectionName = (): StationCollectionId => {
-  return deriveCollectionId(getStationNetworkView(), getStationNetworkId(), getStationSandboxMode())
+  return deriveCollectionId(getStationNetworkView(), getStationNetworkId())
 }
 
-/** Persist derived collection id (keeps network + sandbox keys in sync). */
+/** Persist derived collection id (keeps network keys in sync). */
 export const setStationCollectionName = (id: StationCollectionId): void => {
   if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
     return
   }
   try {
     window.localStorage.setItem(STATION_COLLECTION_STORAGE_KEY, id)
-    if (id === SANDBOX_COLLECTION_ID) {
-      window.localStorage.setItem(STATION_SANDBOX_STORAGE_KEY, 'true')
-      return
-    }
     if (isNetworkCollection(id)) {
       window.localStorage.setItem(STATION_NETWORK_STORAGE_KEY, id)
-      window.localStorage.setItem(STATION_SANDBOX_STORAGE_KEY, 'false')
     }
   } catch {
     // Ignore storage errors; selection just won't persist

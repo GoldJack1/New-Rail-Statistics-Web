@@ -11,6 +11,7 @@ import {
   sortStations,
   type SortOption,
   type StationFilterSelections,
+  type StationSearchMode,
 } from '@/utils/stationSearchFiltering'
 import {
   sortStationsByTableColumn,
@@ -22,8 +23,8 @@ export interface StationListPipelineInput {
   loadedStations: Station[]
   pendingChanges: Record<string, PendingChangeEntry>
   networkView: NetworkViewFilter
-  isSandbox: boolean
   debouncedSearchTerm: string
+  searchMode: StationSearchMode
   filterSelections: StationFilterSelections
   hasUserInteractedWithFilters: boolean
   sortOption: SortOption
@@ -45,8 +46,8 @@ export function useStationListPipeline({
   loadedStations,
   pendingChanges,
   networkView,
-  isSandbox,
   debouncedSearchTerm,
+  searchMode,
   filterSelections,
   hasUserInteractedWithFilters,
   sortOption,
@@ -55,12 +56,12 @@ export function useStationListPipeline({
 }: StationListPipelineInput): StationListPipelineResult {
   const stations = useMemo(() => {
     const baseStations =
-      isSandbox || networkView === 'all'
+      networkView === 'all'
         ? loadedStations
         : loadedStations.filter((station) => station.sourceCollectionId === networkView)
 
     return mergePendingChangesForStationsList(baseStations, pendingChanges, networkView)
-  }, [loadedStations, isSandbox, networkView, pendingChanges])
+  }, [loadedStations, networkView, pendingChanges])
 
   const uniqueValues = useMemo(() => getStationFilterOptions(stations || []), [stations])
   const defaultSelections = useMemo(
@@ -70,8 +71,8 @@ export function useStationListPipeline({
   const effectiveSelections = hasUserInteractedWithFilters ? filterSelections : defaultSelections
 
   const filteredStations = useMemo(
-    () => filterStations(stations || [], debouncedSearchTerm, effectiveSelections, uniqueValues),
-    [stations, debouncedSearchTerm, effectiveSelections, uniqueValues]
+    () => filterStations(stations || [], debouncedSearchTerm, effectiveSelections, uniqueValues, searchMode),
+    [stations, debouncedSearchTerm, effectiveSelections, uniqueValues, searchMode]
   )
 
   const sortedStations = useMemo(() => {

@@ -4,13 +4,13 @@ import React, { useEffect } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Moon, Sun } from '@phosphor-icons/react'
 import { useAuth } from '../../../contexts/AuthContext'
+import { useStationAdminMode } from '../../../hooks/useStationAdminMode'
 import { useTheme } from '../../../hooks/useTheme'
 import {
-  isStationAdminModeActive,
   isStationAdminSearchParam,
   writeStationAdminModeEnabled,
 } from '../../../utils/stationAdminModeStorage'
-import { BUTFooterLink } from '../../buttons'
+import { BUTFooterLink, TOGToggleVisited } from '../../buttons'
 import './Footer.css'
 
 const Footer: React.FC = () => {
@@ -20,7 +20,9 @@ const Footer: React.FC = () => {
   const searchParams = useSearchParams()
   const search = searchParams?.toString() ? `?${searchParams.toString()}` : ''
   const router = useRouter()
-  const isStationsPage = pathname.startsWith('/admin/stations')
+  const adminModeActive = useStationAdminMode()
+  const syncAdminSearchParam =
+    pathname === '/stations/map' || pathname === '/admin/stations' || pathname === '/admin/map'
 
   useEffect(() => {
     if (user && isStationAdminSearchParam(search)) {
@@ -28,43 +30,28 @@ const Footer: React.FC = () => {
     }
   }, [user, search])
 
-  const handleAdminToggle = () => {
-    const currentlyOn = isStationAdminModeActive(search)
-    const nextOn = !currentlyOn
+  const handleAdminModeChange = (nextOn: boolean) => {
     writeStationAdminModeEnabled(nextOn)
 
-    if (pathname === '/stations/map') {
-      const params = new URLSearchParams(search)
-      if (nextOn) {
-        params.set('admin', '1')
-      } else {
-        params.delete('admin')
-      }
-      const query = params.toString()
-      router.push(query.length > 0 ? `/stations/map?${query}` : '/stations/map')
-      return
-    }
+    if (!syncAdminSearchParam) return
 
-    if (isStationsPage) {
-      const params = new URLSearchParams(search)
-      if (nextOn) {
-        params.set('admin', '1')
-      } else {
-        params.delete('admin')
-      }
-      const query = params.toString()
-      router.push(query.length > 0 ? `/admin/stations?${query}` : '/admin/stations')
-      return
+    const params = new URLSearchParams(searchParams?.toString() ?? '')
+    if (nextOn) {
+      params.set('admin', '1')
+    } else {
+      params.delete('admin')
     }
-
-    router.push(nextOn ? '/admin/stations?admin=1' : '/admin/stations')
+    const query = params.toString()
+    router.replace(query.length > 0 ? `${pathname}?${query}` : pathname, { scroll: false })
   }
 
   return (
     <footer className="site-footer app-footer">
       <div className="site-footer-inner">
         <div className="site-footer-primary-row">
-          <p>&copy; {new Date().getFullYear()} Rail Statistics</p>
+          <div className="site-footer-brand">
+            <p>&copy; {new Date().getFullYear()} Rail Statistics</p>
+          </div>
           <div className="site-footer-links site-footer-links--base-row">
             <BUTFooterLink to="/">
               Home
@@ -101,6 +88,15 @@ const Footer: React.FC = () => {
         </div>
         {user ? (
           <div className="site-footer-secondary-row">
+            <div className="site-footer-admin-toggle">
+              <span className="site-footer-admin-toggle__label">Admin</span>
+              <TOGToggleVisited
+                checked={adminModeActive}
+                onChange={handleAdminModeChange}
+                ariaLabel="Admin mode"
+                className="site-footer-admin-toggle__control"
+              />
+            </div>
             <div className="site-footer-links site-footer-links--logged-in-row">
               <BUTFooterLink to="/admin/stations">
                 Stations
@@ -110,9 +106,6 @@ const Footer: React.FC = () => {
               </BUTFooterLink>
               <BUTFooterLink to="/admin/design-system">
                 Design System
-              </BUTFooterLink>
-              <BUTFooterLink onActivate={handleAdminToggle}>
-                Admin
               </BUTFooterLink>
             </div>
           </div>

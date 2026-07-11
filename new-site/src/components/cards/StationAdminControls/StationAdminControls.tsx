@@ -3,34 +3,30 @@
 import React from 'react'
 import { BUTBaseButtonBar as ButtonBar } from '../../buttons'
 import { BUTBaseButton as Button } from '../../buttons'
-import type { StationAdminDisplayMode } from '../../../utils/stationAdminDisplayModeStorage'
 import './StationAdminControls.css'
 
 interface StationAdminControlsProps {
   isEditMode: boolean
-  isSandbox: boolean
-  displayMode: StationAdminDisplayMode
   pendingChangesCount: number
   onModeChange: (mode: 'view' | 'edit') => void
-  onDisplayModeChange: (mode: StationAdminDisplayMode) => void
-  onSandboxChange: (enabled: boolean) => void
   onOpenPendingChanges: () => void
   onAddStation: () => void
+  className?: string
 }
 
 const StationAdminControls: React.FC<StationAdminControlsProps> = ({
   isEditMode,
-  isSandbox,
-  displayMode,
   pendingChangesCount,
   onModeChange,
-  onDisplayModeChange,
-  onSandboxChange,
   onOpenPendingChanges,
   onAddStation,
+  className,
 }) => {
   return (
-    <section className="station-admin-controls-card" aria-label="Station admin controls">
+    <section
+      className={['station-admin-controls-card', className].filter(Boolean).join(' ')}
+      aria-label="Station admin controls"
+    >
       <div className="station-admin-controls-group">
         <span className="station-admin-controls-label">Mode</span>
         <ButtonBar
@@ -43,38 +39,14 @@ const StationAdminControls: React.FC<StationAdminControlsProps> = ({
         />
       </div>
 
-      <div className="station-admin-controls-group">
-        <span className="station-admin-controls-label">Display</span>
-        <ButtonBar
-          buttons={[
-            { label: 'Cards', value: 'cards' },
-            { label: 'Table', value: 'table' },
-          ]}
-          selectedIndex={displayMode === 'table' ? 1 : 0}
-          onChange={(_, value) => onDisplayModeChange(value as StationAdminDisplayMode)}
-        />
-      </div>
-
-      <div className="station-admin-controls-group">
-        <span className="station-admin-controls-label">Sandbox mode</span>
-        <ButtonBar
-          buttons={[
-            { label: 'Off', value: 'off' },
-            { label: 'On', value: 'on' }
-          ]}
-          selectedIndex={isSandbox ? 1 : 0}
-          onChange={(_, value) => onSandboxChange(value === 'on')}
-        />
-      </div>
-
       {isEditMode && (
-        <div className="station-admin-controls-group station-admin-controls-group--add station-admin-controls-group--add-mobile">
+        <div className="station-admin-controls-group">
           <span className="station-admin-controls-label">Stations</span>
           <Button
             type="button"
             variant="wide"
             width="fill"
-            className="station-admin-controls-add-button"
+            className="station-admin-controls-action-button"
             onClick={onAddStation}
           >
             + Add new station

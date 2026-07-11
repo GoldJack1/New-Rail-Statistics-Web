@@ -3,6 +3,7 @@
   gap: var(--space-md);
   min-width: 0;
   max-width: 100%;
+  min-height: 0;
 }
 
 .stations-table-wrap {

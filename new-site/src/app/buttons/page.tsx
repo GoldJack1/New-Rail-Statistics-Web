@@ -6,6 +6,11 @@ import { BUTBaseButtonBar as ButtonBar } from '@/components/buttons'
 import { Gear, MagnifyingGlass, Plus, Star } from '@/components/icons'
 import './ButtonDemoPage.css'
 
+const PlusIcon = () => <Plus size={16} aria-hidden />
+const SearchIcon = () => <MagnifyingGlass size={16} aria-hidden />
+const StarIcon = () => <Star size={16} weight="fill" aria-hidden />
+const SettingsIcon = () => <Gear size={16} aria-hidden />
+
 const ButtonDemoPage: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState(0)
   const [clickedButtons, setClickedButtons] = useState<Record<string, boolean>>({})
@@ -18,11 +23,6 @@ const ButtonDemoPage: React.FC = () => {
       setClickedButtons(prev => ({ ...prev, [id]: false }))
     }, 300)
   }
-
-  const PlusIcon = () => <Plus size={16} aria-hidden />
-  const SearchIcon = () => <MagnifyingGlass size={16} aria-hidden />
-  const StarIcon = () => <Star size={16} weight="fill" aria-hidden />
-  const SettingsIcon = () => <Gear size={16} aria-hidden />
 
   return (
     <div className="container">

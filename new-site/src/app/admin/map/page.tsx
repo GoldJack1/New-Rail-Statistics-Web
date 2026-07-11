@@ -52,7 +52,7 @@ const StationsMapPage: React.FC = () => {
   const searchParams = useSearchParams()
   const routerLocation = { pathname, search: searchParams.toString() ? `?${searchParams}` : '' }
   const isAdminMode = useStationAdminMode()
-  const { collectionId, networkView, setNetworkView, isSandbox } = useStationCollection()
+  const { collectionId, networkView, setNetworkView } = useStationCollection()
   const { pendingChanges } = usePendingStationChanges()
   const { stations, loading, error, refetch, resolveStation, loadStationDetails, dataRevision } =
     useStationsMap()
@@ -86,10 +86,10 @@ const StationsMapPage: React.FC = () => {
   }, [dataRevision, selectedStation, resolveStation])
 
   useEffect(() => {
-    if (isSandbox || networkView === 'all') return
+    if (networkView === 'all') return
     if (!isNetworkCollection(networkView)) return
     void ensureCollectionLoaded(networkView, { detailLevel: 'list', force: false })
-  }, [networkView, isSandbox])
+  }, [networkView])
 
   useEffect(() => {
     if (!selectedStation) return
@@ -209,7 +209,6 @@ const StationsMapPage: React.FC = () => {
   )
 
   const pendingChangesCount = useMemo(() => {
-    if (isSandbox) return countPendingChangesForCollection(pendingChanges, collectionId)
     if (networkView === 'all') {
       return NETWORK_COLLECTION_IDS.reduce(
         (sum, id) => sum + countPendingChangesForCollection(pendingChanges, id),
@@ -217,7 +216,7 @@ const StationsMapPage: React.FC = () => {
       )
     }
     return countPendingChangesForCollection(pendingChanges, collectionId)
-  }, [pendingChanges, collectionId, networkView, isSandbox])
+  }, [pendingChanges, collectionId, networkView])
 
   const handleOpenPendingChanges = useCallback(() => {
     router.push(`/admin/stations/pending-review?from=${encodeURIComponent(pathnameForReviewPendingSource(routerLocation))}`)
@@ -253,33 +252,31 @@ const StationsMapPage: React.FC = () => {
     <div className="stations-page stations-map-page">
       <PageTopHeader title="Map" titleAddon={<BetaTag />} />
       <div className="stations-toolbar-band">
-        <div className="stations-map-page__toolbar-row">
-          {isAdminMode && (
-            <div className="stations-map-page__admin-actions">
-              <Button
-                type="button"
-                variant="wide"
-                width="hug"
-                colorVariant={isAddStationMode ? 'accent' : 'primary'}
-                aria-pressed={isAddStationMode}
-                onClick={() => setIsAddStationMode((active) => !active)}
-              >
-                Add station mode
-              </Button>
-              <Button
-                type="button"
-                variant="wide"
-                width="hug"
-                colorVariant={pendingChangesCount > 0 ? 'accent' : 'primary'}
-                onClick={handleOpenPendingChanges}
-              >
-                Pending changes ({pendingChangesCount})
-              </Button>
-            </div>
-          )}
-          <div className="stations-network-tabs-wrap stations-network-tabs-wrap--toolbar">
-            <NetworkStationTabGroup value={networkView} onChange={setNetworkView} />
+        {isAdminMode && (
+          <div className="stations-map-page__admin-actions">
+            <Button
+              type="button"
+              variant="wide"
+              width="hug"
+              colorVariant={isAddStationMode ? 'accent' : 'primary'}
+              aria-pressed={isAddStationMode}
+              onClick={() => setIsAddStationMode((active) => !active)}
+            >
+              Add station mode
+            </Button>
+            <Button
+              type="button"
+              variant="wide"
+              width="hug"
+              colorVariant={pendingChangesCount > 0 ? 'accent' : 'primary'}
+              onClick={handleOpenPendingChanges}
+            >
+              Pending changes ({pendingChangesCount})
+            </Button>
           </div>
+        )}
+        <div className="stations-network-tabs-wrap stations-network-tabs-wrap--toolbar">
+          <NetworkStationTabGroup value={networkView} onChange={setNetworkView} />
         </div>
       </div>
       <div className="stations-content stations-map-page__content">

@@ -15,14 +15,12 @@ import {
   type StationsTableSort,
 } from '../../../utils/stationsTableColumns'
 import { getLatestYearlyPassengerDisplay } from '../../../utils/yearlyPassengers'
+import { getStationMapKey } from '../../../utils/stationAreaSlug'
 import './StationsTableView.css'
 
 const TABLE_ROW_HEIGHT_PX = 44
-const VIRTUALIZE_THRESHOLD = 40
-
-function getStationTableRowKey(station: Station): string {
-  return `${station.sourceCollectionId ?? station.stnarea ?? 'station'}-${station.id}`
-}
+/** Above admin table page size (100) so rows scroll with the page, not a nested container. */
+const VIRTUALIZE_THRESHOLD = 101
 
 interface StationsTableViewProps {
   stations: Station[]
@@ -64,7 +62,7 @@ function StationTableRow({
   visibleColumns: StationsTableColumnDefinition[]
   onRowClick: (station: Station) => void
 }) {
-  const rowKey = getStationTableRowKey(station)
+  const rowKey = getStationMapKey(station)
 
   return (
     <tr
@@ -201,7 +199,7 @@ const StationsTableView: React.FC<StationsTableViewProps> = ({
                   if (!station) return null
                   return (
                     <StationTableRow
-                      key={getStationTableRowKey(station)}
+                      key={getStationMapKey(station)}
                       station={station}
                       visibleColumns={visibleColumns}
                       onRowClick={onRowClick}
@@ -221,7 +219,7 @@ const StationsTableView: React.FC<StationsTableViewProps> = ({
             ) : (
               stations.map((station) => (
                 <StationTableRow
-                  key={getStationTableRowKey(station)}
+                  key={getStationMapKey(station)}
                   station={station}
                   visibleColumns={visibleColumns}
                   onRowClick={onRowClick}

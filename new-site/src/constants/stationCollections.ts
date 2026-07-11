@@ -104,10 +104,8 @@ export function isNetworkViewFilter(value: string): value is NetworkViewFilter {
 
 export function deriveCollectionId(
   networkView: NetworkViewFilter,
-  networkId: NetworkCollectionId,
-  isSandbox: boolean
+  networkId: NetworkCollectionId
 ): StationCollectionId {
-  if (isSandbox) return SANDBOX_COLLECTION_ID
   if (networkView !== 'all') return networkView
   return networkId
 }
