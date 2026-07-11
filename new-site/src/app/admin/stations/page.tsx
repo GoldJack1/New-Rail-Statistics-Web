@@ -55,6 +55,8 @@ import {
 } from '@/utils/stationsTableColumns'
 import {
   type SortOption,
+  sortOptionToTableSort,
+  tableSortToSortOption,
   type StationFilterSelections,
   type StationSearchMode,
   getAvailableStationSearchModes,
@@ -414,6 +416,7 @@ const StationsPage: React.FC<StationsPageProps> = ({ initialMode = 'view' }) => 
           const selectedSortOption = SORT_DDM_OPTIONS[selectedIndex]
           if (selectedSortOption) {
             setSortOption(selectedSortOption.value)
+            setTableSort(sortOptionToTableSort(selectedSortOption.value))
           }
         }}
         colorVariant="primary"
@@ -621,15 +624,16 @@ const StationsPage: React.FC<StationsPageProps> = ({ initialMode = 'view' }) => 
             </CollapsibleSection>
           </SidebarDropdownSection>
 
-          <SidebarDropdownSection title="View" defaultExpanded>
-            <StationAdminViewControls
-              displayMode={effectiveDisplayMode}
-              onDisplayModeChange={handleDisplayModeChange}
-              onAssignHeaders={() => setIsTableColumnsModalOpen(true)}
-              tableModeDisabled={isMobileStationsLayout}
-              className="station-admin-controls-card--sidebar"
-            />
-          </SidebarDropdownSection>
+          {!isMobileStationsLayout && (
+            <SidebarDropdownSection title="View" defaultExpanded>
+              <StationAdminViewControls
+                displayMode={effectiveDisplayMode}
+                onDisplayModeChange={handleDisplayModeChange}
+                onAssignHeaders={() => setIsTableColumnsModalOpen(true)}
+                className="station-admin-controls-card--sidebar"
+              />
+            </SidebarDropdownSection>
+          )}
 
           <SidebarDropdownSection title="Sort" defaultExpanded={false}>
             {sortControls}
@@ -675,7 +679,13 @@ const StationsPage: React.FC<StationsPageProps> = ({ initialMode = 'view' }) => 
             <StationsTableView
               stations={tableStations}
               sort={tableSort}
-              onSortChange={setTableSort}
+              onSortChange={(sort) => {
+                setTableSort(sort)
+                const mappedSortOption = tableSortToSortOption(sort)
+                if (mappedSortOption) {
+                  setSortOption(mappedSortOption)
+                }
+              }}
               onRowClick={handleStationNavigate}
               columnSlots={tableColumnSlots}
             />

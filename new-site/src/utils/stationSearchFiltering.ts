@@ -2,6 +2,8 @@ import type { Station } from '@/types'
 import type { NetworkViewFilter } from '@/constants/stationCollections'
 import { isGreaterLondonCounty } from '@/utils/formatStationLocation'
 import { boroughLabelMatchesSelection } from '@/utils/londonBoroughs'
+import { getLatestYearlyPassengerCount } from '@/utils/yearlyPassengers'
+import type { StationsTableSort } from '@/utils/stationsTableColumns'
 
 export type SortOption =
   | 'name-asc'
@@ -95,18 +97,38 @@ const sortAlphabetically = (values: string[]) =>
 const shouldApplyCategoryFilter = (selected: string[], allOptions: string[]) =>
   selected.length !== allOptions.length
 
-const getLatestPassengers = (station: Station): number => {
-  if (station.yearlyPassengers && typeof station.yearlyPassengers === 'object') {
-    const years = Object.keys(station.yearlyPassengers)
-      .filter((year) => /^\d{4}$/.test(year))
-      .sort((a, b) => parseInt(b, 10) - parseInt(a, 10))
+const getLatestPassengers = (station: Station): number =>
+  getLatestYearlyPassengerCount(station.yearlyPassengers) ?? 0
 
-    if (years.length > 0) {
-      const latestValue = station.yearlyPassengers[years[0]]
-      return typeof latestValue === 'number' ? latestValue : 0
-    }
+export const sortOptionToTableSort = (sortOption: SortOption): StationsTableSort => {
+  switch (sortOption) {
+    case 'name-desc':
+      return { column: 'name', direction: 'desc' }
+    case 'toc-asc':
+      return { column: 'toc', direction: 'asc' }
+    case 'toc-desc':
+      return { column: 'toc', direction: 'desc' }
+    case 'passengers-asc':
+      return { column: 'latestPassengers', direction: 'asc' }
+    case 'passengers-desc':
+      return { column: 'latestPassengers', direction: 'desc' }
+    case 'name-asc':
+    default:
+      return { column: 'name', direction: 'asc' }
   }
-  return 0
+}
+
+export const tableSortToSortOption = (sort: StationsTableSort): SortOption | null => {
+  if (sort.column === 'name') {
+    return sort.direction === 'desc' ? 'name-desc' : 'name-asc'
+  }
+  if (sort.column === 'toc') {
+    return sort.direction === 'desc' ? 'toc-desc' : 'toc-asc'
+  }
+  if (sort.column === 'latestPassengers') {
+    return sort.direction === 'desc' ? 'passengers-desc' : 'passengers-asc'
+  }
+  return null
 }
 
 export const getStationFilterOptions = (stations: Station[]): StationFilterOptions => ({

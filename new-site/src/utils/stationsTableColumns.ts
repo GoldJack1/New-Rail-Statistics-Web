@@ -4,7 +4,7 @@ import { formatStationLocationDisplay } from './formatStationLocation'
 import { formatFareZoneDisplay } from './formatFareZone'
 import { parseStoredDateForSort } from './dateDdMmYyyy'
 import { readStationUrl } from './stationUrlField'
-import { getLatestYearlyPassengerCount } from './yearlyPassengers'
+import { getLatestYearlyPassengerCount, getPassengersForSort } from './yearlyPassengers'
 import { NETWORK_LABELS } from '../constants/stationCollections'
 import type { NetworkCollectionId } from '../constants/stationCollections'
 import {
@@ -166,6 +166,11 @@ function compareStationsByColumn(
   column: StationsTableColumnKey,
   direction: StationsTableSortDirection
 ): number {
+  if (column === 'latestPassengers') {
+    const result = getPassengersForSort(a) - getPassengersForSort(b)
+    return direction === 'asc' ? result : -result
+  }
+
   const sortMode = STATIONS_TABLE_COLUMN_CATALOG_BY_KEY[column].sortMode
   const valueA = getTableColumnValue(a, column)
   const valueB = getTableColumnValue(b, column)

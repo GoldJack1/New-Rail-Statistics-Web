@@ -1,4 +1,5 @@
 import type { Station, YearlyPassengers } from '../types'
+import { DEFAULT_NETWORK_COLLECTION_ID } from '../constants/stationCollections'
 
 export function parseYearlyPassengerCount(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) return value
@@ -78,6 +79,12 @@ export function getLatestYearlyPassengerCount(
   passengers: Station['yearlyPassengers'] | YearlyPassengers | number | string | null | undefined
 ): number | null {
   return getLatestYearlyPassengerEntry(passengers)?.count ?? null
+}
+
+/** Passenger count used for sorting — only GB National Rail stations have real values. */
+export function getPassengersForSort(station: Station): number {
+  if (station.sourceCollectionId !== DEFAULT_NETWORK_COLLECTION_ID) return 0
+  return getLatestYearlyPassengerCount(station.yearlyPassengers) ?? 0
 }
 
 export function getLatestYearlyPassengerDisplay(

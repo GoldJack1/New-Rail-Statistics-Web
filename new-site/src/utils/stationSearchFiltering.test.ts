@@ -9,7 +9,9 @@ import {
   getDefaultStationFilterSelections,
   getDisabledBoroughPositions,
   getStationFilterOptions,
+  sortOptionToTableSort,
   sortStations,
+  tableSortToSortOption,
 } from './stationSearchFiltering'
 
 const makeStation = (overrides: Partial<Station>): Station => ({
@@ -197,6 +199,33 @@ describe('stationSearchFiltering', () => {
   it('sorts stations by passenger count descending', () => {
     const sorted = sortStations(stations, 'passengers-desc')
     expect(sorted.map((station) => station.id)).toEqual(['2', '3', '1'])
+  })
+
+  it('ignores null values for the latest passenger year when sorting', () => {
+    const passengerStations: Station[] = [
+      makeStation({
+        id: 'low',
+        stationName: 'Abbey Wood',
+        yearlyPassengers: { '2025': 100, '2026': null },
+      }),
+      makeStation({
+        id: 'high',
+        stationName: 'London Waterloo',
+        yearlyPassengers: { '2025': 500, '2026': null },
+      }),
+    ]
+
+    const sorted = sortStations(passengerStations, 'passengers-desc')
+    expect(sorted.map((station) => station.id)).toEqual(['high', 'low'])
+  })
+
+  it('maps sidebar sort options to table sort state', () => {
+    expect(sortOptionToTableSort('passengers-desc')).toEqual({
+      column: 'latestPassengers',
+      direction: 'desc',
+    })
+    expect(tableSortToSortOption({ column: 'toc', direction: 'asc' })).toBe('toc-asc')
+    expect(tableSortToSortOption({ column: 'county', direction: 'asc' })).toBeNull()
   })
 
   it('filters by station name only in name search mode', () => {
