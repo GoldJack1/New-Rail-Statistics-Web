@@ -116,10 +116,6 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
    */
   const [hasApproachedViewport, setHasApproachedViewport] = useState(false)
   const [isMobileTabletViewport, setIsMobileTabletViewport] = useState(false)
-  const [activeTheme, setActiveTheme] = useState<'light' | 'dark'>(() => {
-    if (typeof document === 'undefined') return 'light'
-    return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
-  })
 
   useEffect(() => {
     const root = rootRef.current
@@ -169,25 +165,6 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
     return () => mq.removeListener(onChange)
   }, [])
 
-  useEffect(() => {
-    if (typeof document === 'undefined' || typeof MutationObserver === 'undefined') return
-    const root = document.documentElement
-    const syncTheme = () => {
-      setActiveTheme(root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light')
-    }
-    syncTheme()
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
-          syncTheme()
-          break
-        }
-      }
-    })
-    observer.observe(root, { attributes: true, attributeFilter: ['data-theme'] })
-    return () => observer.disconnect()
-  }, [])
-
   const eagerVideoPreload = loading === 'eager' ? 'auto' : 'metadata'
   /**
    * Regardless of `loading`, never eagerly download video bytes for a hero that hasn't scrolled
@@ -203,8 +180,6 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
   const lightVideoSrc = isMobileTabletViewport && videoSources?.lightMobileTablet
     ? videoSources.lightMobileTablet
     : videoSources?.light
-  const activeDarkVideoSrc = activeTheme === 'dark' ? darkVideoSrc : undefined
-  const activeLightVideoSrc = activeTheme === 'light' ? lightVideoSrc : undefined
 
   useEffect(() => {
     if (!hasApproachedViewport || !videoSources) return
@@ -313,7 +288,7 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
           <>
             <div className="rs-home-hero-image-stack__picture rs-home-hero-image-stack__picture--dark">
               <video
-                key={activeDarkVideoSrc ?? 'dark-video-disabled'}
+                key={darkVideoSrc ?? 'dark-video-disabled'}
                 ref={darkVideoRef}
                 className="rs-home-hero-image-stack__media"
                 muted
@@ -322,17 +297,17 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
                 preload={preferLowQuality && isMobileTabletViewport ? 'metadata' : resolvedVideoPreload}
                 aria-hidden={decorative ? true : undefined}
               >
-                {activeDarkVideoSrc ? (
+                {darkVideoSrc ? (
                   <>
-                    <source src={activeDarkVideoSrc} type="video/webm" />
-                    <source src={mp4FallbackSrc(activeDarkVideoSrc)} type="video/mp4" />
+                    <source src={darkVideoSrc} type="video/webm" />
+                    <source src={mp4FallbackSrc(darkVideoSrc)} type="video/mp4" />
                   </>
                 ) : null}
               </video>
             </div>
             <div className="rs-home-hero-image-stack__picture rs-home-hero-image-stack__picture--light">
               <video
-                key={activeLightVideoSrc ?? 'light-video-disabled'}
+                key={lightVideoSrc ?? 'light-video-disabled'}
                 ref={lightVideoRef}
                 className="rs-home-hero-image-stack__media"
                 muted
@@ -341,10 +316,10 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
                 preload={preferLowQuality && isMobileTabletViewport ? 'metadata' : resolvedVideoPreload}
                 aria-hidden={decorative ? true : undefined}
               >
-                {activeLightVideoSrc ? (
+                {lightVideoSrc ? (
                   <>
-                    <source src={activeLightVideoSrc} type="video/webm" />
-                    <source src={mp4FallbackSrc(activeLightVideoSrc)} type="video/mp4" />
+                    <source src={lightVideoSrc} type="video/webm" />
+                    <source src={mp4FallbackSrc(lightVideoSrc)} type="video/mp4" />
                   </>
                 ) : null}
               </video>
