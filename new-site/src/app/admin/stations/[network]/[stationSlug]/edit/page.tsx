@@ -34,6 +34,7 @@ import { BUTCircleButton } from '@/components/buttons'
 import { PageTopHeader } from '@/components/misc'
 import '@/components/models/StationModal/StationModal.css'
 import '@/components/models/StationEditModal/StationEditModal.css'
+import { PencilSimple, Eye } from '@phosphor-icons/react'
 import { paramAsString } from '@/utils/nextParams'
 import { setStationDetailsNavigationState, readStationDetailsNavigationState } from '@/utils/clientNavigationState'
 import './StationDetailsPage.css'
@@ -261,12 +262,7 @@ function AdminStationEditPage() {
                         setStationDetailsNavigationState(navigationState)
                         router.push(`/admin/stations/${buildStationPath(station, collectionId)}/edit`)
                       }}
-                      icon={
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M12 20h9" />
-                          <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-                        </svg>
-                      }
+                      icon={<PencilSimple size={16} aria-hidden />}
                     />
                   ) : (
                     <BUTCircleButton
@@ -276,12 +272,7 @@ function AdminStationEditPage() {
                         setStationDetailsNavigationState(navigationState)
                         router.push(`/stations/${buildStationPath(station, collectionId)}`)
                       }}
-                      icon={
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
-                          <circle cx="12" cy="12" r="3" />
-                        </svg>
-                      }
+                      icon={<Eye size={16} aria-hidden />}
                     />
                   )}
                 </>

@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { CaretDown, DownloadSimple, Files, MagnifyingGlass } from '@phosphor-icons/react'
 
 import { useStations } from '@/hooks/useStations'
 import { useStationCollection } from '@/contexts/StationCollectionContext'
@@ -45,19 +46,7 @@ function rankMatchCardClassName(match: StationMatch, extra?: string): string {
 function MigrationCompleteDetailsChevron() {
   return (
     <span className="migration-complete-details-summary-chevron" aria-hidden="true">
-      <svg
-        className="migration-complete-details-chevron-icon"
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <polyline points="6 9 12 15 18 9" />
-      </svg>
+      <CaretDown className="migration-complete-details-chevron-icon" size={20} aria-hidden />
     </span>
   )
 }
@@ -1455,12 +1444,7 @@ const MigrationPage: React.FC = () => {
                       <div className="migration-station-search-input-row">
                         <TXTINPIconWideButtonSearch
                           id="migration-search-field-page"
-                          icon={
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                              <circle cx="7" cy="7" r="4" />
-                              <line x1="11" y1="11" x2="13" y2="13" />
-                            </svg>
-                          }
+                          icon={<MagnifyingGlass size={16} aria-hidden />}
                           placeholder="Try a name, code, or place…"
                           value={state.searchQuery}
                           onInputChange={(e) => handleMigrationSearchInputChange(e.target.value)}
@@ -2202,23 +2186,7 @@ const MigrationPage: React.FC = () => {
                         <span className="duplicate-group-title">{duplicateSummaryText}</span>
                       </div>
                       <span className="duplicate-group-chevron" aria-hidden="true">
-                        <svg
-                          className="duplicate-group-chevron-icon"
-                          viewBox="0 0 24 24"
-                          width="20"
-                          height="20"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                          aria-hidden="true"
-                        >
-                          <path
-                            d="M6 9l6 6 6-6"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
+                        <CaretDown className="duplicate-group-chevron-icon" size={20} aria-hidden />
                       </span>
                     </summary>
                     {indicesInRange.length === 0 ? (
@@ -2552,13 +2520,7 @@ const MigrationPage: React.FC = () => {
                   onClick={handleDownload}
                   variant="wide"
                   width="hug"
-                  icon={
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                      <polyline points="7 10 12 15 17 10" />
-                      <line x1="12" y1="15" x2="12" y2="3" />
-                    </svg>
-                  }
+                  icon={<DownloadSimple size={20} />}
                 ariaLabel={`Download converted stations CSV (${getGbStationsDownloadFilename()})`}
               >
                 Download
@@ -2638,17 +2600,7 @@ const MigrationPage: React.FC = () => {
               onClick={handleReset} 
               variant="wide"
               width="hug"
-              icon={
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14,2 14,8 20,8"/>
-                  <path d="M16 13H8"/>
-                  <path d="M16 17H8"/>
-                  <path d="M10 9H9H8"/>
-                  <path d="M21 15h-2a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/>
-                  <path d="M3 15h2a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H3"/>
-                </svg>
-              }
+              icon={<Files size={20} />}
             >
               Convert Another File
             </Button>

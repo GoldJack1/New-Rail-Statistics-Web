@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useState } from 'react'
+import { Check, Copy, X } from '@phosphor-icons/react'
 import { BUTBaseButton as Button } from '../../buttons'
 import { BUTSharedNativeButton } from '../../buttons'
 import './HomeDownloadPlatformModal.css'
@@ -16,29 +17,18 @@ export interface HomeDownloadPlatformModalProps {
 
 const getCopyIcon = (isCopied: boolean) => (
   <span className="rs-download-platform-modal__copy-icon-stack" aria-hidden="true">
-    <svg
+    <Copy
       className={['rs-download-platform-modal__copy-icon', !isCopied && 'is-visible'].filter(Boolean).join(' ')}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="9" y="9" width="13" height="13" rx="2" />
-      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-    </svg>
-    <svg
+      size={16}
+      weight="regular"
+      aria-hidden
+    />
+    <Check
       className={['rs-download-platform-modal__copy-icon', isCopied && 'is-visible'].filter(Boolean).join(' ')}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
+      size={16}
+      weight="bold"
+      aria-hidden
+    />
   </span>
 )
 
@@ -75,7 +65,7 @@ const HomeDownloadPlatformModal: React.FC<HomeDownloadPlatformModalProps> = ({ o
     >
       <div className="rs-download-platform-modal">
         <BUTSharedNativeButton type="button" className="rs-download-platform-modal__close" aria-label="Close" onClick={onClose}>
-          ✕
+          <X size={16} weight="bold" aria-hidden />
         </BUTSharedNativeButton>
         <h2 className="rs-download-platform-modal__title">Download Rail Statistics</h2>
         <p className="rs-download-platform-modal__subtitle">Choose your platform</p>

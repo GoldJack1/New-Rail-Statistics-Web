@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { MagnifyingGlass } from '@phosphor-icons/react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import '../../../components/maps/leafletDarkTiles.css'
@@ -75,12 +76,7 @@ export function LocationMapPicker({
   const [showResults, setShowResults] = useState(false)
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const SearchIcon = (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <circle cx="7" cy="7" r="4" />
-      <line x1="11" y1="11" x2="13" y2="13" />
-    </svg>
-  )
+  const SearchIcon = <MagnifyingGlass size={16} aria-hidden />
 
   const hasValidCoords = isValidCoord(latitude, longitude)
   const center: L.LatLngTuple = hasValidCoords ? [latitude, longitude] : DEFAULT_CENTER

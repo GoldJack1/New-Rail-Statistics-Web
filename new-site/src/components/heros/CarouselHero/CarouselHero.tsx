@@ -5,6 +5,7 @@
  * light/dark + mobile/desktop art via `CarouselHeroSlide.imageSources` (merged with `defaultImageSources`).
  */
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { CaretLeft, CaretRight, Pause, Play } from '@phosphor-icons/react'
 import { BUTBaseButton as Button } from '../../buttons'
 import { BUTSharedNativeButton } from '../../buttons'
 import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion'
@@ -113,43 +114,6 @@ export interface CarouselHeroProps {
   /** Optional default uncropped tuning for mobile/tablet slides. */
   mobileTabletUncroppedSettings?: HeroMobileTabletUncroppedSettings
 }
-
-const ChevronLeft: React.FC = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-    <path
-      d="M10 3L5 8l5 5"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-)
-
-const ChevronRight: React.FC = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-    <path
-      d="M6 3l5 5-5 5"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-)
-
-const AutoplayPauseIcon: React.FC = () => (
-  <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
-    <rect x="2" y="1.5" width="2" height="7" rx="0.5" fill="currentColor" />
-    <rect x="6" y="1.5" width="2" height="7" rx="0.5" fill="currentColor" />
-  </svg>
-)
-
-const AutoplayPlayIcon: React.FC = () => (
-  <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
-    <path d="M2.5 1.5L8.5 5 2.5 8.5V1.5Z" fill="currentColor" />
-  </svg>
-)
 
 const CarouselHero: React.FC<CarouselHeroProps> = ({
   slides,
@@ -792,7 +756,7 @@ const CarouselHero: React.FC<CarouselHeroProps> = ({
                 shape="rounded"
                 type="button"
                 ariaLabel="Previous slide"
-                icon={<ChevronLeft />}
+                icon={<CaretLeft size={16} weight="bold" aria-hidden />}
                 onClick={goPrev}
               />
               <div className="rs-carousel-hero__indicator-track" role="group" aria-label="Choose slide">
@@ -832,7 +796,11 @@ const CarouselHero: React.FC<CarouselHeroProps> = ({
                               })
                             }}
                           >
-                            {autoplayUserPaused ? <AutoplayPlayIcon /> : <AutoplayPauseIcon />}
+                            {autoplayUserPaused ? (
+                              <Play size={10} weight="fill" aria-hidden />
+                            ) : (
+                              <Pause size={10} weight="fill" aria-hidden />
+                            )}
                           </BUTSharedNativeButton>
                         </>
                       ) : null}
@@ -853,7 +821,7 @@ const CarouselHero: React.FC<CarouselHeroProps> = ({
                 shape="rounded"
                 type="button"
                 ariaLabel="Next slide"
-                icon={<ChevronRight />}
+                icon={<CaretRight size={16} weight="bold" aria-hidden />}
                 onClick={goNext}
               />
             </div>

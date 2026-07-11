@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import React, { useEffect, useMemo, useState } from 'react'
+import { MagnifyingGlass } from '@phosphor-icons/react'
 
 import { BUTSquareButton, BUTWideButton } from '@/components/buttons'
 import BUTDDMList from '@/components/buttons/ddm/BUTDDMList'
@@ -31,13 +32,6 @@ type UnitCatalogCacheEntry = {
 const unitsCatalogSWRCache = new Map<string, UnitCatalogCacheEntry>()
 const CATALOG_CACHE_KEY = 'units-catalog'
 const CATALOG_CACHE_MAX_AGE_MS = 5 * 60_000
-
-const SearchIcon: React.FC = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-    <circle cx="7" cy="7" r="4" />
-    <line x1="11" y1="11" x2="13" y2="13" />
-  </svg>
-)
 
 const UnitsInServicePage: React.FC = () => {
   const router = useRouter()
@@ -197,7 +191,7 @@ const UnitsInServicePage: React.FC = () => {
         <section className="units-service-search" aria-label="Unit search">
           <TXTINPBUTIconWideButtonSearch
             id="units-main-search"
-            icon={<SearchIcon />}
+            icon={<MagnifyingGlass size={16} aria-hidden />}
             value={searchInput}
             onChange={setSearchInput}
             placeholder="Enter unit ID, e.g. 150001"

@@ -79,22 +79,12 @@ import TXTINPWideIconLabelBar from '@/components/textInputs/special/TXTINPWideIc
 import type { TXTINPBUTBaseButtonProps } from '@/components/textInputButtons/base/TXTINPBUTBaseButton/TXTINPBUTBaseButton'
 import { SelectionDot, TextCard } from '@/components/cards'
 import type { TextCardState } from '@/components/cards/TextCard/TextCard'
+import { BackIcon, MagnifyingGlass, Plus } from '@/components/icons'
 import { PageTopHeader } from '@/components/misc'
 import './ButtonsPage.css'
 
-const PlusIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-    <line x1="8" y1="3" x2="8" y2="13" />
-    <line x1="3" y1="8" x2="13" y2="8" />
-  </svg>
-)
-
-const SearchIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="7" cy="7" r="4" />
-    <line x1="11" y1="11" x2="13" y2="13" />
-  </svg>
-)
+const PlusIcon = () => <Plus size={16} aria-hidden />
+const SearchIcon = () => <MagnifyingGlass size={16} aria-hidden />
 
 type ColorVariant = 'primary' | 'secondary' | 'accent' | 'green-action' | 'red-action' | 'fav-action'
 
@@ -321,12 +311,7 @@ const ButtonsPage: React.FC = () => {
           to: '/admin/design-system',
           label: 'Back',
           mode: 'iconText',
-          icon: (
-            <svg className="rs-page-top-header__action-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M11.5 8H4.5" />
-              <path d="M7.5 5L4.5 8L7.5 11" />
-            </svg>
-          ),
+          icon: <BackIcon />,
         }}
       />
       <div className="container container--full-bleed">

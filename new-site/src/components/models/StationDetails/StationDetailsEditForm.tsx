@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { X } from '@phosphor-icons/react'
 import type { SandboxStationDoc, Station, YearlyPassengers } from '../../../types'
 import type { PendingChangeEntry } from '../../../contexts/PendingStationChangesContext'
 import type { StationCollectionId } from '../../../constants/stationCollections'
@@ -927,12 +928,7 @@ const StationDetailsEditForm: React.FC<StationDetailsEditFormProps> = ({
                       variant="circle"
                       ariaLabel="Remove yearly passenger row"
                       onClick={() => setYearlyPassengersRows((prev) => prev.filter((_, i) => i !== idx))}
-                      icon={
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <line x1="18" y1="6" x2="6" y2="18" />
-                          <line x1="6" y1="6" x2="18" y2="18" />
-                        </svg>
-                      }
+                      icon={<X size={16} aria-hidden />}
                     />
                   </div>
                 </div>

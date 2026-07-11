@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname, useSearchParams, useParams } from 'next/navigation'
 import React, { useMemo, useState } from 'react'
+import { ArrowsClockwise } from '@phosphor-icons/react'
 
 import { useServiceDetail } from '@/hooks/useServiceDetail'
 import { useStations } from '@/hooks/useStations'
@@ -414,13 +415,7 @@ const ServiceDetailPage: React.FC = () => {
               instantAction
               colorVariant="primary"
               onClick={refetch}
-              icon={(
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <polyline points="23 4 23 10 17 10" />
-                  <polyline points="1 20 1 14 7 14" />
-                  <path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10M1 14l5.36 4.36A9 9 0 0 0 20.49 15" />
-                </svg>
-              )}
+              icon={<ArrowsClockwise size={16} aria-hidden />}
             />
           </div>
         )}

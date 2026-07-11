@@ -1,0 +1,58 @@
+'use client'
+
+export { BackIcon } from './BackIcon'
+export {
+  ArrowLeft,
+  ArrowRight,
+  ArrowSquareOut,
+  ArrowsClockwise,
+  CaretDown,
+  CaretLeft,
+  CaretRight,
+  CaretUp,
+  ChartBar,
+  ChartDonut,
+  Check,
+  CheckCircle,
+  Circle,
+  Copy,
+  Database,
+  DownloadSimple,
+  Eye,
+  FileText,
+  Files,
+  Gear,
+  Info,
+  List,
+  ListMagnifyingGlass,
+  MagnifyingGlass,
+  MagnifyingGlassPlus,
+  MapPin,
+  MapPinSimple,
+  MapTrifold,
+  Minus,
+  Moon,
+  Pause,
+  PencilSimple,
+  Play,
+  Plus,
+  ShareNetwork,
+  SquaresFour,
+  Star,
+  Sun,
+  Ticket,
+  WarningCircle,
+  X,
+  XCircle,
+} from '@phosphor-icons/react'
+
+export type { Icon, IconProps, IconWeight } from '@phosphor-icons/react'
+export { PhosphorIconProvider } from './PhosphorIconProvider'
+export {
+  StationPinIcon,
+  StationsListIcon,
+  StatisticsIcon,
+  TicketsIcon,
+  MapDetailedIcon,
+  RAIL_PHOSPHOR_ICONS,
+} from './rail'

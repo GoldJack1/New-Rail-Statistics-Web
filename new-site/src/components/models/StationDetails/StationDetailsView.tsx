@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect } from 'react'
+import { ArrowSquareOut, MapPin } from '@phosphor-icons/react'
 import type { Station, SandboxStationDoc } from '../../../types'
 import { formatFareZoneDisplay } from '../../../utils/formatFareZone'
 import { readStationUrl, resolveStationUrlHref } from '../../../utils/stationUrlField'
@@ -242,13 +243,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
               width="hug"
               className="modal-map-link"
               onClick={() => window.open(stationUrlHref, '_blank', 'noopener,noreferrer')}
-              icon={
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                  <polyline points="15 3 21 3 21 9" />
-                  <line x1="10" y1="14" x2="21" y2="3" />
-                </svg>
-              }
+              icon={<ArrowSquareOut size={16} aria-hidden />}
             >
               Open link
             </Button>
@@ -308,12 +303,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
                   width="hug"
                   className="modal-map-link"
                   onClick={() => window.open(osmUrl, '_blank', 'noopener,noreferrer')}
-                  icon={
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                      <circle cx="12" cy="10" r="3" />
-                    </svg>
-                  }
+                  icon={<MapPin size={16} aria-hidden />}
                 >
                   View on OpenStreetMap
                 </Button>

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useId } from 'react'
 import { usePathname } from 'next/navigation'
+import { List, X } from '@phosphor-icons/react'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useAppHeaderOffset } from '@/hooks/useAppHeaderOffset'
 import { BUTHeaderLink } from '../../buttons'
@@ -145,10 +146,9 @@ const Header: React.FC = () => {
               }}
               onKeyDown={handleMenuToggleKeyDown}
             >
-              <span className="header-menu-toggle__bars" aria-hidden>
-                <span className="header-menu-toggle__bar" />
-                <span className="header-menu-toggle__bar" />
-                <span className="header-menu-toggle__bar" />
+              <span className="header-menu-toggle__icon" aria-hidden>
+                <List className="header-menu-toggle__glyph header-menu-toggle__glyph--list" size={20} weight="bold" />
+                <X className="header-menu-toggle__glyph header-menu-toggle__glyph--close" size={20} weight="bold" />
               </span>
             </div>
           </div>

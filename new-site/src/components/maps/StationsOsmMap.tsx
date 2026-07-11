@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Minus, Plus } from '@phosphor-icons/react'
 import { createPortal } from 'react-dom'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -36,23 +37,6 @@ import {
 } from './MapAddStationContextMenu'
 import './StationsOsmMap.css'
 import './leafletDarkTiles.css'
-
-function ZoomInIcon() {
-  return (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <line x1="8" y1="3" x2="8" y2="13" />
-      <line x1="3" y1="8" x2="13" y2="8" />
-    </svg>
-  )
-}
-
-function ZoomOutIcon() {
-  return (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <line x1="3" y1="8" x2="13" y2="8" />
-    </svg>
-  )
-}
 
 const DEFAULT_CENTER: L.LatLngTuple = [54.5, -2.5]
 const DEFAULT_ZOOM = 6
@@ -601,14 +585,14 @@ export function StationsOsmMap({
       <BUTCircleButton
         type="button"
         ariaLabel="Zoom in"
-        icon={<ZoomInIcon />}
+        icon={<Plus size={16} weight="bold" aria-hidden />}
         disabled={zoomBounds != null && zoomBounds.zoom >= zoomBounds.max}
         onClick={handleZoomIn}
       />
       <BUTCircleButton
         type="button"
         ariaLabel="Zoom out"
-        icon={<ZoomOutIcon />}
+        icon={<Minus size={16} weight="bold" aria-hidden />}
         disabled={zoomBounds != null && zoomBounds.zoom <= zoomBounds.min}
         onClick={handleZoomOut}
       />

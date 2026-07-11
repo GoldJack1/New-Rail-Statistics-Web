@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { X } from '@phosphor-icons/react'
 import type { Station } from '../../../types'
 import '../StationModal/StationModal.css'
 import './StationEditModal.css'
@@ -27,12 +28,7 @@ const StationEditModal: React.FC<StationEditModalProps> = ({ station, isOpen, on
             className="modal-close"
             ariaLabel="Close modal"
             onClick={() => onClose()}
-            icon={
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            }
+            icon={<X size={24} weight="regular" aria-hidden />}
           />
         </div>
         <StationDetailsEditForm station={station} onCancel={onClose} onSaved={onClose} />

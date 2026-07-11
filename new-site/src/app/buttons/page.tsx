@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { BUTBaseButton as Button } from '@/components/buttons'
 import { BUTBaseButtonBar as ButtonBar } from '@/components/buttons'
+import { Gear, MagnifyingGlass, Plus, Star } from '@/components/icons'
 import './ButtonDemoPage.css'
 
 const ButtonDemoPage: React.FC = () => {
@@ -18,33 +19,10 @@ const ButtonDemoPage: React.FC = () => {
     }, 300)
   }
 
-  // Icon components
-  const PlusIcon = () => (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-      <line x1="8" y1="3" x2="8" y2="13"/>
-      <line x1="3" y1="8" x2="13" y2="8"/>
-    </svg>
-  )
-
-  const SearchIcon = () => (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="7" cy="7" r="4"/>
-      <line x1="11" y1="11" x2="13" y2="13"/>
-    </svg>
-  )
-
-  const StarIcon = () => (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-      <path d="M8 2l1.5 4.5H14l-3.5 2.5 1.5 4.5L8 11l-4 2.5 1.5-4.5L2 6.5h4.5z"/>
-    </svg>
-  )
-
-  const SettingsIcon = () => (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <circle cx="8" cy="8" r="2"/>
-      <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.5 3.5l1.4 1.4M11.1 11.1l1.4 1.4M3.5 12.5l1.4-1.4M11.1 4.9l1.4-1.4"/>
-    </svg>
-  )
+  const PlusIcon = () => <Plus size={16} aria-hidden />
+  const SearchIcon = () => <MagnifyingGlass size={16} aria-hidden />
+  const StarIcon = () => <Star size={16} weight="fill" aria-hidden />
+  const SettingsIcon = () => <Gear size={16} aria-hidden />
 
   return (
     <div className="container">

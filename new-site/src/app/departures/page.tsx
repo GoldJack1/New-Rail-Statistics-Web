@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname, useSearchParams, useParams } from 'next/navigation'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { MagnifyingGlass } from '@phosphor-icons/react'
 
 import { useDepartures } from '@/hooks/useDepartures'
 import type { DepartureRow, DepartureServiceType } from '@/types/darwin'
@@ -41,13 +42,6 @@ const WINDOW_OPTIONS = [
   { label: '12 hours', value: 12 },
 ]
 const WINDOW_VALUES = new Set(WINDOW_OPTIONS.map((opt) => opt.value))
-
-const SearchIcon: React.FC = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-    <circle cx="7" cy="7" r="4" />
-    <line x1="11" y1="11" x2="13" y2="13" />
-  </svg>
-)
 
 function formatTime(iso: string): string {
   const d = new Date(iso)
@@ -893,7 +887,7 @@ const DarwinDeparturesPage: React.FC = () => {
                 <div className="dep-search-row">
                   <TXTINPBUTIconWideButtonSearch
                     id="darwin-station-search"
-                    icon={<SearchIcon />}
+                    icon={<MagnifyingGlass size={16} aria-hidden />}
                     value={searchInput}
                     onChange={(value) => {
                       setSearchInput(normalizeSearchInputForMode(value, searchMode))

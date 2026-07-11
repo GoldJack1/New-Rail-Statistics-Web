@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { CaretDown, CaretRight } from '@phosphor-icons/react'
 import BUTBaseButton, { type ButtonColorVariant } from '../base/BUTBaseButton/BUTBaseButton'
 import './BUTDDMList.css'
 
@@ -20,18 +21,6 @@ interface BUTDDMListBaseProps {
   className?: string
   onSelectionChanged?: (selectedPositions: number[], selectedItems: string[]) => void
 }
-
-const ChevronRightIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-    <polyline points="6,3 11,8 6,13" />
-  </svg>
-)
-
-const ChevronDownIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-    <polyline points="3,6 8,11 13,6" />
-  </svg>
-)
 
 const BUTDDMListBase: React.FC<BUTDDMListBaseProps> = ({
   items,
@@ -297,7 +286,13 @@ const BUTDDMListBase: React.FC<BUTDDMListBaseProps> = ({
           shape={isHeaderExpanded ? 'top-rounded' : 'rounded'}
           width="fill"
           colorVariant={colorVariant}
-          icon={isHeaderExpanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
+          icon={
+            isHeaderExpanded ? (
+              <CaretDown size={16} weight="bold" aria-hidden />
+            ) : (
+              <CaretRight size={16} weight="bold" aria-hidden />
+            )
+          }
           iconPosition="right"
           instantAction
           onClick={handleHeaderToggle}

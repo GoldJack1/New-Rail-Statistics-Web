@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useMemo, useState } from 'react'
+import { Info, Star } from '@phosphor-icons/react'
 import { BUTBaseButton as Button } from '../../buttons'
 import VisitButton from '../../buttons/other/BUTVisitStatusButton'
 import './StationCardActionBar.css'
@@ -21,17 +22,10 @@ const StationCardActionBar: React.FC<StationCardActionBarProps> = ({ onInfoClick
   }
 
   const StarIcon = (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
-      <path d="M8 1.5l2 4.1 4.5.7-3.2 3.1.8 4.4L8 11.7 3.9 13.8l.8-4.4L1.5 6.3l4.5-.7L8 1.5z" fill={isFavorite ? 'currentColor' : 'none'} />
-    </svg>
+    <Star size={16} weight={isFavorite ? 'fill' : 'regular'} aria-hidden />
   )
 
-  const InfoIcon = (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-      <line x1="8" y1="7" x2="8" y2="12" />
-      <circle cx="8" cy="4.5" r="0.7" fill="currentColor" stroke="none" />
-    </svg>
-  )
+  const InfoIcon = <Info size={16} weight="regular" aria-hidden />
 
   return (
     <section

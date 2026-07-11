@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { MagnifyingGlass } from '@phosphor-icons/react'
 
 import { BUTWideButton } from '@/components/buttons'
 import { PageTopHeader } from '@/components/misc'
@@ -212,12 +213,7 @@ const MessageCentreDashboardPage: React.FC = () => {
               <div className="message-centre-list-controls">
                 <TXTINPBUTIconWideButtonSearch
                   id="message-centre-search"
-                  icon={
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                      <circle cx="7" cy="7" r="4" />
-                      <line x1="11" y1="11" x2="13" y2="13" />
-                    </svg>
-                  }
+                  icon={<MagnifyingGlass size={16} aria-hidden />}
                   value={search}
                   onChange={setSearch}
                   placeholder="Search title, preview, body..."

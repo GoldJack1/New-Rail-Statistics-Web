@@ -4,6 +4,7 @@ import { useRouter, useParams } from 'next/navigation'
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { BUTWideButton } from '@/components/buttons'
+import { BackIcon } from '@/components/icons'
 import { PageTopHeader } from '@/components/misc'
 import type { InAppMessageDraftInput, MessageContentBlock } from '@/types/messages'
 import {
@@ -215,23 +216,7 @@ const MessageCentreAdminPage: React.FC = () => {
           to: '/admin/messages',
           label: 'Back',
           mode: 'iconText',
-          icon: (
-            <svg
-              className="rs-page-top-header__action-icon"
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M11.5 8H4.5" />
-              <path d="M7.5 5L4.5 8L7.5 11" />
-            </svg>
-          )
+          icon: <BackIcon />,
         }}
       />
       <div className="message-centre-admin-page">

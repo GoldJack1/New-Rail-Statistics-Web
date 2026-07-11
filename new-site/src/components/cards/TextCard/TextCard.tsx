@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { CaretRight } from '@phosphor-icons/react'
 import './TextCard.css'
 
 export type TextCardState = 'default' | 'accent' | 'redAction' | 'greenAction'
@@ -20,17 +21,7 @@ export interface TextCardProps {
 }
 
 const DefaultChevron: React.FC = () => (
-  <svg
-    className="rs-text-card__chevron-svg"
-    width="16"
-    height="16"
-    viewBox="0 0 16 16"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    aria-hidden="true"
-  >
-    <path d="M6 3.5L10 8L6 12.5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
+  <CaretRight className="rs-text-card__chevron-svg" size={16} weight="bold" aria-hidden />
 )
 
 const TextCard: React.FC<TextCardProps> = ({

@@ -6,6 +6,7 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import { StationCollectionProvider } from '@/contexts/StationCollectionContext'
 import { StationsCacheProvider } from '@/contexts/StationsCacheContext'
 import { PendingStationChangesProvider } from '@/contexts/PendingStationChangesContext'
+import { PhosphorIconProvider } from '@/components/icons/PhosphorIconProvider'
 import Header from '@/components/misc/Header/Header'
 import Footer from '@/components/misc/Footer/Footer'
 import AppMain from '@/components/misc/AppMain'
@@ -121,6 +122,7 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning>
         <ThemeProvider>
+          <PhosphorIconProvider>
           <AuthProvider>
             <StationCollectionProvider>
               <StationsCacheProvider>
@@ -140,6 +142,7 @@ export default function RootLayout({
               </StationsCacheProvider>
             </StationCollectionProvider>
           </AuthProvider>
+          </PhosphorIconProvider>
         </ThemeProvider>
       </body>
     </html>
