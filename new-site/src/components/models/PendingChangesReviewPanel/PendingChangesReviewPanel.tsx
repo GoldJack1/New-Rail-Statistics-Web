@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback, type ReactNode } from
 import { usePathname, useRouter } from 'next/navigation'
 import { BUTBaseButton as Button } from '../../buttons'
 import { BUTBaseButtonBar as ButtonBar } from '../../buttons'
+import { BackIcon } from '@/components/icons'
 import PendingChangesActionModal, { type PendingActionModalMode } from '../PendingChangesActionModal/PendingChangesActionModal'
 import { usePendingChangesPublishFlow } from '../../../hooks/usePendingChangesPublishFlow'
 import { useMyScheduleJobsForReview } from '../../../hooks/useMyScheduleJobsForReview'
@@ -1097,6 +1098,7 @@ const PendingChangesReviewPanel: React.FC<PendingChangesReviewPanelProps> = ({
               width="fill"
               instantAction
               className="pending-review-cancel"
+              icon={<BackIcon />}
               onClick={onBack}
               disabled={isPublishingAll || isSavingSchedule}
             >

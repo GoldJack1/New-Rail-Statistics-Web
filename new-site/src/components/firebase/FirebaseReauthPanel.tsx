@@ -13,6 +13,7 @@ import {
 import { initializeFirebase, getFirebaseAuth } from '@/services/firebase'
 import { getTotpMfaHints, isMultiFactorAuthRequiredError, mapTotpMfaError } from '@/services/firebaseTotpMfa'
 import { BUTBaseButton as Button } from '@/components/buttons'
+import { BackIcon } from '@/components/icons'
 import { MFA_AUTOFILL, MFA_OTP_INPUT_NAME } from '@/constants/mfaAutofill'
 import './PasswordReauthModal/PasswordReauthModal.css'
 import TXTINPWideButton from '@/components/textInputs/plain/TXTINPWideButton'
@@ -440,6 +441,7 @@ const FirebaseReauthPanel: React.FC<FirebaseReauthPanelProps> = ({
               type="button"
               variant="wide"
               width="hug"
+              icon={<BackIcon />}
               onClick={() => {
                 setPhase('password')
                 resetMfaChallenge()

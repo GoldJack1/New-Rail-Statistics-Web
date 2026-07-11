@@ -11,6 +11,7 @@ import { PageTopHeader } from '@/components/misc'
 import ChooseNetworkForNewStationModal from '@/components/models/ChooseNetworkForNewStationModal/ChooseNetworkForNewStationModal'
 import { stationDetailsShowsAdditionalTab, type StationDetailsTab } from '@/utils/stationCollectionFieldSchema'
 import { BUTWideButton } from '@/components/buttons'
+import { BackIcon } from '@/components/icons'
 import { NETWORK_LABELS } from '@/constants/stationCollections'
 import type { NetworkCollectionId } from '@/constants/stationCollections'
 import type { NewStationNavigationState } from '@/types/newStationNavigation'
@@ -134,6 +135,7 @@ const NewStationPageContent: React.FC<NewStationPageContentProps> = ({
               <BUTWideButton
                 type="button"
                 width="hug"
+                icon={<BackIcon />}
                 onClick={() => {
                   if (formIsDirty && !window.confirm('Are you sure you want to go back? All data will not be saved.')) return
                   if (returnTo) {

@@ -5,7 +5,7 @@
  * light/dark + mobile/desktop art via `CarouselHeroSlide.imageSources` (merged with `defaultImageSources`).
  */
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { CaretLeft, CaretRight, Pause, Play } from '@phosphor-icons/react'
+import { ChevronLeftIcon, ChevronRightIcon, Pause, Play } from '@/components/icons'
 import { BUTBaseButton as Button } from '../../buttons'
 import { BUTSharedNativeButton } from '../../buttons'
 import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion'
@@ -756,7 +756,7 @@ const CarouselHero: React.FC<CarouselHeroProps> = ({
                 shape="rounded"
                 type="button"
                 ariaLabel="Previous slide"
-                icon={<CaretLeft size={16} weight="bold" aria-hidden />}
+                icon={<ChevronLeftIcon />}
                 onClick={goPrev}
               />
               <div className="rs-carousel-hero__indicator-track" role="group" aria-label="Choose slide">
@@ -821,7 +821,7 @@ const CarouselHero: React.FC<CarouselHeroProps> = ({
                 shape="rounded"
                 type="button"
                 ariaLabel="Next slide"
-                icon={<CaretRight size={16} weight="bold" aria-hidden />}
+                icon={<ChevronRightIcon />}
                 onClick={goNext}
               />
             </div>

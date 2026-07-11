@@ -2,7 +2,8 @@
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
-import { CaretDown, DownloadSimple, Files, MagnifyingGlass } from '@phosphor-icons/react'
+import { ChevronDownIcon } from '@/components/icons'
+import { DownloadSimple, Files, MagnifyingGlass } from '@phosphor-icons/react'
 
 import { useStations } from '@/hooks/useStations'
 import { useStationCollection } from '@/contexts/StationCollectionContext'
@@ -24,6 +25,7 @@ import type {
   MigrationCorrectionLogEntry
 } from '@/types/migration'
 import { BUTBaseButton as Button } from '@/components/buttons'
+import { BackIcon } from '@/components/icons'
 import { BUTSharedNativeButton } from '@/components/buttons'
 import './MigrationPage.css'
 import '@/components/models/StationModal/StationModal.css'
@@ -46,7 +48,7 @@ function rankMatchCardClassName(match: StationMatch, extra?: string): string {
 function MigrationCompleteDetailsChevron() {
   return (
     <span className="migration-complete-details-summary-chevron" aria-hidden="true">
-      <CaretDown className="migration-complete-details-chevron-icon" size={20} aria-hidden />
+      <ChevronDownIcon className="migration-complete-details-chevron-icon" size={20} />
     </span>
   )
 }
@@ -1264,7 +1266,7 @@ const MigrationPage: React.FC = () => {
           <div className="station-details-layout">
             <aside className="station-details-sidebar">
               <div className="station-details-sidebar-actions">
-                <Button type="button" variant="wide" width="hug" onClick={() => handleCloseSearchModal()}>
+                <Button type="button" variant="wide" width="hug" icon={<BackIcon />} onClick={() => handleCloseSearchModal()}>
                   Back to migration
                 </Button>
                 <div className="station-details-sidebar-actions-spacer" aria-hidden />
@@ -2186,7 +2188,7 @@ const MigrationPage: React.FC = () => {
                         <span className="duplicate-group-title">{duplicateSummaryText}</span>
                       </div>
                       <span className="duplicate-group-chevron" aria-hidden="true">
-                        <CaretDown className="duplicate-group-chevron-icon" size={20} aria-hidden />
+                        <ChevronDownIcon className="duplicate-group-chevron-icon" size={20} />
                       </span>
                     </summary>
                     {indicesInRange.length === 0 ? (
@@ -2381,7 +2383,7 @@ const MigrationPage: React.FC = () => {
             </section>
           )}
           <div className="mapping-actions mapping-actions--bottom review-step-footer-actions">
-            <Button type="button" onClick={handleBackToReview} variant="wide" width="hug">
+            <Button type="button" onClick={handleBackToReview} variant="wide" width="hug" icon={<BackIcon />}>
               Back to review
             </Button>
             <Button type="button" onClick={handleContinueToSummary} variant="wide" width="hug">
@@ -2471,7 +2473,7 @@ const MigrationPage: React.FC = () => {
             )}
 
             <div className="mapping-actions mapping-actions--bottom review-step-footer-actions">
-              <Button type="button" onClick={handleBackFromReviewChanges} variant="wide" width="hug">
+              <Button type="button" onClick={handleBackFromReviewChanges} variant="wide" width="hug" icon={<BackIcon />}>
                 Back to check duplicates
               </Button>
               <Button type="button" onClick={handleContinueToComplete} variant="wide" width="hug">

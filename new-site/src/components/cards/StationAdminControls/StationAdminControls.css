@@ -1,21 +1,12 @@
 .station-admin-controls-card {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: 1fr;
   gap: var(--space-md);
   width: 100%;
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: var(--space-md);
-}
-
-@media (min-width: 1024px) {
-  .station-admin-controls-card {
-    background-color: transparent;
-    border: 0;
-    border-radius: 0;
-    padding: var(--space-md) 0;
-  }
+  background-color: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
 }
 
 .station-admin-controls-group {
@@ -23,9 +14,22 @@
   gap: var(--space-sm);
 }
 
+.station-admin-controls-reveal {
+  width: 100%;
+  min-width: 0;
+}
+
+.station-admin-view-controls-card {
+  gap: 0;
+}
+
+.station-admin-view-controls-card .station-admin-controls-reveal .station-admin-controls-group {
+  padding-top: var(--space-md);
+}
+
 .station-admin-controls-group--pending {
   grid-column: auto;
-  align-content: end;
+  align-content: start;
 }
 
 .station-admin-controls-group--pending .rs-button {
@@ -37,7 +41,7 @@
 }
 
 .station-admin-controls-label {
-  margin: 0;
+  margin: 0 0 var(--space-xs);
   font-size: var(--text-xs);
   font-weight: 500;
   color: var(--text-secondary);
@@ -78,7 +82,7 @@
     background-color: transparent;
     border: 0;
     border-radius: 0;
-    padding: var(--space-md) 0 0;
+    padding: 0;
   }
 
   .station-admin-controls-group--pending {

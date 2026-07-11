@@ -29,6 +29,13 @@
   height: 16px;
   align-items: center;
   justify-content: center;
+  transform: rotate(0deg);
+  transform-origin: center;
+  transition: transform 300ms ease-in-out;
+}
+
+.but-ddm__header-icon--expanded {
+  transform: rotate(90deg);
 }
 
 .but-ddm__panel {

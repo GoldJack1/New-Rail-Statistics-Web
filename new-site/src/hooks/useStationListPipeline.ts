@@ -7,7 +7,6 @@ import {
   filterStations,
   getDefaultStationFilterSelections,
   getStationFilterOptions,
-  isOnlyGreaterLondonSelected,
   sortStations,
   type SortOption,
   type StationFilterSelections,
@@ -39,7 +38,6 @@ export interface StationListPipelineResult {
   effectiveSelections: StationFilterSelections
   filteredStations: Station[]
   sortedStations: Station[]
-  boroughFilterEnabled: boolean
 }
 
 export function useStationListPipeline({
@@ -71,7 +69,14 @@ export function useStationListPipeline({
   const effectiveSelections = hasUserInteractedWithFilters ? filterSelections : defaultSelections
 
   const filteredStations = useMemo(
-    () => filterStations(stations || [], debouncedSearchTerm, effectiveSelections, uniqueValues, searchMode),
+    () =>
+      filterStations(
+        stations || [],
+        debouncedSearchTerm,
+        effectiveSelections,
+        uniqueValues,
+        searchMode
+      ),
     [stations, debouncedSearchTerm, effectiveSelections, uniqueValues, searchMode]
   )
 
@@ -82,8 +87,6 @@ export function useStationListPipeline({
     return sortStations(filteredStations, sortOption)
   }, [filteredStations, sortOption, adminDisplayMode, tableSort])
 
-  const boroughFilterEnabled = isOnlyGreaterLondonSelected(effectiveSelections.counties)
-
   return {
     stations,
     uniqueValues,
@@ -91,6 +94,5 @@ export function useStationListPipeline({
     effectiveSelections,
     filteredStations,
     sortedStations,
-    boroughFilterEnabled,
   }
 }

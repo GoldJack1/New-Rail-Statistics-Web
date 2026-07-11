@@ -1,9 +1,8 @@
 'use client'
 
 export { BackIcon } from './BackIcon'
+export { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon } from './ChevronIcons'
 export {
-  ArrowLeft,
-  ArrowRight,
   ArrowSquareOut,
   ArrowsClockwise,
   CaretDown,

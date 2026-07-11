@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { CaretDown, CaretRight } from '@phosphor-icons/react'
+import { ChevronRightIcon } from '@/components/icons'
 import BUTBaseButton, { type ButtonColorVariant } from '../base/BUTBaseButton/BUTBaseButton'
 import './BUTDDMList.css'
 
@@ -14,12 +14,18 @@ interface BUTDDMListBaseProps {
   selectionMode?: DDMSelectionMode
   selectedPositions?: number[]
   disabledPositions?: number[]
+  /** When true, shows "N selected" instead of "All {filterName} Selected" when every enabled item is selected. */
+  preferCountWhenAllSelected?: boolean
   colorVariant?: ButtonColorVariant
   bottomType: DDMBottomType
   clearAllLabel?: string
   selectAllLabel?: string
   className?: string
   onSelectionChanged?: (selectedPositions: number[], selectedItems: string[]) => void
+  onOpenChange?: (open: boolean) => void
+  closeRequestId?: number
+  onCloseAnimationComplete?: () => void
+  formatItemLabel?: (item: string) => string
 }
 
 const BUTDDMListBase: React.FC<BUTDDMListBaseProps> = ({
@@ -28,15 +34,21 @@ const BUTDDMListBase: React.FC<BUTDDMListBaseProps> = ({
   selectionMode = 'single',
   selectedPositions = [],
   disabledPositions = [],
+  preferCountWhenAllSelected = false,
   colorVariant = 'primary',
   bottomType,
   clearAllLabel = 'Clear All',
   selectAllLabel = 'Select All',
   className = '',
   onSelectionChanged,
+  onOpenChange,
+  closeRequestId,
+  onCloseAnimationComplete,
+  formatItemLabel,
 }) => {
   const [isOpen, setIsOpen] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
+  const previousCloseRequestIdRef = useRef(closeRequestId ?? 0)
   const [uncontrolledSelectedSet, setUncontrolledSelectedSet] = useState<Set<number>>(
     new Set(selectedPositions)
   )
@@ -90,17 +102,34 @@ const BUTDDMListBase: React.FC<BUTDDMListBaseProps> = ({
   const allEnabledSelected =
     allEnabledPositions.length > 0 && allEnabledPositions.every((index) => selectedSet.has(index))
 
+  const getItemLabel = useCallback(
+    (item: string) => (formatItemLabel ? formatItemLabel(item) : item),
+    [formatItemLabel]
+  )
+
   const headerText = useMemo(() => {
     if (selectionMode === 'single') {
       if (selectedCount === 0) return filterName || 'Select option'
       const selectedIndex = orderedSelectedPositions[0]
-      return items[selectedIndex] || filterName || 'Select option'
+      const selectedItem = items[selectedIndex]
+      return selectedItem ? getItemLabel(selectedItem) : filterName || 'Select option'
     }
 
     if (selectedCount === 0) return '0 selected'
-    if (allEnabledSelected && filterName) return `All ${filterName} Selected`
+    if (allEnabledSelected && filterName && !preferCountWhenAllSelected) {
+      return `All ${filterName} Selected`
+    }
     return `${selectedCount} selected`
-  }, [allEnabledSelected, filterName, items, orderedSelectedPositions, selectedCount, selectionMode])
+  }, [
+    allEnabledSelected,
+    filterName,
+    getItemLabel,
+    items,
+    orderedSelectedPositions,
+    preferCountWhenAllSelected,
+    selectedCount,
+    selectionMode,
+  ])
 
   const applySelection = (next: Set<number>) => {
     const nextPositions = Array.from(next).sort((a, b) => a - b)
@@ -159,6 +188,7 @@ const BUTDDMListBase: React.FC<BUTDDMListBaseProps> = ({
     }
     setIsClosing(false)
     setIsOpen(true)
+    onOpenChange?.(true)
   }
 
   const handlePanelTransitionEnd = (event: React.TransitionEvent<HTMLDivElement>) => {
@@ -166,8 +196,26 @@ const BUTDDMListBase: React.FC<BUTDDMListBaseProps> = ({
     if (event.propertyName !== 'max-height') return
     if (!isOpen) {
       setIsClosing(false)
+      onOpenChange?.(false)
+      onCloseAnimationComplete?.()
     }
   }
+
+  useEffect(() => {
+    if (closeRequestId === undefined) return
+    if (closeRequestId === previousCloseRequestIdRef.current) return
+    previousCloseRequestIdRef.current = closeRequestId
+
+    if (isOpen) {
+      setIsOpen(false)
+      setIsClosing(true)
+      return
+    }
+
+    if (isClosing) return
+
+    onCloseAnimationComplete?.()
+  }, [closeRequestId, isClosing, isOpen, onCloseAnimationComplete])
 
   const updateScrollbarMetrics = useCallback(() => {
     const element = listViewportRef.current
@@ -287,11 +335,17 @@ const BUTDDMListBase: React.FC<BUTDDMListBaseProps> = ({
           width="fill"
           colorVariant={colorVariant}
           icon={
-            isHeaderExpanded ? (
-              <CaretDown size={16} weight="bold" aria-hidden />
-            ) : (
-              <CaretRight size={16} weight="bold" aria-hidden />
-            )
+            <span
+              className={[
+                'but-ddm__header-icon',
+                isOpen ? 'but-ddm__header-icon--expanded' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              aria-hidden
+            >
+              <ChevronRightIcon />
+            </span>
           }
           iconPosition="right"
           instantAction
@@ -329,7 +383,7 @@ const BUTDDMListBase: React.FC<BUTDDMListBaseProps> = ({
                   instantAction
                   onClick={() => toggleSelection(index)}
                 >
-                  {item}
+                  {getItemLabel(item)}
                 </BUTBaseButton>
               </div>
             )

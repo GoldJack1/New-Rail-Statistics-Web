@@ -89,6 +89,33 @@ a.rs-button {
   order: 1;
 }
 
+/*
+ * Chevrons sit optically light in a 16px box — tighten edge padding and
+ * icon↔label gap so Back / Next controls don’t look padded-out.
+ */
+.rs-button--wide:has(.rs-icon--chevron),
+.rs-button--tab:has(.rs-icon--chevron) {
+  gap: 4px;
+}
+
+.rs-button--wide.rs-button--icon-left:has(.rs-icon--chevron) {
+  padding-left: 12px;
+  padding-right: 16px;
+}
+
+.rs-button--wide.rs-button--icon-right:has(.rs-icon--chevron) {
+  padding-right: 12px;
+  padding-left: 16px;
+}
+
+.rs-button--icon-left:has(.rs-icon--chevron) .rs-button__icon {
+  margin-inline-start: -2px;
+}
+
+.rs-button--icon-right:has(.rs-icon--chevron) .rs-button__icon {
+  margin-inline-end: -2px;
+}
+
 /* Color variants */
 
 .rs-button--color-secondary {

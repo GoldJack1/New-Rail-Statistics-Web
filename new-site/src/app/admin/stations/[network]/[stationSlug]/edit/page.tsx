@@ -31,6 +31,7 @@ import { StationDetailsView } from '@/components/models'
 import { StationDetailsEditForm } from '@/components/models'
 import { BUTWideButton } from '@/components/buttons'
 import { BUTCircleButton } from '@/components/buttons'
+import { BackIcon } from '@/components/icons'
 import { PageTopHeader } from '@/components/misc'
 import '@/components/models/StationModal/StationModal.css'
 import '@/components/models/StationEditModal/StationEditModal.css'
@@ -222,7 +223,7 @@ function AdminStationEditPage() {
         <div className="error-state">
           <h3>Station not found</h3>
           <p>We couldn’t find that station in the current data source.</p>
-          <BUTWideButton type="button" width="hug" onClick={() => router.push(backPath)}>
+          <BUTWideButton type="button" width="hug" icon={<BackIcon />} onClick={() => router.push(backPath)}>
             Back to stations
           </BUTWideButton>
         </div>
@@ -244,6 +245,7 @@ function AdminStationEditPage() {
               <BUTWideButton
                 type="button"
                 width="hug"
+                icon={<BackIcon />}
                 onClick={() => {
                   if (mode === 'edit' && editFormHasUnsavedChanges && !window.confirm('Are you sure you want to go back? All data will not be saved.')) return
                   router.push(backPath)

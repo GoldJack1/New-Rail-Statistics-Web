@@ -8,6 +8,7 @@ import { useDepartures } from '@/hooks/useDepartures'
 import type { DepartureRow, DepartureServiceType } from '@/types/darwin'
 import type { Station } from '@/types'
 import { useStations } from '@/hooks/useStations'
+import { BackIcon } from '@/components/icons'
 import { PageTopHeader } from '@/components/misc'
 import { BUTBaseButton, BUTOperatorChip, BUTWideButton } from '@/components/buttons'
 import BUTDDMList from '@/components/buttons/ddm/BUTDDMList'
@@ -845,7 +846,9 @@ const DarwinDeparturesPage: React.FC = () => {
         subtitle={subtitle}
         className={`darwin-departures-header darwin-departures-header--${status}`}
         actionButton={from ? {
-          label: '← Back',
+          label: 'Back',
+          mode: 'iconText',
+          icon: <BackIcon />,
           onClick: () => router.push(from),
         } : undefined}
       />

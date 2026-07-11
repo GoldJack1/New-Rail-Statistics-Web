@@ -131,7 +131,7 @@ const StationsTableColumnsModal: React.FC<StationsTableColumnsModalProps> = ({
             className="modal-close"
             ariaLabel="Close"
             onClick={onClose}
-            colorVariant="secondary"
+            colorVariant="primary"
             icon={<X size={24} weight="regular" aria-hidden />}
           />
         </div>
@@ -144,7 +144,7 @@ const StationsTableColumnsModal: React.FC<StationsTableColumnsModalProps> = ({
                 <BUTWideButton
                   type="button"
                   width="hug"
-                  colorVariant="secondary"
+                  colorVariant="primary"
                   onClick={handleAddColumn}
                   disabled={!canAddColumn}
                 >
@@ -153,7 +153,7 @@ const StationsTableColumnsModal: React.FC<StationsTableColumnsModalProps> = ({
                 <BUTWideButton
                   type="button"
                   width="hug"
-                  colorVariant="secondary"
+                  colorVariant="primary"
                   onClick={handleRemoveColumn}
                   disabled={!canRemoveColumn}
                 >
@@ -223,7 +223,7 @@ const StationsTableColumnsModal: React.FC<StationsTableColumnsModalProps> = ({
             Reset defaults
           </BUTWideButton>
           <div className="stations-table-columns-modal__footer-actions">
-            <BUTWideButton type="button" width="hug" colorVariant="secondary" onClick={onClose}>
+            <BUTWideButton type="button" width="hug" colorVariant="primary" onClick={onClose}>
               Cancel
             </BUTWideButton>
             <BUTWideButton type="button" width="hug" colorVariant="green-action" onClick={handleApply}>

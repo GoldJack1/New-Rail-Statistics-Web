@@ -5,6 +5,7 @@ import React, { useCallback, useMemo, useState } from 'react'
 
 import { useStations } from '@/hooks/useStations'
 import { BUTWideButton } from '@/components/buttons'
+import { BackIcon } from '@/components/icons'
 import { PageTopHeader } from '@/components/misc'
 import PendingChangesReviewPanel, {
   type PendingReviewPageActionBarApi,
@@ -94,7 +95,7 @@ const ReviewPendingChangesPage: React.FC = () => {
       aria-label="Review navigation and publish actions"
     >
       <div className="review-pending-page__action-bar-back">
-        <BUTWideButton type="button" width="hug" instantAction onClick={goBackToPreviousPage}>
+        <BUTWideButton type="button" width="hug" instantAction icon={<BackIcon />} onClick={goBackToPreviousPage}>
           Back
         </BUTWideButton>
       </div>

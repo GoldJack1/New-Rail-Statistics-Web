@@ -52,15 +52,13 @@
   margin-top: 30px;
 }
 
-.rs-page-top-header__action-icon {
+.rs-page-top-header__action-icon,
+.rs-page-top-header__action .rs-icon--chevron {
   width: 16px;
   height: 16px;
   flex: 0 0 16px;
 }
 
-.rs-page-top-header__action .rs-button__icon {
-  margin-left: -1px;
-}
 
 .rs-page-top-header__actions-row {
   margin-top: 30px;
@@ -69,9 +67,9 @@
   gap: 8px;
 }
 
-/* Unified secondary chrome: site header matches the page title band */
+/* Site header uses primary chrome on pages with a page title band */
 .app:has(.rs-page-top-header) .universal-header {
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   border-bottom-color: var(--border-color);
   /* Opaque fill — backdrop-filter samples scrolling tertiary content and causes a colour flash */
   backdrop-filter: none;
@@ -80,11 +78,11 @@
 }
 
 .app:has(.rs-page-top-header) .safari-toolbar-tint {
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-primary);
 }
 
 .app:has(.rs-page-top-header) .universal-header--menu-open {
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
 }
 
 @media (max-width: 1023px) {

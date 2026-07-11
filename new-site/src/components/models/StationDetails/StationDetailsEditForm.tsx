@@ -9,6 +9,7 @@ import { usePendingStationChanges } from '../../../contexts/PendingStationChange
 import { useStationCollection } from '../../../contexts/StationCollectionContext'
 import { fetchStationDocumentById } from '../../../services/firebase'
 import { BUTBaseButton as Button } from '../../buttons'
+import { BackIcon } from '@/components/icons'
 import LocationMapPicker from './LocationMapPicker'
 import { LightRailDateOpenedInput } from './LightRailDateOpenedInput'
 import { LightRailYesNoSelect } from './LightRailYesNoSelect'
@@ -1380,6 +1381,7 @@ const StationDetailsEditForm: React.FC<StationDetailsEditFormProps> = ({
               variant="wide"
               width="hug"
               className="edit-cancel-button"
+              icon={isReviewing ? <BackIcon /> : undefined}
               onClick={() => {
                 if (isReviewing) {
                   setIsReviewing(false)

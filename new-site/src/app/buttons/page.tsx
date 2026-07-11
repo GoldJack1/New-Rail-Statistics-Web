@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { BUTBaseButton as Button } from '@/components/buttons'
 import { BUTBaseButtonBar as ButtonBar } from '@/components/buttons'
-import { Gear, MagnifyingGlass, Plus, Star } from '@/components/icons'
+import { Gear, MagnifyingGlass, Plus, Star, BackIcon, ChevronRightIcon } from '@/components/icons'
 import './ButtonDemoPage.css'
 
 const PlusIcon = () => <Plus size={16} aria-hidden />
@@ -173,18 +173,21 @@ const ButtonDemoPage: React.FC = () => {
               <Button 
                 variant="wide"
                 shape="left-rounded"
+                icon={<BackIcon />}
                 pressed={clickedButtons['nav-back']}
                 onClick={() => handleButtonClick('nav-back')}
               >
-                ← Back
+                Back
               </Button>
               <Button 
                 variant="wide"
                 shape="right-rounded"
+                icon={<ChevronRightIcon />}
+                iconPosition="right"
                 pressed={clickedButtons['nav-next']}
                 onClick={() => handleButtonClick('nav-next')}
               >
-                Next →
+                Next
               </Button>
               <Button 
                 variant="wide"

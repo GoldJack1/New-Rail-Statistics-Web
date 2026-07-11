@@ -1,8 +1,8 @@
 'use client'
 
-import { ArrowLeft } from '@phosphor-icons/react'
+import { ChevronLeftIcon } from './ChevronIcons'
 
-/** Standard back control icon for PageTopHeader actions */
-export function BackIcon({ className = 'rs-page-top-header__action-icon' }: { className?: string }) {
-  return <ArrowLeft className={className} size={16} weight="bold" aria-hidden />
+/** Standard back chevron for header actions and back buttons. */
+export function BackIcon({ className }: { className?: string } = {}) {
+  return <ChevronLeftIcon className={className} />
 }

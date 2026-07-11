@@ -23,7 +23,7 @@ import {
   userMustEnrollTotpMfaOnFirebase
 } from '@/services/firebaseTotpMfa'
 import { BUTWideButton } from '@/components/buttons'
-import { CaretLeft } from '@/components/icons'
+import { BackIcon } from '@/components/icons'
 import { MFA_AUTOFILL, MFA_OTP_INPUT_NAME } from '@/constants/mfaAutofill'
 import './LoginPage.css'
 import TXTINPWideButton from '@/components/textInputs/plain/TXTINPWideButton'
@@ -464,7 +464,7 @@ export default function LoginPageClient() {
                 width="hug"
                 shape="left-rounded"
                 iconPosition="left"
-                icon={<CaretLeft size={16} aria-hidden />}
+                icon={<BackIcon />}
                 colorVariant="primary"
                 className="login-auth-back-button"
                 onClick={() => {

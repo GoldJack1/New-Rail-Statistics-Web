@@ -412,24 +412,24 @@ textarea:focus {
 }
 
 /*
- * PageTopHeader pages: paint the fixed-header offset strip --bg-secondary (matches site nav +
- * page header). Offset stays on .app-main — not inside sticky .rs-page-top-header — so scrolling
- * doesn’t leave an empty secondary band between the two headers.
+ * PageTopHeader pages: paint the fixed-header offset strip --bg-primary (matches site nav).
+ * Offset stays on .app-main — not inside sticky .rs-page-top-header — so scrolling
+ * doesn’t leave an empty band between the two headers.
  */
 .app:has(.rs-page-top-header) .main-content.app-main {
     background: linear-gradient(
         to bottom,
-        var(--bg-secondary) 0,
-        var(--bg-secondary) var(--app-header-offset),
+        var(--bg-primary) 0,
+        var(--bg-primary) var(--app-header-offset),
         var(--bg-tertiary) var(--app-header-offset),
         var(--bg-tertiary) 100%
     );
 }
 
-/* Top overscroll / rubber-band should match the secondary header chrome on these pages */
+/* Top overscroll / rubber-band should match the primary header chrome on these pages */
 html:has(.rs-page-top-header),
 body:has(.rs-page-top-header) {
-    background-color: var(--bg-secondary);
+    background-color: var(--bg-primary);
 }
 
 /* Match +5px header padding where .safari-toolbar-tint is shown */

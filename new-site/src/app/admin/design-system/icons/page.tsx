@@ -5,10 +5,10 @@ import type { Icon, IconWeight } from '@phosphor-icons/react'
 import { PageTopHeader } from '@/components/misc'
 import { BUTLink, BUTTabButton } from '@/components/buttons'
 import {
-  ArrowLeft,
-  ArrowRight,
   ArrowSquareOut,
   BackIcon,
+  CaretLeft,
+  CaretRight,
   ChartBar,
   CheckCircle,
   Database,
@@ -79,8 +79,8 @@ const SITE_ICONS: { name: string; phosphor: string; Icon: Icon }[] = [
   { name: 'Map Pin', phosphor: 'MapPin', Icon: MapPin },
   { name: 'Error Circle', phosphor: 'XCircle', Icon: XCircle },
   { name: 'Search Plus', phosphor: 'MagnifyingGlassPlus', Icon: MagnifyingGlassPlus },
-  { name: 'Arrow Right', phosphor: 'ArrowRight', Icon: ArrowRight },
-  { name: 'Arrow Left', phosphor: 'ArrowLeft', Icon: ArrowLeft },
+  { name: 'Chevron Right', phosphor: 'CaretRight', Icon: CaretRight },
+  { name: 'Chevron Left', phosphor: 'CaretLeft', Icon: CaretLeft },
   { name: 'Success Check', phosphor: 'CheckCircle', Icon: CheckCircle },
   { name: 'Star', phosphor: 'Star', Icon: Star },
   { name: 'Network', phosphor: 'ShareNetwork', Icon: ShareNetwork },

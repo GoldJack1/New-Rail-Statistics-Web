@@ -7,7 +7,8 @@ import { ArrowsClockwise } from '@phosphor-icons/react'
 import { useServiceDetail } from '@/hooks/useServiceDetail'
 import { useStations } from '@/hooks/useStations'
 import { PageTopHeader } from '@/components/misc'
-import { BUTBaseButton, BUTCircleButton, BUTTwoButtonBar, BUTWideButton } from '@/components/buttons'
+import { BUTBaseButton, BUTCircleButton, BUTLeftIconWideButton, BUTTwoButtonBar, BUTWideButton } from '@/components/buttons'
+import { BackIcon } from '@/components/icons'
 import { ActivityPill } from '@/components/darwin/ActivityPill'
 import { CarriageMap } from '@/components/darwin/CarriageMap'
 import DataLicenceAttribution from '@/components/darwin/DataLicenceAttribution'
@@ -400,16 +401,17 @@ const ServiceDetailPage: React.FC = () => {
         className={`service-detail-header service-detail-header--${status}`}
         actionContent={(
           <div className="svc-header-actions">
-            <BUTWideButton
+            <BUTLeftIconWideButton
               width="hug"
+              icon={<BackIcon />}
               onClick={() => {
                 if (from) { router.push(from); return }
                 if (window.history.length > 1) { router.back(); return }
                 router.push('/departures')
               }}
             >
-              ← Back
-            </BUTWideButton>
+              Back
+            </BUTLeftIconWideButton>
             <BUTCircleButton
               ariaLabel="Refresh service detail"
               instantAction

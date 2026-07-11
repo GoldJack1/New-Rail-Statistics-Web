@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import CollapsibleSection from '@/components/misc/CollapsibleSection/CollapsibleSection'
 import { BUTBaseButtonBar as ButtonBar } from '../../buttons'
 import { BUTBaseButton as Button } from '../../buttons'
 import type { StationAdminDisplayMode } from '../../../utils/stationAdminDisplayModeStorage'
@@ -21,9 +22,13 @@ const StationAdminViewControls: React.FC<StationAdminViewControlsProps> = ({
   tableModeDisabled = false,
   className,
 }) => {
+  const showAssignHeaders = displayMode === 'table' && Boolean(onAssignHeaders)
+
   return (
     <section
-      className={['station-admin-controls-card', className].filter(Boolean).join(' ')}
+      className={['station-admin-controls-card', 'station-admin-view-controls-card', className]
+        .filter(Boolean)
+        .join(' ')}
       aria-label="Station view controls"
     >
       <div className="station-admin-controls-group">
@@ -46,7 +51,11 @@ const StationAdminViewControls: React.FC<StationAdminViewControlsProps> = ({
         )}
       </div>
 
-      {displayMode === 'table' && onAssignHeaders && (
+      <CollapsibleSection
+        isExpanded={showAssignHeaders}
+        className="station-admin-controls-reveal"
+        ariaHidden={!showAssignHeaders}
+      >
         <div className="station-admin-controls-group">
           <span className="station-admin-controls-label">Table columns</span>
           <Button
@@ -59,7 +68,7 @@ const StationAdminViewControls: React.FC<StationAdminViewControlsProps> = ({
             Assign headers
           </Button>
         </div>
-      )}
+      </CollapsibleSection>
     </section>
   )
 }

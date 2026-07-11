@@ -1,0 +1,66 @@
+'use client'
+
+import React, { useId, useState } from 'react'
+import { ChevronRightIcon } from '@/components/icons'
+import AutoAnimateCollapse from '@/components/misc/AutoAnimateCollapse/AutoAnimateCollapse'
+import './SidebarDropdownSection.css'
+
+interface SidebarDropdownSectionProps {
+  title: string
+  children: React.ReactNode
+  defaultExpanded?: boolean
+  className?: string
+  headerAction?: React.ReactNode
+}
+
+const SidebarDropdownSection: React.FC<SidebarDropdownSectionProps> = ({
+  title,
+  children,
+  defaultExpanded = true,
+  className = '',
+  headerAction,
+}) => {
+  const [isOpen, setIsOpen] = useState(defaultExpanded)
+  const panelId = useId()
+
+  return (
+    <section
+      className={[
+        'sidebar-dropdown',
+        isOpen ? 'sidebar-dropdown--open' : 'sidebar-dropdown--closed',
+        className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <div className="sidebar-dropdown__header-row">
+        <button
+          type="button"
+          className="sidebar-dropdown__header"
+          aria-expanded={isOpen}
+          aria-controls={panelId}
+          onClick={() => setIsOpen((current) => !current)}
+        >
+          <span className="sidebar-dropdown__title">{title}</span>
+          <ChevronRightIcon className="sidebar-dropdown__chevron" aria-hidden />
+        </button>
+        {isOpen && headerAction ? (
+          <div className="sidebar-dropdown__header-action" onClick={(event) => event.stopPropagation()}>
+            {headerAction}
+          </div>
+        ) : null}
+      </div>
+
+      <AutoAnimateCollapse
+        isOpen={isOpen}
+        id={panelId}
+        className="sidebar-dropdown__panel-host"
+        itemClassName="sidebar-dropdown__panel"
+      >
+        <div className="sidebar-dropdown__panel-inner">{children}</div>
+      </AutoAnimateCollapse>
+    </section>
+  )
+}
+
+export default SidebarDropdownSection

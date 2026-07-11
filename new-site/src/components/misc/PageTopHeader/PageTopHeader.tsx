@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { BackIcon } from '@/components/icons'
 import { BUTLeftIconWideButton, BUTWideButton } from '../../buttons'
 import './PageTopHeader.css'
 
@@ -39,9 +40,10 @@ const PageTopHeader: React.FC<PageTopHeaderProps> = ({
   const headerClassName = ['rs-page-top-header', className].filter(Boolean).join(' ')
   const innerClassNameCombined = ['rs-page-top-header__inner', innerClassName].filter(Boolean).join(' ')
   const buttonLabel = actionButton?.label ?? 'Back'
-  const buttonMode = actionButton?.mode ?? 'text'
+  const buttonMode = actionButton?.mode ?? (actionButton ? 'iconText' : 'text')
+  const buttonIcon = actionButton?.icon ?? (buttonMode !== 'text' ? <BackIcon /> : undefined)
   const buttonChildren = buttonMode === 'icon' ? undefined : buttonLabel
-  const shouldUseIconButton = buttonMode !== 'text' && Boolean(actionButton?.icon)
+  const shouldUseIconButton = buttonMode !== 'text' && Boolean(buttonIcon)
 
   return (
     <header className={headerClassName}>
@@ -59,7 +61,7 @@ const PageTopHeader: React.FC<PageTopHeaderProps> = ({
                 onClick={actionButton.onClick}
                 width="hug"
                 className={['rs-page-top-header__action', actionButton.className].filter(Boolean).join(' ')}
-                icon={actionButton.icon}
+                icon={buttonIcon}
                 ariaLabel={actionButton.ariaLabel ?? (buttonMode === 'icon' ? buttonLabel : undefined)}
               >
                 {buttonChildren}

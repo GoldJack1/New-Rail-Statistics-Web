@@ -6,6 +6,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: var(--bg-secondary);
 }
 
 @media (min-width: 1024px) {
@@ -29,6 +30,11 @@
   gap: var(--space-lg);
   padding: var(--space-xl) var(--space-2xl);
   flex-shrink: 0;
+  background: var(--bg-secondary);
+  position: relative;
+  z-index: 2;
+  border-bottom: none;
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.08);
 }
 
 .stations-table-columns-modal__header .modal-title {
@@ -72,7 +78,7 @@
 .stations-table-columns-modal__columns-panel {
   padding: var(--space-lg) var(--space-xl) var(--space-lg) var(--space-2xl);
   border-right: 1px solid var(--border-color);
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
 }
 
 .stations-table-columns-modal__fields-panel {
@@ -116,23 +122,40 @@
 }
 
 .stations-table-columns-modal__slot-list {
+  --slot-card-shadow-pad: 6px;
   list-style: none;
   margin: 0;
-  padding: 0;
+  /* Room for TextCard drop shadow so overflow-y doesn’t clip left/right edges */
+  padding: var(--slot-card-shadow-pad);
   display: grid;
   gap: var(--space-sm);
   overflow-y: auto;
   overscroll-behavior: contain;
   flex: 1 1 auto;
   min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-disabled) transparent;
+}
+
+.stations-table-columns-modal__slot-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.stations-table-columns-modal__slot-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.stations-table-columns-modal__slot-list::-webkit-scrollbar-thumb {
+  background: var(--text-disabled);
+  border-radius: 999px;
+}
+
+.stations-table-columns-modal__slot-list::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
 }
 
 .stations-table-columns-modal__slot-card {
   width: 100%;
-}
-
-.stations-table-columns-modal__slot-card .rs-text-card__chevron {
-  display: none;
 }
 
 .stations-table-columns-modal__chip-grid {
@@ -146,6 +169,25 @@
   flex: 1 1 auto;
   min-height: 0;
   padding-right: var(--space-xs);
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-disabled) transparent;
+}
+
+.stations-table-columns-modal__chip-grid::-webkit-scrollbar {
+  width: 8px;
+}
+
+.stations-table-columns-modal__chip-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.stations-table-columns-modal__chip-grid::-webkit-scrollbar-thumb {
+  background: var(--text-disabled);
+  border-radius: 999px;
+}
+
+.stations-table-columns-modal__chip-grid::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
 }
 
 .stations-table-columns-modal__chip-grid .rs-button {
@@ -160,7 +202,7 @@
   justify-content: space-between;
   align-items: center;
   padding: var(--space-xl) var(--space-2xl);
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
   flex-shrink: 0;
 }
 

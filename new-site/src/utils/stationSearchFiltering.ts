@@ -1,5 +1,7 @@
 import type { Station } from '@/types'
 import type { NetworkViewFilter } from '@/constants/stationCollections'
+import { isGreaterLondonCounty } from '@/utils/formatStationLocation'
+import { boroughLabelMatchesSelection } from '@/utils/londonBoroughs'
 
 export type SortOption =
   | 'name-asc'
@@ -13,10 +15,8 @@ export interface StationFilterOptions {
   tocs: string[]
   countries: string[]
   counties: string[]
-  /** Boroughs of Greater London stations (used by the London Borough filter). */
-  boroughs: string[]
-  /** Boroughs of stations outside Greater London (used by the general Borough filter). */
-  otherBoroughs: string[]
+  /** All borough values shown in the Borough filter DDM. */
+  allBoroughs: string[]
   fareZones: string[]
 }
 
@@ -24,10 +24,8 @@ export interface StationFilterSelections {
   tocs: string[]
   countries: string[]
   counties: string[]
-  /** London-only borough subset when Greater London is the sole county selection. */
+  /** Selected boroughs in the Borough filter DDM. */
   boroughs: string[]
-  /** Borough filter across all networks in the current station set. */
-  allBoroughs: string[]
   fareZones: string[]
 }
 
@@ -86,7 +84,7 @@ const stationMatchesSearchTerm = (
 }
 
 export const isOnlyGreaterLondonSelected = (counties: string[]) =>
-  counties.length === 1 && counties[0] === 'Greater London'
+  counties.length === 1 && isGreaterLondonCounty(counties[0])
 
 const isNonEmptyString = (value: string | null | undefined): value is string =>
   typeof value === 'string' && value.length > 0
@@ -115,24 +113,66 @@ export const getStationFilterOptions = (stations: Station[]): StationFilterOptio
   tocs: sortAlphabetically([...new Set(stations.map((station) => station.toc).filter(isNonEmptyString))]),
   countries: sortAlphabetically([...new Set(stations.map((station) => station.country).filter(isNonEmptyString))]),
   counties: sortAlphabetically([...new Set(stations.map((station) => station.county).filter(isNonEmptyString))]),
-  boroughs: sortAlphabetically([
-    ...new Set(
-      stations
-        .filter((station) => station.county === 'Greater London')
-        .map((station) => station.borough)
-        .filter(isNonEmptyString)
-    ),
-  ]),
-  otherBoroughs: sortAlphabetically([
-    ...new Set(
-      stations
-        .filter((station) => station.county !== 'Greater London')
-        .map((station) => station.borough)
-        .filter(isNonEmptyString)
-    ),
+  allBoroughs: sortAlphabetically([
+    ...new Set(stations.map((station) => station.borough).filter(isNonEmptyString)),
   ]),
   fareZones: sortAlphabetically([...new Set(stations.map((station) => station.fareZone).filter(isNonEmptyString))]),
 })
+
+/** Borough values that appear on stations in the given counties. */
+export const getBoroughsForCounties = (
+  stations: Station[],
+  counties: readonly string[]
+): string[] =>
+  sortAlphabetically([
+    ...new Set(
+      stations
+        .filter((station) => counties.includes(station.county || ''))
+        .map((station) => station.borough)
+        .filter(isNonEmptyString)
+    ),
+  ])
+
+/** Borough DDM options scoped to the current county selection. */
+export const getBoroughOptionsForCountySelection = (
+  stations: Station[],
+  selectedCounties: readonly string[],
+  allCounties: readonly string[]
+): string[] => {
+  if (!shouldApplyCategoryFilter([...selectedCounties], [...allCounties])) {
+    return sortAlphabetically([
+      ...new Set(stations.map((station) => station.borough).filter(isNonEmptyString)),
+    ])
+  }
+
+  return getBoroughsForCounties(stations, selectedCounties)
+}
+
+/** Borough DDM positions that should be disabled for the current county selection. */
+export const getDisabledBoroughPositions = (
+  allBoroughs: readonly string[],
+  enabledBoroughs: readonly string[]
+): number[] => {
+  const enabledSet = new Set(enabledBoroughs)
+
+  return allBoroughs.reduce<number[]>((positions, borough, index) => {
+    if (!enabledSet.has(borough)) positions.push(index)
+    return positions
+  }, [])
+}
+/** Borough selections to apply when the county filter changes. */
+export const getBoroughSelectionsForCountyChange = (
+  stations: Station[],
+  selectedCounties: readonly string[],
+  allCounties: readonly string[],
+  allBoroughs: readonly string[]
+): string[] => {
+  if (!shouldApplyCategoryFilter([...selectedCounties], [...allCounties])) {
+    return [...allBoroughs]
+  }
+
+  return getBoroughsForCounties(stations, selectedCounties)
+}
 
 export const getDefaultStationFilterSelections = (
   options: StationFilterOptions
@@ -140,8 +180,7 @@ export const getDefaultStationFilterSelections = (
   tocs: options.tocs,
   countries: options.countries,
   counties: options.counties,
-  boroughs: options.boroughs,
-  allBoroughs: options.otherBoroughs,
+  boroughs: options.allBoroughs,
   fareZones: options.fareZones,
 })
 
@@ -153,6 +192,11 @@ export const filterStations = (
   searchMode: StationSearchMode = 'name'
 ): Station[] => {
   const normalizedSearchTerm = searchTerm.trim().toLowerCase()
+  const boroughOptions = getBoroughOptionsForCountySelection(
+    stations,
+    selections.counties,
+    options.counties
+  )
 
   return stations.filter((station) => {
     const searchTermMatch = stationMatchesSearchTerm(station, normalizedSearchTerm, searchMode)
@@ -167,24 +211,10 @@ export const filterStations = (
       !shouldApplyCategoryFilter(selections.counties, options.counties) ||
       selections.counties.includes(station.county || '')
 
-    const londonBoroughFilterEnabled = isOnlyGreaterLondonSelected(selections.counties)
-    const londonBoroughSubsetSelected = shouldApplyCategoryFilter(
-      selections.boroughs,
-      options.boroughs
-    )
-    const londonBoroughMatch =
-      !londonBoroughFilterEnabled ||
-      station.county !== 'Greater London' ||
-      !londonBoroughSubsetSelected ||
-      selections.boroughs.includes(station.borough || '')
-
-    const allBoroughSubsetSelected = shouldApplyCategoryFilter(
-      selections.allBoroughs,
-      options.otherBoroughs
-    )
-    const allBoroughMatch =
-      !allBoroughSubsetSelected ||
-      (isNonEmptyString(station.borough) && selections.allBoroughs.includes(station.borough))
+    const boroughMatch =
+      !shouldApplyCategoryFilter(selections.boroughs, boroughOptions) ||
+      (isNonEmptyString(station.borough) &&
+        boroughLabelMatchesSelection(station.borough, selections.boroughs))
 
     const fareZoneMatch =
       !shouldApplyCategoryFilter(selections.fareZones, options.fareZones) ||
@@ -195,8 +225,7 @@ export const filterStations = (
       tocMatch &&
       countryMatch &&
       countyMatch &&
-      londonBoroughMatch &&
-      allBoroughMatch &&
+      boroughMatch &&
       fareZoneMatch
     )
   })

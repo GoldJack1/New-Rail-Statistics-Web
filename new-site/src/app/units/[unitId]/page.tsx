@@ -5,6 +5,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 
 import { PageTopHeader } from '@/components/misc'
 import { BUTWideButton } from '@/components/buttons'
+import { BackIcon } from '@/components/icons'
 import { TextCard } from '@/components/cards'
 import { CarriageMap } from '@/components/darwin/CarriageMap'
 import DataLicenceAttribution from '@/components/darwin/DataLicenceAttribution'
@@ -499,6 +500,7 @@ const UnitLookupPage: React.FC = () => {
           <BUTWideButton
             width="hug"
             instantAction
+            icon={<BackIcon />}
             onClick={() => router.push(`/units${location.search || ''}`)}
           >
             Back
@@ -512,6 +514,7 @@ const UnitLookupPage: React.FC = () => {
               <BUTWideButton
                 width="hug"
                 instantAction
+                icon={<BackIcon />}
                 onClick={() => router.push(`/units${location.search || ''}`)}
               >
                 Back

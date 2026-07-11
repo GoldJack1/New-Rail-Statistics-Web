@@ -1,4 +1,5 @@
 .network-station-tab-group {
+  --network-tab-group-shadow-pad: 8px;
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
@@ -8,6 +9,8 @@
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
+  /* Room for `--button-drop-shadow` (0 3px 3px) — overflow-y clips without this pad */
+  padding-block: 4px var(--network-tab-group-shadow-pad);
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
@@ -53,7 +56,7 @@
 @media (max-width: 1023px) {
   .network-station-tab-group {
     scroll-padding-inline: var(--space-lg);
-    padding: 4px var(--space-lg) 12px;
+    padding: 4px var(--space-lg) var(--network-tab-group-shadow-pad);
   }
 
   .network-station-tab-group::before,

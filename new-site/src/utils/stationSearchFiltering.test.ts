@@ -3,7 +3,11 @@ import type { Station } from '../types'
 import {
   filterStations,
   getAvailableStationSearchModes,
+  getBoroughOptionsForCountySelection,
+  getBoroughSelectionsForCountyChange,
+  getBoroughsForCounties,
   getDefaultStationFilterSelections,
+  getDisabledBoroughPositions,
   getStationFilterOptions,
   sortStations,
 } from './stationSearchFiltering'
@@ -61,10 +65,81 @@ describe('stationSearchFiltering', () => {
     }),
   ]
 
-  it('splits borough options into london and non-london lists', () => {
+  it('exposes all boroughs in the DDM', () => {
     const options = getStationFilterOptions(stations)
-    expect(options.boroughs).toEqual(['Westminster'])
-    expect(options.otherBoroughs).toEqual(['Cardiff', 'York'])
+    expect(options.allBoroughs).toEqual(['Cardiff', 'Westminster', 'York'])
+  })
+
+  it('scopes borough options to the selected county', () => {
+    const options = getStationFilterOptions(stations)
+
+    expect(
+      getBoroughOptionsForCountySelection(stations, ['Greater London'], options.counties)
+    ).toEqual(['Westminster'])
+
+    expect(
+      getBoroughOptionsForCountySelection(stations, ['North Yorkshire'], options.counties)
+    ).toEqual(['York'])
+  })
+
+  it('returns all boroughs when every county is selected', () => {
+    const options = getStationFilterOptions(stations)
+    expect(
+      getBoroughOptionsForCountySelection(stations, options.counties, options.counties)
+    ).toEqual(['Cardiff', 'Westminster', 'York'])
+    expect(
+      getDisabledBoroughPositions(options.allBoroughs, options.allBoroughs)
+    ).toEqual([])
+  })
+
+  it('disables boroughs outside the selected county', () => {
+    const options = getStationFilterOptions(stations)
+    const enabledBoroughs = getBoroughOptionsForCountySelection(
+      stations,
+      ['Greater London'],
+      options.counties
+    )
+
+    expect(getDisabledBoroughPositions(options.allBoroughs, enabledBoroughs)).toEqual([0, 2])
+  })
+
+  it('includes combined borough labels from Greater London stations', () => {
+    const londonStations: Station[] = [
+      makeStation({
+        id: '1',
+        county: 'Greater London',
+        borough: 'Greenwich & Bexley',
+      }),
+      makeStation({
+        id: '2',
+        county: 'Greater London',
+        borough: 'Hackney',
+      }),
+      makeStation({
+        id: '3',
+        county: 'North Yorkshire',
+        borough: 'York',
+      }),
+    ]
+
+    expect(getBoroughsForCounties(londonStations, ['Greater London'])).toEqual([
+      'Greenwich & Bexley',
+      'Hackney',
+    ])
+
+    const options = getStationFilterOptions(londonStations)
+    const londonSelections = {
+      ...getDefaultStationFilterSelections(options),
+      counties: ['Greater London'],
+      boroughs: getBoroughSelectionsForCountyChange(
+        londonStations,
+        ['Greater London'],
+        options.counties,
+        options.allBoroughs
+      ),
+    }
+    const results = filterStations(londonStations, '', londonSelections, options)
+    expect(results.map((station) => station.id)).toEqual(['1', '2'])
   })
 
   it('returns all stations with default all-selected filters', () => {
@@ -90,33 +165,30 @@ describe('stationSearchFiltering', () => {
     expect(results).toHaveLength(0)
   })
 
-  it('applies london borough only when greater london is the only county selected', () => {
+  it('filters to Greater London when only that county is selected', () => {
     const options = getStationFilterOptions(stations)
-    const selections = {
-      tocs: options.tocs,
-      countries: options.countries,
+    const defaults = getDefaultStationFilterSelections(options)
+    const londonSelections = {
+      ...defaults,
       counties: ['Greater London'],
-      boroughs: ['Westminster'],
-      allBoroughs: options.otherBoroughs,
-      fareZones: options.fareZones,
+      boroughs: getBoroughSelectionsForCountyChange(
+        stations,
+        ['Greater London'],
+        options.counties,
+        options.allBoroughs
+      ),
     }
-    const londonOnlyResults = filterStations(stations, '', selections, options)
-    expect(londonOnlyResults.map((station) => station.id)).toEqual(['1'])
-
-    const multiCountySelections = {
-      ...selections,
-      counties: ['Greater London', 'North Yorkshire'],
-    }
-    const multiCountyResults = filterStations(stations, '', multiCountySelections, options)
-    expect(multiCountyResults.map((station) => station.id)).toEqual(['1', '2'])
+    const results = filterStations(stations, '', londonSelections, options)
+    expect(results.map((station) => station.id)).toEqual(['1'])
   })
 
-  it('filters by borough across all networks with the general borough filter', () => {
+  it('filters by borough within the selected county', () => {
     const options = getStationFilterOptions(stations)
     const defaults = getDefaultStationFilterSelections(options)
     const selections = {
       ...defaults,
-      allBoroughs: ['York'],
+      counties: ['North Yorkshire'],
+      boroughs: ['York'],
     }
     const results = filterStations(stations, '', selections, options)
     expect(results.map((station) => station.id)).toEqual(['2'])
