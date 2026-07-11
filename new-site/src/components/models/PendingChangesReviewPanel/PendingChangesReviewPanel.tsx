@@ -261,7 +261,7 @@ const PendingChangesReviewPanel: React.FC<PendingChangesReviewPanelProps> = ({
     clearReauthIntent
   } = flow
 
-  const openPublishModal = () => {
+  const openPublishModal = useCallback(() => {
     if (publishIds.length === 0) {
       window.alert('Select at least one station with Publish now.')
       return
@@ -271,9 +271,9 @@ const PendingChangesReviewPanel: React.FC<PendingChangesReviewPanelProps> = ({
       return
     }
     setActionModal('publish')
-  }
+  }, [publishIds.length, canMasterPublish])
 
-  const openScheduleModal = () => {
+  const openScheduleModal = useCallback(() => {
     if (scheduleIds.length === 0) {
       window.alert('Select at least one station with Schedule.')
       return
@@ -283,7 +283,7 @@ const PendingChangesReviewPanel: React.FC<PendingChangesReviewPanelProps> = ({
       return
     }
     setActionModal('schedule')
-  }
+  }, [scheduleIds.length, canMasterPublish])
 
   const openCancelScheduleModal = () => {
     if (!trackedScheduledJobId) return

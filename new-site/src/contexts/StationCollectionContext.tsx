@@ -5,6 +5,7 @@ import React, { createContext, useContext, useCallback, useState, useEffect, use
 import type { NetworkCollectionId, NetworkViewFilter, StationCollectionId } from '@/constants/stationCollections'
 import {
   DEFAULT_NETWORK_COLLECTION_ID,
+  DEFAULT_NETWORK_VIEW,
   SANDBOX_COLLECTION_ID,
   deriveCollectionId,
   isNetworkCollection,
@@ -33,8 +34,13 @@ interface StationCollectionContextValue {
 const StationCollectionContext = createContext<StationCollectionContextValue | null>(null)
 
 export const StationCollectionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [networkView, setNetworkViewState] = useState<NetworkViewFilter>(() => getStationNetworkView())
-  const [networkId, setNetworkIdState] = useState<NetworkCollectionId>(() => getStationNetworkId())
+  const [networkView, setNetworkViewState] = useState<NetworkViewFilter>(DEFAULT_NETWORK_VIEW)
+  const [networkId, setNetworkIdState] = useState<NetworkCollectionId>(DEFAULT_NETWORK_COLLECTION_ID)
+
+  useEffect(() => {
+    setNetworkViewState(getStationNetworkView())
+    setNetworkIdState(getStationNetworkId())
+  }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined') return

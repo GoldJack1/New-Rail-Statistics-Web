@@ -39,6 +39,23 @@ const ReviewPendingChangesPage: React.FC = () => {
   const collectionLabel = getStationCollectionDisplayLabel(collectionId)
   const [reviewTab, setReviewTab] = useState<PendingReviewPageTab>('pending')
   const [pageActionBarApi, setPageActionBarApi] = useState<PendingReviewPageActionBarApi | null>(null)
+  const handlePageActionBarApi = useCallback((api: PendingReviewPageActionBarApi) => {
+    setPageActionBarApi((current) => {
+      if (
+        current &&
+        current.publishDisabled === api.publishDisabled &&
+        current.scheduleDisabled === api.scheduleDisabled &&
+        current.canMasterPublish === api.canMasterPublish &&
+        current.isPublishingAll === api.isPublishingAll &&
+        current.isSavingSchedule === api.isSavingSchedule &&
+        current.openPublishModal === api.openPublishModal &&
+        current.openScheduleModal === api.openScheduleModal
+      ) {
+        return current
+      }
+      return api
+    })
+  }, [])
 
   const fromState = safeReviewPendingReturnPath(searchParams.get('from'))
   const fallbackBackTarget =
@@ -162,7 +179,7 @@ const ReviewPendingChangesPage: React.FC = () => {
             onPublishSuccess={goBackToPreviousPage}
             pageTab={reviewTab}
             onPageTabChange={setReviewTab}
-            onPageActionBarApi={setPageActionBarApi}
+            onPageActionBarApi={handlePageActionBarApi}
           />
         </main>
       </div>
