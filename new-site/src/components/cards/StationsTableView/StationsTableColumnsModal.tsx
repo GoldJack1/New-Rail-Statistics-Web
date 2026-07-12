@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
-import { X } from '@phosphor-icons/react'
-import { BUTBaseButton as Button, BUTOperatorChip, BUTWideButton } from '../../buttons'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { CloseIcon } from '@/components/icons'
+import { BUTLeftIconWideButton, BUTOperatorChip, BUTWideButton } from '../../buttons'
 import TextCard from '../TextCard/TextCard'
 import {
   addTableColumnSlot,
@@ -66,6 +66,27 @@ const StationsTableColumnsModal: React.FC<StationsTableColumnsModalProps> = ({
     setSelectedSlotIndex((current) => Math.min(current, Math.max(0, draftSlots.length - 1)))
   }, [draftSlots.length])
 
+  const slotListRef = useRef<HTMLUListElement | null>(null)
+  const [slotListFades, setSlotListFades] = useState({ top: false, bottom: false })
+
+  const updateSlotListFades = useCallback(() => {
+    const list = slotListRef.current
+    if (!list) return
+    const { scrollTop, scrollHeight, clientHeight } = list
+    const maxScroll = scrollHeight - clientHeight
+    const top = scrollTop > 1
+    const bottom = maxScroll > 1 && scrollTop < maxScroll - 1
+    setSlotListFades((current) =>
+      current.top === top && current.bottom === bottom ? current : { top, bottom }
+    )
+  }, [])
+
+  /* Recompute when the modal opens or the column count changes (list grows/shrinks). */
+  useEffect(() => {
+    if (!open) return
+    updateSlotListFades()
+  }, [open, draftSlots.length, updateSlotListFades])
+
   if (!open) return null
 
   const selectedSlot = draftSlots[selectedSlotIndex]
@@ -125,63 +146,59 @@ const StationsTableColumnsModal: React.FC<StationsTableColumnsModalProps> = ({
               default). Changes reset when you reload the page.
             </p>
           </div>
-          <Button
+          <BUTLeftIconWideButton
             type="button"
-            variant="circle"
-            className="modal-close"
+            width="hug"
+            className="modal-close stations-table-columns-modal__close"
             ariaLabel="Close"
             onClick={onClose}
             colorVariant="primary"
-            icon={<X size={24} weight="regular" aria-hidden />}
-          />
+            icon={<CloseIcon />}
+          >
+            Close
+          </BUTLeftIconWideButton>
         </div>
 
         <div className="stations-table-columns-modal__workspace">
           <section className="stations-table-columns-modal__columns-panel" aria-label="Table columns">
             <div className="stations-table-columns-modal__panel-head">
               <h3 className="stations-table-columns-modal__panel-title">Columns</h3>
-              <div className="stations-table-columns-modal__panel-actions">
-                <BUTWideButton
-                  type="button"
-                  width="hug"
-                  colorVariant="primary"
-                  onClick={handleAddColumn}
-                  disabled={!canAddColumn}
-                >
-                  Add
-                </BUTWideButton>
-                <BUTWideButton
-                  type="button"
-                  width="hug"
-                  colorVariant="primary"
-                  onClick={handleRemoveColumn}
-                  disabled={!canRemoveColumn}
-                >
-                  Remove
-                </BUTWideButton>
-              </div>
             </div>
 
-            <ul className="stations-table-columns-modal__slot-list">
-              {draftSlots.map((slot, index) => {
-                const label = getTableFieldLabel(slot.field)
-                const isSelected = index === selectedSlotIndex
+            <div
+              className={[
+                'stations-table-columns-modal__slot-list-wrap',
+                slotListFades.top ? 'stations-table-columns-modal__slot-list-wrap--fade-top' : '',
+                slotListFades.bottom ? 'stations-table-columns-modal__slot-list-wrap--fade-bottom' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              <ul
+                className="stations-table-columns-modal__slot-list"
+                ref={slotListRef}
+                onScroll={updateSlotListFades}
+              >
+                {draftSlots.map((slot, index) => {
+                  const label = getTableFieldLabel(slot.field)
+                  const isSelected = index === selectedSlotIndex
 
-                return (
-                  <li key={`header-slot-${index}`}>
-                    <TextCard
-                      className="stations-table-columns-modal__slot-card"
-                      title={`Column ${index + 1}`}
-                      description={label}
-                      state={isSelected ? 'accent' : 'default'}
-                      pressed={isSelected}
-                      onClick={() => setSelectedSlotIndex(index)}
-                      ariaLabel={`Column ${index + 1}, ${label}`}
-                    />
-                  </li>
-                )
-              })}
-            </ul>
+                  return (
+                    <li key={`header-slot-${index}`}>
+                      <TextCard
+                        className="stations-table-columns-modal__slot-card"
+                        title={`Column ${index + 1}`}
+                        description={label}
+                        state={isSelected ? 'accent' : 'default'}
+                        pressed={isSelected}
+                        onClick={() => setSelectedSlotIndex(index)}
+                        ariaLabel={`Column ${index + 1}, ${label}`}
+                      />
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
           </section>
 
           <section className="stations-table-columns-modal__fields-panel" aria-label="Field options">
@@ -219,9 +236,34 @@ const StationsTableColumnsModal: React.FC<StationsTableColumnsModalProps> = ({
         </div>
 
         <div className="stations-table-columns-modal__footer">
-          <BUTWideButton type="button" width="hug" colorVariant="red-action" onClick={handleResetDefaults}>
-            Reset defaults
-          </BUTWideButton>
+          <div className="stations-table-columns-modal__footer-column-actions">
+            <BUTWideButton
+              type="button"
+              width="hug"
+              colorVariant="primary"
+              onClick={handleAddColumn}
+              disabled={!canAddColumn}
+            >
+              Add
+            </BUTWideButton>
+            <BUTWideButton
+              type="button"
+              width="hug"
+              colorVariant="primary"
+              onClick={handleRemoveColumn}
+              disabled={!canRemoveColumn}
+            >
+              Remove
+            </BUTWideButton>
+            <BUTWideButton
+              type="button"
+              width="hug"
+              colorVariant="red-action"
+              onClick={handleResetDefaults}
+            >
+              Reset defaults
+            </BUTWideButton>
+          </div>
           <div className="stations-table-columns-modal__footer-actions">
             <BUTWideButton type="button" width="hug" colorVariant="primary" onClick={onClose}>
               Cancel

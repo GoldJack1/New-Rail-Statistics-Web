@@ -90,29 +90,35 @@ a.rs-button {
 }
 
 /*
- * Chevrons sit optically light in a 16px box — tighten edge padding and
- * icon↔label gap so Back / Next controls don’t look padded-out.
+ * Chevrons and dismiss icons sit optically light in a 16px box — tighten edge
+ * padding and icon↔label gap so Back / Close controls don’t look padded-out.
  */
 .rs-button--wide:has(.rs-icon--chevron),
-.rs-button--tab:has(.rs-icon--chevron) {
+.rs-button--wide:has(.rs-icon--dismiss),
+.rs-button--tab:has(.rs-icon--chevron),
+.rs-button--tab:has(.rs-icon--dismiss) {
   gap: 4px;
 }
 
-.rs-button--wide.rs-button--icon-left:has(.rs-icon--chevron) {
+.rs-button--wide.rs-button--icon-left:has(.rs-icon--chevron),
+.rs-button--wide.rs-button--icon-left:has(.rs-icon--dismiss) {
   padding-left: 12px;
   padding-right: 16px;
 }
 
-.rs-button--wide.rs-button--icon-right:has(.rs-icon--chevron) {
+.rs-button--wide.rs-button--icon-right:has(.rs-icon--chevron),
+.rs-button--wide.rs-button--icon-right:has(.rs-icon--dismiss) {
   padding-right: 12px;
   padding-left: 16px;
 }
 
-.rs-button--icon-left:has(.rs-icon--chevron) .rs-button__icon {
+.rs-button--icon-left:has(.rs-icon--chevron) .rs-button__icon,
+.rs-button--icon-left:has(.rs-icon--dismiss) .rs-button__icon {
   margin-inline-start: -2px;
 }
 
-.rs-button--icon-right:has(.rs-icon--chevron) .rs-button__icon {
+.rs-button--icon-right:has(.rs-icon--chevron) .rs-button__icon,
+.rs-button--icon-right:has(.rs-icon--dismiss) .rs-button__icon {
   margin-inline-end: -2px;
 }
 

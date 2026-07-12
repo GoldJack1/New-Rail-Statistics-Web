@@ -7,6 +7,10 @@
   flex-direction: column;
   overflow: hidden;
   background: var(--bg-secondary);
+  --slot-card-shadow-pad: 6px;
+  --slot-list-scrollbar-size: 8px;
+  --workspace-panel-pad-inline: var(--space-2xl);
+  --workspace-panel-pad-block: var(--space-lg);
 }
 
 @media (min-width: 1024px) {
@@ -39,11 +43,24 @@
 
 .stations-table-columns-modal__header .modal-title {
   margin: 0 0 var(--space-xs);
+  line-height: 1.2;
 }
 
 .stations-table-columns-modal__header-text {
   min-width: 0;
   flex: 1 1 auto;
+}
+
+.stations-table-columns-modal__close {
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 0.125rem;
+}
+
+.stations-table-columns-modal__close .rs-icon--dismiss {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
 }
 
 .stations-table-columns-modal__intro,
@@ -73,17 +90,12 @@
   flex-direction: column;
   min-height: 0;
   min-width: 0;
+  padding: var(--workspace-panel-pad-block) var(--workspace-panel-pad-inline);
+  background: var(--bg-tertiary);
 }
 
 .stations-table-columns-modal__columns-panel {
-  padding: var(--space-lg) var(--space-xl) var(--space-lg) var(--space-2xl);
   border-right: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-}
-
-.stations-table-columns-modal__fields-panel {
-  padding: var(--space-lg) var(--space-2xl);
-  background: var(--bg-secondary);
 }
 
 .stations-table-columns-modal__panel-head {
@@ -91,8 +103,17 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
-  margin-bottom: var(--space-md);
+  margin-bottom: var(--space-sm);
   flex-shrink: 0;
+}
+
+.stations-table-columns-modal__fields-panel .stations-table-columns-modal__panel-head {
+  align-items: flex-start;
+}
+
+.stations-table-columns-modal__columns-panel .stations-table-columns-modal__panel-head {
+  padding-inline: var(--slot-card-shadow-pad);
+  box-sizing: border-box;
 }
 
 .stations-table-columns-modal__panel-title {
@@ -102,13 +123,6 @@
   color: var(--text-primary);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-}
-
-.stations-table-columns-modal__panel-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
-  flex-shrink: 0;
 }
 
 .stations-table-columns-modal__fields-heading {
@@ -121,18 +135,58 @@
   font-weight: 600;
 }
 
+.stations-table-columns-modal__slot-list-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  --slot-list-fade-size: calc(var(--space-md) * 4 / 3);
+}
+
+.stations-table-columns-modal__slot-list-wrap::before,
+.stations-table-columns-modal__slot-list-wrap::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: calc(var(--slot-list-scrollbar-size) + var(--space-xs));
+  height: var(--slot-list-fade-size);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.stations-table-columns-modal__slot-list-wrap::before {
+  top: 0;
+  background: linear-gradient(to bottom, var(--bg-tertiary) 0%, transparent 100%);
+}
+
+.stations-table-columns-modal__slot-list-wrap::after {
+  bottom: 0;
+  background: linear-gradient(to top, var(--bg-tertiary) 0%, transparent 100%);
+}
+
+.stations-table-columns-modal__slot-list-wrap--fade-top::before,
+.stations-table-columns-modal__slot-list-wrap--fade-bottom::after {
+  opacity: 1;
+}
+
 .stations-table-columns-modal__slot-list {
-  --slot-card-shadow-pad: 6px;
   list-style: none;
   margin: 0;
-  /* Room for TextCard drop shadow so overflow-y doesn’t clip left/right edges */
-  padding: var(--slot-card-shadow-pad);
+  /* Room for TextCard drop shadow; extra end inset keeps the scrollbar off the cards */
+  padding-block: var(--slot-card-shadow-pad);
+  padding-inline-start: var(--slot-card-shadow-pad);
+  padding-inline-end: calc(var(--slot-card-shadow-pad) + var(--slot-list-scrollbar-size) + var(--space-xs));
   display: grid;
   gap: var(--space-sm);
   overflow-y: auto;
   overscroll-behavior: contain;
   flex: 1 1 auto;
   min-height: 0;
+  width: 100%;
+  scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: var(--text-disabled) transparent;
 }
@@ -159,6 +213,7 @@
 }
 
 .stations-table-columns-modal__chip-grid {
+  --chip-grid-shadow-pad: var(--space-xs);
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-sm);
@@ -168,7 +223,7 @@
   overscroll-behavior: contain;
   flex: 1 1 auto;
   min-height: 0;
-  padding-right: var(--space-xs);
+  padding: var(--chip-grid-shadow-pad);
   scrollbar-width: thin;
   scrollbar-color: var(--text-disabled) transparent;
 }
@@ -198,18 +253,37 @@
 .stations-table-columns-modal__footer {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-md);
-  justify-content: space-between;
   align-items: center;
-  padding: var(--space-xl) var(--space-2xl);
+  justify-content: space-between;
+  gap: var(--space-sm) var(--space-md);
+  padding: var(--space-md) var(--workspace-panel-pad-inline) var(--space-lg);
   background: var(--bg-secondary);
   flex-shrink: 0;
+}
+
+.stations-table-columns-modal__footer-column-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--space-sm);
+  align-items: center;
+  margin-inline-start: var(--slot-card-shadow-pad);
+  /* Match the column-card row width so the trailing button ends at the cards' right edge */
+  width: calc(
+    460px - (2 * var(--workspace-panel-pad-inline)) - (2 * var(--slot-card-shadow-pad)) -
+      var(--slot-list-scrollbar-size) - var(--space-xs)
+  );
+  max-width: 100%;
+}
+
+.stations-table-columns-modal__footer-column-actions .rs-button:last-child {
+  flex: 1 1 auto;
 }
 
 .stations-table-columns-modal__footer-actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-sm);
+  justify-content: flex-end;
   margin-left: auto;
 }
 
@@ -225,6 +299,10 @@
     padding: var(--space-lg) var(--space-xl);
   }
 
+  .modal-content.stations-table-columns-modal {
+    --workspace-panel-pad-inline: var(--space-xl);
+  }
+
   .stations-table-columns-modal__workspace {
     display: flex;
     flex-direction: column;
@@ -235,7 +313,6 @@
     flex: 0 0 auto;
     border-right: 0;
     border-bottom: 1px solid var(--border-color);
-    padding: var(--space-lg) var(--space-xl);
     max-height: none;
   }
 
@@ -247,7 +324,6 @@
   .stations-table-columns-modal__fields-panel {
     flex: 1 1 auto;
     min-height: 0;
-    padding: var(--space-lg) var(--space-xl);
   }
 
   .stations-table-columns-modal__chip-grid {
@@ -256,7 +332,16 @@
   }
 
   .stations-table-columns-modal__footer {
-    padding: var(--space-lg) var(--space-xl);
+    padding: var(--space-md) var(--workspace-panel-pad-inline) var(--space-lg);
+  }
+
+  .stations-table-columns-modal__footer-column-actions {
+    flex-wrap: wrap;
+    width: auto;
+  }
+
+  .stations-table-columns-modal__footer-column-actions .rs-button:last-child {
+    flex: 0 0 auto;
   }
 }
 
@@ -270,9 +355,8 @@
     padding: var(--space-lg);
   }
 
-  .stations-table-columns-modal__columns-panel,
-  .stations-table-columns-modal__fields-panel {
-    padding: var(--space-lg);
+  .modal-content.stations-table-columns-modal {
+    --workspace-panel-pad-inline: var(--space-lg);
   }
 
   .stations-table-columns-modal__slot-list {
@@ -287,11 +371,16 @@
   .stations-table-columns-modal__footer {
     flex-direction: column;
     align-items: stretch;
-    padding: var(--space-lg);
+    padding: var(--space-md) var(--workspace-panel-pad-inline) var(--space-lg);
+  }
+
+  .stations-table-columns-modal__footer-column-actions {
+    margin-inline-start: var(--slot-card-shadow-pad);
   }
 
   .stations-table-columns-modal__footer-actions {
     width: 100%;
     margin-left: 0;
+    justify-content: flex-end;
   }
 }

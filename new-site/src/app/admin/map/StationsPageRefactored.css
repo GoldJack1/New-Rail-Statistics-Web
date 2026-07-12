@@ -438,8 +438,6 @@
 @media (max-width: 1023px) {
     .stations-network-tabs-wrap--toolbar {
         max-width: none;
-        padding-left: 0;
-        padding-right: 0;
     }
 }
 

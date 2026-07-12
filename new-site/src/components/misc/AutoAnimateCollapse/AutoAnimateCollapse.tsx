@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState, type ReactNode, type TransitionEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode, type TransitionEvent } from 'react'
 import './AutoAnimateCollapse.css'
 
 interface AutoAnimateCollapseProps {
@@ -23,13 +23,36 @@ const AutoAnimateCollapse: React.FC<AutoAnimateCollapseProps> = ({
   const [isSettledOpen, setIsSettledOpen] = useState(isOpen)
   const [isContentVisible, setIsContentVisible] = useState(isOpen)
   const [isAnimating, setIsAnimating] = useState(false)
+  const hasMountedRef = useRef(false)
 
   useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true
+      return
+    }
+
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
     setIsAnimating(true)
 
     if (isOpen) {
       setIsContentVisible(true)
       setIsSettledOpen(false)
+
+      if (prefersReducedMotion) {
+        setIsSettledOpen(true)
+        setIsAnimating(false)
+      }
+
+      return
+    }
+
+    if (prefersReducedMotion) {
+      setIsSettledOpen(false)
+      setIsContentVisible(false)
+      setIsAnimating(false)
     }
   }, [isOpen])
 

@@ -1,6 +1,7 @@
 'use client'
 
 export { BackIcon } from './BackIcon'
+export { CloseIcon } from './CloseIcon'
 export { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon } from './ChevronIcons'
 export {
   ArrowSquareOut,

@@ -19,12 +19,15 @@
   min-width: 0;
 }
 
-.station-admin-view-controls-card {
-  gap: 0;
+.station-admin-controls-reveal .station-admin-controls-group {
+  padding-top: var(--space-md);
+  /* Keep shadow room on inner content so collapse height animates smoothly */
+  padding-bottom: var(--space-xs);
+  padding-inline: var(--space-xs);
 }
 
-.station-admin-view-controls-card .station-admin-controls-reveal .station-admin-controls-group {
-  padding-top: var(--space-md);
+.station-admin-view-controls-card {
+  gap: 0;
 }
 
 .station-admin-controls-group--pending {
@@ -38,6 +41,9 @@
 
 .station-admin-controls-action-button {
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .station-admin-controls-label {

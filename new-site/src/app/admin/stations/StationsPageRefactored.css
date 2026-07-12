@@ -211,10 +211,6 @@
     padding-top: 0;
 }
 
-.stations-sidebar-panel .collapse-panel--open.collapse-panel--settled .collapse-panel__item {
-    padding-bottom: 0;
-}
-
 .stations-sidebar-panel .sidebar-dropdown__header-row {
     height: 52px;
     min-height: 52px;
@@ -326,6 +322,8 @@
     flex-wrap: wrap;
     gap: var(--space-xs);
     margin-top: var(--space-md);
+    /* Room for `--button-drop-shadow` below chips when parent overflow clips */
+    padding-bottom: var(--space-xs);
 }
 
 .filters-panel__footer {
@@ -599,6 +597,7 @@
 @media (max-width: 1023px) {
     .stations-page {
         --stations-content-inset: var(--stations-card-gap);
+        --network-tab-toolbar-bleed: var(--stations-content-inset);
         --stations-panel-text-inset: calc(var(--stations-content-inset) + var(--space-md));
     }
 
@@ -608,18 +607,8 @@
     }
 
     .stations-page .stations-toolbar-band .stations-network-tabs-wrap {
-        padding-left: var(--stations-content-inset);
-        padding-right: var(--stations-content-inset);
-    }
-
-    .stations-page .network-station-tab-group {
-        padding-inline: 0;
-        scroll-padding-inline: 0;
-    }
-
-    .stations-page .network-station-tab-group::before,
-    .stations-page .network-station-tab-group::after {
-        content: none;
+        padding-left: 0;
+        padding-right: 0;
     }
 
     .stations-content {
@@ -678,41 +667,6 @@
         overflow: visible;
         padding-top: var(--space-md);
         padding-bottom: var(--network-tab-group-shadow-pad);
-    }
-
-    .stations-page .stations-toolbar-band .stations-network-tabs-wrap {
-        overflow-x: auto;
-        overflow-y: visible;
-        padding-left: var(--space-lg);
-        padding-right: 0;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .stations-page .stations-toolbar-band .stations-network-tabs-wrap::-webkit-scrollbar {
-        display: none;
-        width: 0;
-        height: 0;
-    }
-
-    .stations-page .network-station-tab-group {
-        padding: 0 0 var(--network-tab-group-shadow-pad);
-        overflow: visible;
-        width: max-content;
-        min-width: 100%;
-        max-width: none;
-        box-sizing: border-box;
-    }
-
-    .stations-page .network-station-tab-group::before {
-        content: none;
-    }
-
-    .stations-page .network-station-tab-group::after {
-        content: '';
-        flex: 0 0 var(--space-lg);
-        min-width: var(--space-lg);
     }
 
     .stations-toolbar-band::before {

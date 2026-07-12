@@ -1,5 +1,6 @@
 .network-station-tab-group {
   --network-tab-group-shadow-pad: 8px;
+  --network-tab-group-inline-pad: var(--network-tab-group-shadow-pad);
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
@@ -9,8 +10,10 @@
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
-  /* Room for `--button-drop-shadow` (0 3px 3px) — overflow-y clips without this pad */
+  /* Room for `--button-drop-shadow` (0 3px 3px) — overflow clips without this pad */
   padding-block: 4px var(--network-tab-group-shadow-pad);
+  padding-inline: var(--network-tab-group-inline-pad);
+  scroll-padding-inline: var(--network-tab-group-inline-pad);
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
@@ -54,20 +57,14 @@
 }
 
 @media (max-width: 1023px) {
-  .network-station-tab-group {
-    scroll-padding-inline: var(--space-lg);
-    padding: 4px var(--space-lg) var(--network-tab-group-shadow-pad);
-  }
-
-  .network-station-tab-group::before,
-  .network-station-tab-group::after {
-    content: '';
-    flex: 0 0 1px;
-  }
-
   .stations-network-tabs-wrap--toolbar {
-    padding-left: 0;
-    padding-right: 0;
+    margin-inline: calc(-1 * var(--network-tab-toolbar-bleed, var(--space-lg)));
+    padding-inline: 0;
+  }
+
+  .network-station-tab-group {
+    --network-tab-group-inline-pad: var(--network-tab-toolbar-bleed, var(--space-lg));
+    scroll-padding-inline: var(--network-tab-group-inline-pad);
   }
 }
 

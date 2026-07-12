@@ -2,6 +2,7 @@
 
 .stations-map-page.stations-page {
     --stations-map-app-header: calc(4rem + env(safe-area-inset-top, 0px));
+    --network-tab-toolbar-bleed: var(--space-lg);
     flex: 1;
     min-height: 0;
     display: flex;
@@ -206,12 +207,6 @@
         margin-bottom: var(--space-sm);
         padding-left: var(--space-lg);
         padding-right: var(--space-lg);
-    }
-
-    .stations-map-page .stations-network-tabs-wrap--toolbar {
-        display: block;
-        padding-left: 0;
-        padding-right: 0;
     }
 }
 

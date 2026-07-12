@@ -150,6 +150,8 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-xs);
+  /* Room for `--button-drop-shadow` (0 3px 3px) when parent overflow clips */
+  padding-bottom: var(--space-xs);
 }
 .dep-search-input {
   flex: 1 1 auto;

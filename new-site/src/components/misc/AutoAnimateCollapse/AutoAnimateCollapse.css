@@ -27,11 +27,15 @@
 
 .collapse-panel--open.collapse-panel--settled .collapse-panel__item {
     overflow: visible;
-    padding-bottom: var(--space-xs);
 }
 
 @media (prefers-reduced-motion: reduce) {
     .collapse-panel {
         transition: none;
+    }
+
+    .collapse-panel--open,
+    .collapse-panel--open .collapse-panel__item {
+        overflow: visible;
     }
 }
