@@ -78,6 +78,11 @@ import TXTINPBUTIconWideButtonSearch from '@/components/textInputButtons/special
 
 const WHISTLESTOP_KIRKLEES_TOC = 'Whistlestop Valley/Kirklees Light Railway'
 
+/** Minimum time the loading skeleton stays visible so fast cache hits do not flash. */
+const MIN_SKELETON_MS = 1500
+/** Minimum skeleton time when switching network tabs. */
+const MIN_NETWORK_TAB_SKELETON_MS = 1000
+
 const formatTocFilterDdmLabel = (toc: string) =>
   toc === WHISTLESTOP_KIRKLEES_TOC ? 'Whistlestop Valley/Kirklees Light Rlwy' : toc
 
@@ -125,7 +130,9 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
   const [isTableColumnsModalOpen, setIsTableColumnsModalOpen] = useState(false)
   const [viewportWidth, setViewportWidth] = useState(0)
   const [viewportMeasured, setViewportMeasured] = useState(false)
-  const [hasCompletedInitialShell, setHasCompletedInitialShell] = useState(false)
+  const [minSkeletonElapsed, setMinSkeletonElapsed] = useState(false)
+  const [networkTabSkeletonActive, setNetworkTabSkeletonActive] = useState(false)
+  const isInitialNetworkViewRef = useRef(true)
   const { collectionId, networkView, setNetworkView } = useStationCollection()
   const effectiveNetworkView = useMemo(() => {
     if (networkView !== DEFAULT_NETWORK_VIEW) {
@@ -556,14 +563,28 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
   }, [])
 
   useEffect(() => {
-    if (!loading && !error) {
-      setHasCompletedInitialShell(true)
-    }
-  }, [loading, error])
+    if (typeof window === 'undefined') return
 
-  // Keep the skeleton visible for at least one paint on mount so production
-  // (IndexedDB + early bootstrap) cannot skip the loading shell before this page mounts.
-  const showMainSkeleton = (!hasCompletedInitialShell || loading) && !error
+    const timer = window.setTimeout(() => setMinSkeletonElapsed(true), MIN_SKELETON_MS)
+    return () => window.clearTimeout(timer)
+  }, [])
+
+  useEffect(() => {
+    if (isInitialNetworkViewRef.current) {
+      isInitialNetworkViewRef.current = false
+      return
+    }
+
+    setNetworkTabSkeletonActive(true)
+    const timer = window.setTimeout(
+      () => setNetworkTabSkeletonActive(false),
+      MIN_NETWORK_TAB_SKELETON_MS
+    )
+    return () => window.clearTimeout(timer)
+  }, [effectiveNetworkView])
+
+  const showMainSkeleton =
+    !error && (loading || !minSkeletonElapsed || networkTabSkeletonActive)
   const showMainError = Boolean(error)
   const showMainContent = !showMainSkeleton && !showMainError
 
