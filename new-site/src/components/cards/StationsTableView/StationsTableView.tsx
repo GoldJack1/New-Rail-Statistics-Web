@@ -57,17 +57,24 @@ function StationTableRow({
   station,
   visibleColumns,
   onRowClick,
+  rowIndex,
 }: {
   station: Station
   visibleColumns: StationsTableColumnDefinition[]
   onRowClick: (station: Station) => void
+  rowIndex: number
 }) {
   const rowKey = getStationMapKey(station)
 
   return (
     <tr
       key={rowKey}
-      className="stations-table__row"
+      className={[
+        'stations-table__row',
+        rowIndex % 2 === 1 ? 'stations-table__row--striped' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       tabIndex={0}
       onClick={() => onRowClick(station)}
       onKeyDown={(event) => {
@@ -203,6 +210,7 @@ const StationsTableView: React.FC<StationsTableViewProps> = ({
                       station={station}
                       visibleColumns={visibleColumns}
                       onRowClick={onRowClick}
+                      rowIndex={virtualRow.index}
                     />
                   )
                 })}
@@ -217,12 +225,13 @@ const StationsTableView: React.FC<StationsTableViewProps> = ({
                 )}
               </>
             ) : (
-              stations.map((station) => (
+              stations.map((station, rowIndex) => (
                 <StationTableRow
                   key={getStationMapKey(station)}
                   station={station}
                   visibleColumns={visibleColumns}
                   onRowClick={onRowClick}
+                  rowIndex={rowIndex}
                 />
               ))
             )}
