@@ -11,6 +11,9 @@ import {
   invalidateStationsCache,
   isAnyNetworkCollectionLoading,
   isAnyNetworkCollectionRefreshing,
+  isStationsInitialSyncPending,
+  beginStationsInitialSync,
+  endStationsInitialSync,
   loadAllNetworkStationsProgressive,
   resolveMapStationDetails,
   getStationsStoreRevision,
@@ -73,7 +76,9 @@ export const useStations = (): UseStationsReturn => {
   const snapshot = useMemo(() => {
     if (!hydrated) return SERVER_STATION_SNAPSHOT
     const stations = getMergedNetworkStationsForDisplay()
-    const loading = isAnyNetworkCollectionLoading() && stations.length === 0
+    const loading =
+      isStationsInitialSyncPending() ||
+      (isAnyNetworkCollectionLoading() && stations.length === 0)
     const isRefreshing = isAnyNetworkCollectionRefreshing()
     const error = stations.length === 0 ? buildStationsError() : null
     return { stations, loading, isRefreshing, error }
@@ -84,11 +89,11 @@ export const useStations = (): UseStationsReturn => {
 
   const refetch = useCallback(() => {
     invalidateStationsCache()
-    void bootstrapStationsData({ networkView, detailLevel: 'lean', force: true }).then(() =>
-      loadAllNetworkStationsProgressive({ detailLevel: 'list', force: true }).then(() =>
-        loadAllNetworkStationsProgressive({ detailLevel: 'full', force: true })
-      )
-    )
+    beginStationsInitialSync()
+    void bootstrapStationsData({ networkView, detailLevel: 'lean', force: true })
+      .then(() => loadAllNetworkStationsProgressive({ detailLevel: 'list', force: true }))
+      .then(() => loadAllNetworkStationsProgressive({ detailLevel: 'full', force: true }))
+      .finally(() => endStationsInitialSync())
   }, [networkView])
 
   return useMemo(
@@ -131,7 +136,9 @@ export const useStationsMap = (): UseStationsMapReturn => {
     const leanStations = getMergedNetworkStations('lean')
     const fullStations = getMergedNetworkStationDetails()
     const stations = leanStations.length > 0 ? leanStations : fullStations
-    const loading = isAnyNetworkCollectionLoading() && stations.length === 0
+    const loading =
+      isStationsInitialSyncPending() ||
+      (isAnyNetworkCollectionLoading() && stations.length === 0)
     const isRefreshing = isAnyNetworkCollectionRefreshing()
     const error = stations.length === 0 ? buildStationsError() : null
     return {
@@ -145,11 +152,11 @@ export const useStationsMap = (): UseStationsMapReturn => {
 
   const refetch = useCallback(() => {
     invalidateStationsCache()
-    void bootstrapStationsData({ networkView, detailLevel: 'lean', force: true }).then(() =>
-      loadAllNetworkStationsProgressive({ detailLevel: 'list', force: true }).then(() =>
-        loadAllNetworkStationsProgressive({ detailLevel: 'full', force: true })
-      )
-    )
+    beginStationsInitialSync()
+    void bootstrapStationsData({ networkView, detailLevel: 'lean', force: true })
+      .then(() => loadAllNetworkStationsProgressive({ detailLevel: 'list', force: true }))
+      .then(() => loadAllNetworkStationsProgressive({ detailLevel: 'full', force: true }))
+      .finally(() => endStationsInitialSync())
   }, [networkView])
 
   const resolveStation = useCallback(

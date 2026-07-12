@@ -5,6 +5,8 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { useStationCollection } from '@/contexts/StationCollectionContext'
 import {
   bootstrapStationsData,
+  beginStationsInitialSync,
+  endStationsInitialSync,
   getCollectionStations,
   invalidateStationsCache,
   loadAllNetworkStationsProgressive,
@@ -26,8 +28,13 @@ export const StationsCacheProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const runBootstrap = useCallback(
     (force = false) => {
-      void loadAllNetworkStationsProgressive({ detailLevel: 'list', force })
-      void bootstrapStationsData({ networkView, detailLevel: 'lean', force })
+      beginStationsInitialSync()
+      void Promise.all([
+        loadAllNetworkStationsProgressive({ detailLevel: 'list', force }),
+        bootstrapStationsData({ networkView, detailLevel: 'lean', force }),
+      ]).finally(() => {
+        endStationsInitialSync()
+      })
     },
     [networkView]
   )
@@ -39,11 +46,16 @@ export const StationsCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     const onRefetch = () => {
       invalidateStationsCache()
-      void bootstrapStationsData({ networkView, detailLevel: 'lean', force: true }).then(() => {
-        void loadAllNetworkStationsProgressive({ detailLevel: 'list', force: true })
-        if (isLiteDataMode) return
-        void loadAllNetworkStationsProgressive({ detailLevel: 'full', force: true })
-      })
+      beginStationsInitialSync()
+      void bootstrapStationsData({ networkView, detailLevel: 'lean', force: true })
+        .then(() => loadAllNetworkStationsProgressive({ detailLevel: 'list', force: true }))
+        .then(() => {
+          if (isLiteDataMode) return
+          return loadAllNetworkStationsProgressive({ detailLevel: 'full', force: true })
+        })
+        .finally(() => {
+          endStationsInitialSync()
+        })
     }
     window.addEventListener('railstats-stations-refetch', onRefetch)
     return () => window.removeEventListener('railstats-stations-refetch', onRefetch)

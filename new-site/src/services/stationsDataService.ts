@@ -53,6 +53,7 @@ const collectionState = new Map<StationCollectionId, CollectionLoadState>()
 const inflightLoads = new Map<string, Promise<void>>()
 const inflightMergedBundleLoads = new Map<StationFetchDetailLevel, Promise<boolean>>()
 let storeRevision = 0
+let initialSyncPending = typeof window !== 'undefined'
 
 function createEmptyState(): CollectionLoadState {
   return {
@@ -148,6 +149,22 @@ function patchState(
 export function subscribeStationsData(listener: Listener): () => void {
   listeners.add(listener)
   return () => listeners.delete(listener)
+}
+
+export function isStationsInitialSyncPending(): boolean {
+  return initialSyncPending
+}
+
+export function beginStationsInitialSync(): void {
+  if (initialSyncPending) return
+  initialSyncPending = true
+  notify()
+}
+
+export function endStationsInitialSync(): void {
+  if (!initialSyncPending) return
+  initialSyncPending = false
+  notify()
 }
 
 export function getFetchConcurrency(): number {
@@ -709,6 +726,7 @@ export function invalidateStationsCache(): void {
   inflightLoads.clear()
   inflightMergedBundleLoads.clear()
   invalidateStationsCdnManifestCache()
+  beginStationsInitialSync()
   notify()
 }
 
