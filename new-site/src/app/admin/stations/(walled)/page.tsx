@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import StationsPageClient from './StationsPageClient'
+import StationsPageClient from '../StationsPageClient'
 import {
   readStationNetworkViewFromCookie,
   STATION_NETWORK_VIEW_COOKIE,

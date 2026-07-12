@@ -96,41 +96,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return <>{children}</>
   }
 
-  if (loading || (user && profileCheck === 'checking')) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '200px',
-          fontSize: '18px',
-          color: 'var(--text-secondary)',
-        }}
-      >
-        Loading…
-      </div>
-    )
-  }
+  const isRedirecting =
+    !loading &&
+    (!user ||
+      profileCheck === 'need-email-verify' ||
+      profileCheck === 'need-totp-enroll')
 
-  if (!user || profileCheck === 'need-email-verify' || profileCheck === 'need-totp-enroll') {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '200px',
-          fontSize: '18px',
-          color: 'var(--text-secondary)',
-        }}
-      >
-        Loading…
-      </div>
-    )
-  }
-
-  if (profileCheck !== 'ok') {
+  // Block only while auth state is unknown or a redirect is in flight. Signed-in users
+  // can see page chrome (e.g. stations skeleton) while email/MFA verification runs.
+  if (loading || isRedirecting) {
     return (
       <div
         style={{

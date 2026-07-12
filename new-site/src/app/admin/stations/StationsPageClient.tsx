@@ -125,6 +125,7 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
   const [isTableColumnsModalOpen, setIsTableColumnsModalOpen] = useState(false)
   const [viewportWidth, setViewportWidth] = useState(0)
   const [viewportMeasured, setViewportMeasured] = useState(false)
+  const [hasCompletedInitialShell, setHasCompletedInitialShell] = useState(false)
   const { collectionId, networkView, setNetworkView } = useStationCollection()
   const effectiveNetworkView = useMemo(() => {
     if (networkView !== DEFAULT_NETWORK_VIEW) {
@@ -554,8 +555,15 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
+  useEffect(() => {
+    if (!loading && !error) {
+      setHasCompletedInitialShell(true)
+    }
+  }, [loading, error])
 
-  const showMainSkeleton = loading && !error
+  // Keep the skeleton visible for at least one paint on mount so production
+  // (IndexedDB + early bootstrap) cannot skip the loading shell before this page mounts.
+  const showMainSkeleton = (!hasCompletedInitialShell || loading) && !error
   const showMainError = Boolean(error)
   const showMainContent = !showMainSkeleton && !showMainError
 
