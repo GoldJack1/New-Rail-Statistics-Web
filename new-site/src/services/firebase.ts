@@ -266,6 +266,7 @@ import {
   STATION_COLLECTION_STORAGE_KEY,
   STATION_NETWORK_STORAGE_KEY,
   STATION_NETWORK_VIEW_STORAGE_KEY,
+  STATION_NETWORK_VIEW_COOKIE,
   STATION_SANDBOX_STORAGE_KEY,
   deriveCollectionId,
   isNetworkCollection,
@@ -326,6 +327,11 @@ export const setStationNetworkId = (id: NetworkCollectionId): void => {
   }
 }
 
+function syncNetworkViewCookie(view: NetworkViewFilter): void {
+  if (typeof document === 'undefined') return
+  document.cookie = `${STATION_NETWORK_VIEW_COOKIE}=${view}; path=/; max-age=31536000; SameSite=Lax`
+}
+
 /** Read persisted network view filter (All or a single network). */
 export const getStationNetworkView = (): NetworkViewFilter => {
   if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
@@ -333,7 +339,10 @@ export const getStationNetworkView = (): NetworkViewFilter => {
   }
   try {
     const stored = window.localStorage.getItem(STATION_NETWORK_VIEW_STORAGE_KEY)
-    if (stored != null && isNetworkViewFilter(stored)) return stored
+    if (stored != null && isNetworkViewFilter(stored)) {
+      syncNetworkViewCookie(stored)
+      return stored
+    }
   } catch {
     // ignore
   }
@@ -348,6 +357,7 @@ export const setStationNetworkView = (view: NetworkViewFilter): void => {
     if (view !== 'all') {
       window.localStorage.setItem(STATION_NETWORK_STORAGE_KEY, view)
     }
+    syncNetworkViewCookie(view)
     syncDerivedCollectionStorage()
   } catch {
     // ignore

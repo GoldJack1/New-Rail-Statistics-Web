@@ -114,6 +114,7 @@
         flex: 1 1 auto;
         min-height: 100%;
         width: 100%;
+        padding-top: 25px;
         padding-left: var(--stations-content-inset);
         box-sizing: border-box;
         background-color: var(--bg-secondary);
@@ -280,6 +281,12 @@
 
 .stations-sidebar-panel .station-admin-controls-card.station-admin-view-controls-card {
     gap: 0;
+}
+
+@media (max-width: 639px) {
+    .stations-sidebar-view-section {
+        display: none;
+    }
 }
 
 .stations-sidebar-panel .station-admin-controls-group {
@@ -566,6 +573,225 @@
     justify-content: center;
     min-height: 400px;
     text-align: center;
+}
+
+.stations-sidebar--disabled {
+    opacity: 0.55;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Loading: keep every control rendered, redact only its text with a shimmer bar. */
+.stations-sidebar--loading {
+    pointer-events: none;
+    user-select: none;
+    --stations-redact-surface: color-mix(in srgb, var(--text-secondary) 18%, transparent);
+    --stations-redact-highlight: color-mix(in srgb, var(--text-primary) 30%, transparent);
+}
+
+.stations-sidebar--loading .sidebar-dropdown__title,
+.stations-sidebar--loading .filter-label,
+.stations-sidebar--loading .station-admin-controls-label,
+.stations-sidebar--loading .station-admin-controls-note,
+.stations-sidebar--loading .county-london-toggle__label,
+.stations-sidebar--loading .rs-button__text,
+.stations-sidebar--loading .rs-button-bar__text {
+    color: transparent !important;
+    caret-color: transparent;
+    border-radius: var(--radius-sm, 4px);
+    background-image: linear-gradient(
+        90deg,
+        var(--stations-redact-surface) 25%,
+        var(--stations-redact-highlight) 37%,
+        var(--stations-redact-surface) 63%
+    );
+    background-size: 400% 100%;
+    animation: stations-sidebar-text-redact 1.4s ease infinite;
+}
+
+.stations-sidebar--loading .search-input-shell.rs-button.rs-input:not(.rs-input--has-value)::after {
+    border-radius: var(--radius-sm, 4px);
+    background-image: linear-gradient(
+        90deg,
+        var(--stations-redact-surface) 25%,
+        var(--stations-redact-highlight) 37%,
+        var(--stations-redact-surface) 63%
+    );
+    background-size: 400% 100%;
+    animation: stations-sidebar-text-redact 1.4s ease infinite;
+}
+
+/* Search placeholder: same shimmer bar as other labels, overlaid on the text line. */
+.stations-sidebar--loading .search-input-shell.rs-button.rs-input {
+    position: relative;
+}
+
+.stations-sidebar--loading .search-input-shell.rs-button.rs-input::after {
+    content: '';
+    position: absolute;
+    left: calc(12px + 18px + 8px);
+    top: 50%;
+    width: 11.5rem;
+    max-width: calc(100% - 12px - 18px - 8px - 12px);
+    height: 0.85em;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.stations-sidebar--loading .search-input-shell .rs-input__field {
+    color: transparent !important;
+    caret-color: transparent;
+    background: none !important;
+    animation: none !important;
+}
+
+.stations-sidebar--loading .search-input-shell.rs-input--has-value .rs-input__field {
+    color: transparent !important;
+    border-radius: var(--radius-sm, 4px);
+    background-image: linear-gradient(
+        90deg,
+        var(--stations-redact-surface) 25%,
+        var(--stations-redact-highlight) 37%,
+        var(--stations-redact-surface) 63%
+    ) !important;
+    background-size: 400% 100% !important;
+    background-repeat: no-repeat;
+    background-position: 100% 50%;
+    animation: stations-sidebar-text-redact 1.4s ease infinite !important;
+    align-self: center;
+    width: min(100%, 12rem);
+    height: 0.85em;
+    min-height: 0;
+    flex: 0 1 auto;
+}
+
+.stations-sidebar--loading .search-input-shell .rs-input__field::placeholder {
+    color: transparent;
+}
+
+/* Sidebar icons: circular shimmer instead of glyphs. */
+.stations-sidebar--loading .search-input-shell .rs-input__prefix--icon,
+.stations-sidebar--loading .sidebar-dropdown__chevron {
+    color: transparent;
+    border-radius: 50%;
+    overflow: hidden;
+    background-image: linear-gradient(
+        90deg,
+        var(--stations-redact-surface) 25%,
+        var(--stations-redact-highlight) 37%,
+        var(--stations-redact-surface) 63%
+    );
+    background-size: 400% 100%;
+    animation: stations-sidebar-text-redact 1.4s ease infinite;
+}
+
+.stations-sidebar--loading .but-ddm__header-icon {
+    --stations-redact-surface: color-mix(in srgb, var(--button-text-active, var(--text-primary)) 32%, transparent);
+    --stations-redact-highlight: color-mix(in srgb, var(--button-text-active, var(--text-primary)) 52%, transparent);
+    color: transparent;
+    border-radius: 50%;
+    overflow: hidden;
+    background-image: linear-gradient(
+        90deg,
+        var(--stations-redact-surface) 25%,
+        var(--stations-redact-highlight) 37%,
+        var(--stations-redact-surface) 63%
+    );
+    background-size: 400% 100%;
+    animation: stations-sidebar-text-redact 1.4s ease infinite;
+}
+
+.stations-sidebar--loading .search-input-shell .rs-input__prefix--icon svg,
+.stations-sidebar--loading .sidebar-dropdown__chevron > *,
+.stations-sidebar--loading .but-ddm__header-icon svg {
+    visibility: hidden;
+}
+
+/* London Borough Filter toggle: shimmer track and knob instead of live colours. */
+.stations-sidebar--loading .county-london-toggle__control .rs-tog-toggle__track,
+.stations-sidebar--loading .county-london-toggle__control .rs-tog-toggle__knob {
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    background-color: transparent !important;
+    background-image: linear-gradient(
+        90deg,
+        var(--stations-redact-surface) 25%,
+        var(--stations-redact-highlight) 37%,
+        var(--stations-redact-surface) 63%
+    );
+    background-size: 400% 100%;
+    animation: stations-sidebar-text-redact 1.4s ease infinite;
+}
+
+/* Button text sits on coloured button surfaces, so derive the bar from the button's text token. */
+.stations-sidebar--loading .rs-button__text,
+.stations-sidebar--loading .rs-button-bar__text {
+    --stations-redact-surface: color-mix(in srgb, var(--button-text-active, var(--text-primary)) 32%, transparent);
+    --stations-redact-highlight: color-mix(in srgb, var(--button-text-active, var(--text-primary)) 52%, transparent);
+}
+
+@keyframes stations-sidebar-text-redact {
+    0% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stations-sidebar--loading .sidebar-dropdown__title,
+    .stations-sidebar--loading .filter-label,
+    .stations-sidebar--loading .station-admin-controls-label,
+    .stations-sidebar--loading .station-admin-controls-note,
+    .stations-sidebar--loading .county-london-toggle__label,
+    .stations-sidebar--loading .rs-button__text,
+    .stations-sidebar--loading .rs-button-bar__text,
+    .stations-sidebar--loading .search-input-shell.rs-button.rs-input:not(.rs-input--has-value)::after,
+    .stations-sidebar--loading .search-input-shell.rs-input--has-value .rs-input__field,
+    .stations-sidebar--loading .search-input-shell .rs-input__prefix--icon,
+    .stations-sidebar--loading .sidebar-dropdown__chevron,
+    .stations-sidebar--loading .but-ddm__header-icon,
+    .stations-sidebar--loading .county-london-toggle__control .rs-tog-toggle__track,
+    .stations-sidebar--loading .county-london-toggle__control .rs-tog-toggle__knob {
+        animation: none;
+        background-image: linear-gradient(
+            90deg,
+            var(--stations-redact-surface),
+            var(--stations-redact-surface)
+        );
+    }
+}
+
+.stations-main-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: min(60dvh, 560px);
+    padding: var(--space-xl) var(--space-lg);
+    text-align: center;
+    gap: var(--space-md);
+}
+
+.stations-main-error__icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    color: var(--text-secondary);
+}
+
+.stations-main-error__title {
+    margin: 0;
+    font-size: var(--text-lg, 1.125rem);
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.stations-main-error__message {
+    margin: 0;
+    max-width: 36rem;
+    color: var(--text-secondary);
 }
 
 .loading-spinner {

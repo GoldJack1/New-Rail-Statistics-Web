@@ -9,6 +9,8 @@ interface SidebarDropdownSectionProps {
   title: string
   children: React.ReactNode
   defaultExpanded?: boolean
+  expanded?: boolean
+  onExpandedChange?: (expanded: boolean) => void
   className?: string
   headerAction?: React.ReactNode
 }
@@ -17,11 +19,24 @@ const SidebarDropdownSection: React.FC<SidebarDropdownSectionProps> = ({
   title,
   children,
   defaultExpanded = true,
+  expanded,
+  onExpandedChange,
   className = '',
   headerAction,
 }) => {
-  const [isOpen, setIsOpen] = useState(defaultExpanded)
+  const [internalOpen, setInternalOpen] = useState(defaultExpanded)
+  const isControlled = expanded !== undefined
+  const isOpen = isControlled ? expanded : internalOpen
   const panelId = useId()
+
+  const setIsOpen = (next: boolean | ((current: boolean) => boolean)) => {
+    const resolved = typeof next === 'function' ? next(isOpen) : next
+    if (isControlled) {
+      onExpandedChange?.(resolved)
+      return
+    }
+    setInternalOpen(resolved)
+  }
 
   return (
     <section

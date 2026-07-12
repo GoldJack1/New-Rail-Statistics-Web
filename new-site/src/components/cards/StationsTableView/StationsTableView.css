@@ -186,3 +186,53 @@ html[data-theme='dark'] .stations-table-wrap {
   width: max-content;
   max-width: none;
 }
+
+.stations-table-panel--loading {
+  --skeleton-shimmer: color-mix(in srgb, var(--text-primary) 12%, transparent);
+}
+
+.stations-table-panel--loading thead {
+  --skeleton-surface: color-mix(
+    in srgb,
+    var(--text-secondary) 14%,
+    var(--stations-table-header-bg, var(--bg-secondary))
+  );
+}
+
+.stations-table-panel--loading tbody .stations-table__row {
+  --skeleton-surface: color-mix(
+    in srgb,
+    var(--text-secondary) 14%,
+    var(--stations-table-row-bg, var(--bg-primary))
+  );
+}
+
+.stations-table__skeleton-cell {
+  display: inline-block;
+  vertical-align: middle;
+  flex: 0 0 auto;
+  border-radius: var(--radius-sm, 4px);
+}
+
+.stations-table__skeleton-chips {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+}
+
+.stations-table__skeleton-chip {
+  display: inline-block;
+  border-radius: var(--radius-pill, 999px);
+}
+
+.stations-table__skeleton-header {
+  display: block;
+  flex: 0 0 auto;
+  border-radius: var(--radius-sm, 4px);
+}
+
+.stations-table__sort-button--loading {
+  pointer-events: none;
+  cursor: default;
+}

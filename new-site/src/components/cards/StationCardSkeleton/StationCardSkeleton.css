@@ -1,0 +1,83 @@
+.rs-station-card-skeleton {
+  --skeleton-surface: color-mix(in srgb, var(--button-text-active) 14%, var(--button-bg-active));
+  --skeleton-shimmer: color-mix(in srgb, var(--button-text-active) 22%, transparent);
+}
+
+.rs-station-card-skeleton__text-card {
+  cursor: default;
+  pointer-events: none;
+}
+
+.rs-station-card-skeleton__operator,
+.rs-station-card-skeleton__name,
+.rs-station-card-skeleton__location {
+  position: relative;
+  z-index: 1;
+  display: block;
+  flex: 0 0 auto;
+}
+
+.rs-station-card-skeleton__operator {
+  margin-bottom: 6px;
+}
+
+.rs-station-card-skeleton__name {
+  margin-bottom: 6px;
+}
+
+.rs-station-card-skeleton__action-bar {
+  pointer-events: none;
+}
+
+.rs-station-card-skeleton__action-bar-visit,
+.rs-station-card-skeleton__action-bar-button-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  box-shadow: var(--button-drop-shadow);
+}
+
+.rs-station-card-skeleton__action-bar-visit::after,
+.rs-station-card-skeleton__action-bar-button-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: var(--button-inner-shadow-active);
+}
+
+.rs-station-card-skeleton__action-bar-visit {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 40px;
+  justify-content: flex-start;
+  padding: 0 18px 0 12px;
+  background-color: hsl(0 68% 48%);
+  --skeleton-surface: color-mix(in srgb, var(--text-disabled) 50%, transparent);
+  --skeleton-shimmer: color-mix(in srgb, hsl(0 0% 100%) 28%, transparent);
+}
+
+[data-theme='dark'] .rs-station-card-skeleton__action-bar-visit {
+  background-color: hsl(359 100% 17%);
+}
+
+.rs-station-card-skeleton__action-bar-button-wrap {
+  flex: 0 0 40px;
+  height: 40px;
+  justify-content: center;
+  background: var(--button-bg-active);
+  --skeleton-surface: color-mix(in srgb, var(--button-text-active) 14%, var(--button-bg-active));
+  --skeleton-shimmer: color-mix(in srgb, var(--button-text-active) 22%, transparent);
+}
+
+.rs-station-card-skeleton__action-bar-button {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-sm, 4px);
+}
+
+.rs-station-card-skeleton__action-bar-text {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+}

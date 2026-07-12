@@ -82,6 +82,7 @@ export const DEFAULT_NETWORK_VIEW: NetworkViewFilter = 'all'
 
 export const STATION_NETWORK_STORAGE_KEY = 'railstats_station_network'
 export const STATION_NETWORK_VIEW_STORAGE_KEY = 'railstats_station_network_view'
+export const STATION_NETWORK_VIEW_COOKIE = 'rs-station-network-view'
 export const STATION_SANDBOX_STORAGE_KEY = 'railstats_station_sandbox'
 /** Legacy key — migrated to network + sandbox keys */
 export const STATION_COLLECTION_STORAGE_KEY = 'railstats_station_collection'
@@ -100,6 +101,13 @@ export function isStationCollectionId(id: string): id is StationCollectionId {
 
 export function isNetworkViewFilter(value: string): value is NetworkViewFilter {
   return value === 'all' || isNetworkCollection(value)
+}
+
+export function readStationNetworkViewFromCookie(
+  cookieValue: string | undefined
+): NetworkViewFilter {
+  if (cookieValue != null && isNetworkViewFilter(cookieValue)) return cookieValue
+  return DEFAULT_NETWORK_VIEW
 }
 
 export function deriveCollectionId(

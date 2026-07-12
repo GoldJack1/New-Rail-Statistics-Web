@@ -1,7 +1,7 @@
 'use client'
 
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useCallback, useState, useEffect, useMemo } from 'react'
+import React, { createContext, useContext, useCallback, useState, useEffect, useLayoutEffect, useMemo } from 'react'
 import type { NetworkCollectionId, NetworkViewFilter, StationCollectionId } from '@/constants/stationCollections'
 import {
   DEFAULT_NETWORK_COLLECTION_ID,
@@ -34,10 +34,14 @@ interface StationCollectionContextValue {
 const StationCollectionContext = createContext<StationCollectionContextValue | null>(null)
 
 export const StationCollectionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [networkView, setNetworkViewState] = useState<NetworkViewFilter>(DEFAULT_NETWORK_VIEW)
-  const [networkId, setNetworkIdState] = useState<NetworkCollectionId>(DEFAULT_NETWORK_COLLECTION_ID)
+  const [networkView, setNetworkViewState] = useState<NetworkViewFilter>(() =>
+    typeof window !== 'undefined' ? getStationNetworkView() : DEFAULT_NETWORK_VIEW
+  )
+  const [networkId, setNetworkIdState] = useState<NetworkCollectionId>(() =>
+    typeof window !== 'undefined' ? getStationNetworkId() : DEFAULT_NETWORK_COLLECTION_ID
+  )
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setNetworkViewState(getStationNetworkView())
     setNetworkIdState(getStationNetworkId())
   }, [])
