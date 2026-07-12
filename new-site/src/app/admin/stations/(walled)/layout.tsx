@@ -9,5 +9,5 @@ import ProtectedRoute from '@/components/firebase/ProtectedRoute/ProtectedRoute'
  * `admin/(authenticated)/stations/`.
  */
 export default function WalledStationsBrowseLayout({ children }: { children: React.ReactNode }) {
-  return <ProtectedRoute>{children}</ProtectedRoute>
+  return <ProtectedRoute showShellWhileChecking>{children}</ProtectedRoute>
 }

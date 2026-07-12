@@ -9,6 +9,11 @@ import { userMustEnrollTotpMfaOnFirebase } from '@/services/firebaseTotpMfa'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
+  /**
+   * Render page content while auth resolves (e.g. stations skeleton) instead of a
+   * blocking loader. Redirects still run once auth state is known.
+   */
+  showShellWhileChecking?: boolean
 }
 
 type ProfileCheck = 'idle' | 'checking' | 'ok' | 'need-email-verify' | 'need-totp-enroll'
@@ -19,7 +24,10 @@ const isLocalDevLoginBypassEnabled =
 /**
  * Requires a signed-in user with verified email and TOTP (authenticator) MFA enrolled.
  */
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  showShellWhileChecking = false,
+}) => {
   const { user, loading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
@@ -102,9 +110,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       profileCheck === 'need-email-verify' ||
       profileCheck === 'need-totp-enroll')
 
-  // Block only while auth state is unknown or a redirect is in flight. Signed-in users
-  // can see page chrome (e.g. stations skeleton) while email/MFA verification runs.
-  if (loading || isRedirecting) {
+  // Block only while auth state is unknown or a redirect is in flight, unless the route
+  // opts into rendering its shell (e.g. stations skeleton) during that window.
+  if (!showShellWhileChecking && (loading || isRedirecting)) {
     return (
       <div
         style={{
