@@ -39,6 +39,9 @@ export default function FirebaseAnalytics() {
     }
 
     const isMarketingHome = pathname === '/' || pathname === '/home'
+    const isPublicStationsBrowse =
+      pathname === '/stations' || pathname === '/stations/map'
+    const deferUntilScroll = isMarketingHome || isPublicStationsBrowse
     const scheduleLog = () => {
       if (typeof window.requestIdleCallback === 'function') {
         idleHandle = window.requestIdleCallback(() => void logPageView(), { timeout: 5_000 })
@@ -49,7 +52,7 @@ export default function FirebaseAnalytics() {
 
     let onFirstScroll: (() => void) | undefined
 
-    if (isMarketingHome) {
+    if (deferUntilScroll) {
       onFirstScroll = () => {
         if (onFirstScroll) {
           window.removeEventListener('scroll', onFirstScroll, { capture: true })

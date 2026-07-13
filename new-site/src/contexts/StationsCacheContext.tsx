@@ -1,7 +1,7 @@
 'use client'
 
 /* eslint-disable react-refresh/only-export-components */
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import { useStationCollection } from '@/contexts/StationCollectionContext'
 import {
   bootstrapStationsData,
@@ -11,6 +11,7 @@ import {
   invalidateStationsCache,
   loadAllNetworkStationsProgressive,
 } from '@/services/stationsDataService'
+import { fetchStationsCdnManifest, isStationCdnEnabled } from '@/services/stationsCdnService'
 import { NETWORK_COLLECTION_IDS } from '@/constants/stationCollections'
 import {
   readDeviceCapabilityFromBrowser,
@@ -39,7 +40,10 @@ export const StationsCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     [networkView]
   )
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (isStationCdnEnabled()) {
+      void fetchStationsCdnManifest()
+    }
     runBootstrap(false)
   }, [runBootstrap])
 

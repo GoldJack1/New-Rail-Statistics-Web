@@ -1,0 +1,250 @@
+'use client'
+
+import React, { useState, useCallback, useEffect, useRef } from 'react'
+import type { SandboxStationDoc, Station } from '@/types'
+import {
+  readServerScheduledJobId,
+  writeServerScheduledJobId,
+  readScheduleSavedFingerprint,
+  writeScheduleSavedFingerprint,
+} from '@/utils/scheduledPublishStorage'
+import { computePendingChangesFingerprint } from '@/utils/pendingChangesFingerprint'
+import {
+  pendingEntryMatchesScheduledPayload,
+  type ScheduledJobStationPayload,
+} from '@/utils/scheduledJobPendingMatch'
+import ScheduledServerJobFirestoreSync from '@/contexts/ScheduledServerJobFirestoreSync'
+import { requestStationCdnExportAfterPublish } from '@/services/stationsCdnService'
+import type { StationCollectionId } from '@/constants/stationCollections'
+import { migratePendingEntryTarget } from '@/utils/pendingChangesByCollection'
+import { PendingStationChangesContext } from '@/contexts/PendingStationChangesContext.shared'
+import type {
+  PendingChangeEntry,
+  ServerScheduledJobDetail,
+} from '@/contexts/pendingStationChangesTypes'
+
+const PENDING_CHANGES_STORAGE_KEY = 'railstatistics-pending-station-changes-v1'
+
+function migratePendingEntry(entry: PendingChangeEntry): PendingChangeEntry {
+  return migratePendingEntryTarget(entry)
+}
+
+function loadPendingChangesFromStorage(): Record<string, PendingChangeEntry> {
+  if (typeof window === 'undefined') return {}
+  try {
+    const raw = localStorage.getItem(PENDING_CHANGES_STORAGE_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as unknown
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+    const entries = parsed as Record<string, PendingChangeEntry>
+    const migrated: Record<string, PendingChangeEntry> = {}
+    for (const [id, entry] of Object.entries(entries)) {
+      migrated[id] = migratePendingEntry(entry)
+    }
+    return migrated
+  } catch {
+    return {}
+  }
+}
+
+export const PendingStationChangesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [pendingChanges, setPendingChanges] = useState<Record<string, PendingChangeEntry>>(loadPendingChangesFromStorage)
+  const [trackedScheduledJobId, setTrackedScheduledJobId] = useState<string | null>(() => readServerScheduledJobId())
+  const [serverScheduledJobDetail, setServerScheduledJobDetail] = useState<ServerScheduledJobDetail | null>(null)
+  const scheduleFingerprintBaselinedForJobRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PENDING_CHANGES_STORAGE_KEY, JSON.stringify(pendingChanges))
+    } catch {
+      /* quota / private mode */
+    }
+  }, [pendingChanges])
+
+  const upsertPendingChange = useCallback((
+    station: Station,
+    updated: Partial<Station>,
+    targetCollectionId: StationCollectionId,
+    sandboxUpdated?: Partial<SandboxStationDoc> | null,
+    sandboxOriginal?: Partial<SandboxStationDoc> | null
+  ) => {
+    const draftEntry: PendingChangeEntry = {
+      targetCollectionId,
+      original: station,
+      updated,
+      sandboxUpdated: sandboxUpdated ?? null,
+      sandboxOriginal: sandboxOriginal ?? null,
+    }
+    const resolvedTarget = migratePendingEntryTarget(draftEntry).targetCollectionId
+
+    setPendingChanges(prev => ({
+      ...prev,
+      [station.id]: {
+        targetCollectionId: resolvedTarget,
+        original: station,
+        updated,
+        sandboxUpdated: sandboxUpdated !== undefined ? sandboxUpdated : prev[station.id]?.sandboxUpdated ?? null,
+        sandboxOriginal:
+          sandboxOriginal !== undefined
+            ? sandboxOriginal
+            : prev[station.id]?.sandboxOriginal ?? null,
+        isNew: prev[station.id]?.isNew,
+      },
+    }))
+  }, [])
+
+  const addNewPendingStation = useCallback((
+    stationId: string,
+    updated: Partial<Station>,
+    targetCollectionId: StationCollectionId,
+    sandboxUpdated?: Partial<SandboxStationDoc> | null
+  ) => {
+    const original: Station = {
+      id: stationId,
+      stationName: updated.stationName ?? '',
+      crsCode: updated.crsCode ?? '',
+      tiploc: updated.tiploc ?? null,
+      latitude: typeof updated.latitude === 'number' ? updated.latitude : 0,
+      longitude: typeof updated.longitude === 'number' ? updated.longitude : 0,
+      country: updated.country ?? null,
+      county: updated.county ?? null,
+      toc: updated.toc ?? null,
+      stnarea: updated.stnarea ?? null,
+      borough: updated.borough ?? null,
+      fareZone: updated.fareZone ?? null,
+      yearlyPassengers: (updated.yearlyPassengers ?? null) as Station['yearlyPassengers'],
+    }
+
+    const draftEntry: PendingChangeEntry = {
+      targetCollectionId,
+      original,
+      updated,
+      sandboxUpdated: sandboxUpdated ?? null,
+      isNew: true,
+    }
+    const resolvedTarget = migratePendingEntryTarget(draftEntry).targetCollectionId
+
+    setPendingChanges(prev => ({
+      ...prev,
+      [stationId]: {
+        targetCollectionId: resolvedTarget,
+        original,
+        updated,
+        sandboxUpdated: sandboxUpdated ?? prev[stationId]?.sandboxUpdated ?? null,
+        isNew: true,
+      },
+    }))
+  }, [])
+
+  const clearPendingChange = useCallback((stationId: string) => {
+    setPendingChanges(prev => {
+      const next = { ...prev }
+      delete next[stationId]
+      return next
+    })
+  }, [])
+
+  const clearAllPendingChanges = useCallback(() => {
+    setPendingChanges({})
+  }, [])
+
+  const clearPendingChangesForIds = useCallback((stationIds: string[]) => {
+    if (stationIds.length === 0) return
+    setPendingChanges(prev => {
+      const next = { ...prev }
+      for (const id of stationIds) {
+        delete next[id]
+      }
+      return next
+    })
+  }, [])
+
+  const clearTrackedScheduledServerJob = useCallback(() => {
+    writeServerScheduledJobId(null)
+    writeScheduleSavedFingerprint(null)
+    scheduleFingerprintBaselinedForJobRef.current = null
+    setTrackedScheduledJobId(null)
+    setServerScheduledJobDetail(null)
+  }, [])
+
+  const registerScheduledServerJob = useCallback((jobId: string) => {
+    writeServerScheduledJobId(jobId)
+    setTrackedScheduledJobId(jobId)
+  }, [])
+
+  useEffect(() => {
+    if (!trackedScheduledJobId) {
+      scheduleFingerprintBaselinedForJobRef.current = null
+      return
+    }
+    if (readScheduleSavedFingerprint() !== null) {
+      scheduleFingerprintBaselinedForJobRef.current = trackedScheduledJobId
+      return
+    }
+    if (scheduleFingerprintBaselinedForJobRef.current === trackedScheduledJobId) return
+    writeScheduleSavedFingerprint(computePendingChangesFingerprint(pendingChanges))
+    scheduleFingerprintBaselinedForJobRef.current = trackedScheduledJobId
+  }, [trackedScheduledJobId, pendingChanges])
+
+  const handleServerJobDetail = useCallback((detail: ServerScheduledJobDetail | null) => {
+    setServerScheduledJobDetail(detail)
+  }, [])
+
+  const handleServerJobCompleted = useCallback(
+    (stationIds: string[], scheduledChanges: Record<string, ScheduledJobStationPayload> | null) => {
+      setPendingChanges(prev => {
+        const next = { ...prev }
+        for (const id of stationIds) {
+          const entry = next[id]
+          if (!entry) continue
+          if (scheduledChanges == null) {
+            delete next[id]
+            continue
+          }
+          const sch = scheduledChanges[id]
+          if (sch == null) {
+            delete next[id]
+            continue
+          }
+          if (pendingEntryMatchesScheduledPayload(entry, sch)) {
+            delete next[id]
+          }
+        }
+        return next
+      })
+      clearTrackedScheduledServerJob()
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('railstats-stations-refetch'))
+      }
+      void requestStationCdnExportAfterPublish().catch((exportError) => {
+        console.warn('Station CDN export after scheduled publish failed:', exportError)
+      })
+    },
+    [clearTrackedScheduledServerJob]
+  )
+
+  return (
+    <PendingStationChangesContext.Provider
+      value={{
+        pendingChanges,
+        upsertPendingChange,
+        addNewPendingStation,
+        clearPendingChange,
+        clearAllPendingChanges,
+        clearPendingChangesForIds,
+        trackedScheduledJobId,
+        registerScheduledServerJob,
+        clearTrackedScheduledServerJob,
+        serverScheduledJobDetail,
+      }}
+    >
+      <ScheduledServerJobFirestoreSync
+        jobId={trackedScheduledJobId}
+        onDetail={handleServerJobDetail}
+        onCompleted={handleServerJobCompleted}
+        onJobDocMissing={clearTrackedScheduledServerJob}
+      />
+      {children}
+    </PendingStationChangesContext.Provider>
+  )
+}

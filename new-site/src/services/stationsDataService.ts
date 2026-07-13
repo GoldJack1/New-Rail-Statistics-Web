@@ -6,7 +6,6 @@ import {
   type StationCollectionId,
 } from '@/constants/stationCollections'
 import type { StationFetchDetailLevel } from '@/services/stationFirestoreMapper'
-import { fetchStationsFromFirebase } from '@/services/firebase'
 import {
   readDeviceCapabilityFromBrowser,
   resolveDevicePerformanceTier,
@@ -215,6 +214,7 @@ async function fetchCollectionFromNetwork(
     }
   }
 
+  const { fetchStationsFromFirebase } = await import('@/services/firebase')
   return fetchWithDevTimeout(fetchStationsFromFirebase(collectionId, { detailLevel }))
 }
 

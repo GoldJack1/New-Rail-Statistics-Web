@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import type { NetworkViewFilter } from '@/constants/stationCollections'
-import type { PendingChangeEntry } from '@/contexts/PendingStationChangesContext'
+import type { PendingChangeEntry } from '@/contexts/pendingStationChangesTypes'
 import type { Station } from '@/types'
 import { mergePendingChangesForStationsList } from '@/utils/applyPendingChangesForDisplay'
 import {

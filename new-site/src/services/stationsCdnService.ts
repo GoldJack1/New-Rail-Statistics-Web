@@ -8,9 +8,6 @@ import type { StationFetchDetailLevel } from '@/services/stationFirestoreMapper'
 import type { Station } from '@/types'
 import type { StationCdnBundleLevel, StationsCdnManifest } from '@/types/stationsCdn'
 import { mergeNetworkCollections } from '@/utils/mapLeanStation'
-import { getFirebaseApp, initializeFirebase } from '@/services/firebase'
-import { getFunctions, httpsCallable } from 'firebase/functions'
-
 const MANIFEST_STORAGE_PATH = 'station-exports/manifest.json'
 const MANIFEST_SESSION_KEY = 'railstats_station_cdn_manifest'
 
@@ -253,6 +250,10 @@ export function invalidateStationsCdnManifestCache(): void {
 export async function requestStationCdnExportAfterPublish(): Promise<void> {
   if (!isStationCdnEnabled()) return
 
+  const [{ initializeFirebase, getFirebaseApp }, { getFunctions, httpsCallable }] = await Promise.all([
+    import('@/services/firebase'),
+    import('firebase/functions'),
+  ])
   await initializeFirebase()
   const firebaseApp = getFirebaseApp()
   if (!firebaseApp) return

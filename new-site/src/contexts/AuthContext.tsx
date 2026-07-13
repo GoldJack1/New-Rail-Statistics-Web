@@ -43,6 +43,15 @@ function isMarketingHomePath(pathname: string): boolean {
   return pathname === '/' || pathname === '/home'
 }
 
+/** Public read-only station browse — skip auth iframe for cold visitors (PSI / first load). */
+function isPublicStationsBrowsePath(pathname: string): boolean {
+  return pathname === '/stations' || pathname === '/stations/map'
+}
+
+function isColdVisitorAuthDeferPath(pathname: string): boolean {
+  return isMarketingHomePath(pathname) || isPublicStationsBrowsePath(pathname)
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
@@ -106,11 +115,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (authIsRouteCritical) {
       void init()
-    } else if (isMarketingHomePath(pathname) && !readAuthSessionHint()) {
-      // Cold marketing visits: skip Firebase Auth (and its iframe.js) until the user navigates away
-      // or signs in on another route. PSI / first-time visitors won't download the auth iframe.
+    } else if (isColdVisitorAuthDeferPath(pathname) && !readAuthSessionHint()) {
+      // Cold marketing / public stations visits: skip Firebase Auth (and its iframe.js) until the
+      // user interacts or navigates to an auth-critical route.
       setLoading(false)
-    } else if (isMarketingHomePath(pathname)) {
+    } else if (isColdVisitorAuthDeferPath(pathname)) {
       scheduleDeferredInit(12_000)
     } else if (typeof window.requestIdleCallback === 'function') {
       idleHandle = window.requestIdleCallback(() => void init(), { timeout: 5_000 })

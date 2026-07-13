@@ -1,21 +1,20 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import React, { useState, useMemo, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
+import React, { useState, useMemo, useCallback, useEffect, useLayoutEffect, useRef, useDeferredValue } from 'react'
 import { ChevronLeftIcon, ChevronRightIcon, MagnifyingGlass, WarningCircle } from '@/components/icons'
 
 import { useStations } from '@/hooks/useStations'
 import { useStationListPipeline } from '@/hooks/useStationListPipeline'
 import { useDebounce } from '@/hooks/useDebounce'
-import {
-  BUTLeftRoundedCircleButton,
-  BUTOperatorChip,
-  BUTRightRoundedCircleButton,
-  BUTSquareButton,
-  BUTTextNumberSquareButton,
-  TOGToggleVisited,
-  BUTWideButton,
-} from '@/components/buttons'
+import BUTLeftRoundedCircleButton from '@/components/buttons/small/BUTLeftRoundedCircleButton'
+import BUTRightRoundedCircleButton from '@/components/buttons/small/BUTRightRoundedCircleButton'
+import BUTSquareButton from '@/components/buttons/small/BUTSquareButton'
+import BUTTextNumberSquareButton from '@/components/buttons/small/BUTTextNumberSquareButton'
+import BUTWideButton from '@/components/buttons/wide/BUTWideButton'
+import BUTOperatorChip from '@/components/buttons/wide/BUTOperatorChip'
+import TOGToggleVisited from '@/components/buttons/toggle/TOGToggleVisited'
 import { PageTopHeader } from '@/components/misc'
 import SidebarDropdownSection from '@/components/misc/SidebarDropdownSection/SidebarDropdownSection'
 import BUTDDMList from '@/components/buttons/ddm/BUTDDMList'
@@ -23,18 +22,14 @@ import BUTDDMListActionDual from '@/components/buttons/ddm/BUTDDMListActionDual'
 import StationCard from '@/components/cards/StationCard/StationCard'
 import LightRailStopCard from '@/components/cards/LightRailStopCard/LightRailStopCard'
 import StationsCardGridSkeleton from '@/components/cards/StationsCardGridSkeleton/StationsCardGridSkeleton'
-import StationsTableView from '@/components/cards/StationsTableView/StationsTableView'
-import StationsTableColumnsModal from '@/components/cards/StationsTableView/StationsTableColumnsModal'
 import { isLightRailStop } from '@/utils/stationCardForNetwork'
-import StationAdminControls from '@/components/cards/StationAdminControls/StationAdminControls'
-import StationAdminViewControls from '@/components/cards/StationAdminControls/StationAdminViewControls'
 import NetworkStationTabGroup from '@/components/cards/NetworkStationTabGroup/NetworkStationTabGroup'
 import { formatStationLocationDisplay, isGreaterLondonCounty } from '@/utils/formatStationLocation'
 import { NETWORK_COLLECTION_IDS, DEFAULT_NETWORK_VIEW } from '@/constants/stationCollections'
 import type { NetworkViewFilter } from '@/constants/stationCollections'
 import { countPendingChangesForCollection } from '@/utils/pendingChangesByCollection'
 import { useStationCollection } from '@/contexts/StationCollectionContext'
-import { usePendingStationChanges } from '@/contexts/PendingStationChangesContext'
+import { usePendingStationChanges } from '@/contexts/PendingStationChangesContext.shared'
 import { buildStationPath, getStationMapKey } from '@/utils/stationAreaSlug'
 import { pathnameForReviewPendingSource } from '@/utils/reviewPendingNavigation'
 import { useStationAdminMode } from '@/hooks/useStationAdminMode'
@@ -76,6 +71,21 @@ import {
 import './StationsPageRefactored.css'
 import TXTINPBUTIconWideButtonSearch from '@/components/textInputButtons/special/TXTINPBUTIconWideButtonSearch'
 
+const StationsTableView = dynamic(
+  () => import('@/components/cards/StationsTableView/StationsTableView'),
+  { loading: () => <StationsCardGridSkeleton count={24} /> }
+)
+const StationsTableColumnsModal = dynamic(
+  () => import('@/components/cards/StationsTableView/StationsTableColumnsModal'),
+  { ssr: false }
+)
+const StationAdminControls = dynamic(
+  () => import('@/components/cards/StationAdminControls/StationAdminControls')
+)
+const StationAdminViewControls = dynamic(
+  () => import('@/components/cards/StationAdminControls/StationAdminViewControls')
+)
+
 const WHISTLESTOP_KIRKLEES_TOC = 'Whistlestop Valley/Kirklees Light Railway'
 
 /** Minimum time the loading skeleton stays visible so fast cache hits do not flash. */
@@ -91,6 +101,8 @@ interface StationsPageProps {
   initialDisplayMode?: StationAdminDisplayMode
   initialNetworkView?: NetworkViewFilter
   initialSidebarSections?: StationAdminSidebarSectionsState
+  /** Minimum skeleton display time; 0 shows content as soon as data is ready (public browse). */
+  minSkeletonMs?: number
 }
 
 const SORT_DDM_OPTIONS: Array<{ label: string; value: SortOption }> = [
@@ -107,6 +119,7 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
   initialDisplayMode = 'cards',
   initialNetworkView = DEFAULT_NETWORK_VIEW,
   initialSidebarSections,
+  minSkeletonMs = MIN_SKELETON_MS,
 }) => {
   const { stations: loadedStations, loading, error, refetch } = useStations()
   const router = useRouter()
@@ -159,7 +172,8 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
   )
   const isMobileStationsLayout = viewportMeasured && viewportWidth < 640
   const showSidebarViewSection = viewportMeasured && viewportWidth >= 640
-  const effectiveDisplayMode: StationAdminDisplayMode = isMobileStationsLayout ? 'cards' : adminDisplayMode
+  const effectiveDisplayMode: StationAdminDisplayMode =
+    !viewportMeasured || isMobileStationsLayout ? 'cards' : adminDisplayMode
   const handleDisplayModeChange = useCallback((mode: StationAdminDisplayMode) => {
     if (isMobileStationsLayout && mode === 'table') return
     writeStationAdminDisplayMode(mode)
@@ -175,9 +189,10 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
   }, [pendingChanges, collectionId, networkView])
   const isAdminPanelVisible = initialMode === 'edit' || isAdminMode
   const tableHeaderSchemaCollectionId = useMemo(() => {
+    if (effectiveDisplayMode !== 'table' && !isTableColumnsModalOpen) return null
     if (networkView === 'all') return null
     return networkView
-  }, [networkView])
+  }, [networkView, effectiveDisplayMode, isTableColumnsModalOpen])
   const { fieldSchema: tableHeaderFieldSchema, loading: tableHeaderSchemaLoading } =
     useStationCollectionFieldSchema(tableHeaderSchemaCollectionId)
   const tableHeaderFieldSchemaForModal = useMemo(() => {
@@ -220,6 +235,8 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
     setSearchTerm((current) => normalizeStationSearchInput(current, searchMode))
   }, [searchMode])
 
+  const deferredLoadedStations = useDeferredValue(loadedStations)
+
   const {
     stations,
     uniqueValues,
@@ -227,7 +244,7 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
     effectiveSelections,
     sortedStations,
   } = useStationListPipeline({
-    loadedStations,
+    loadedStations: deferredLoadedStations,
     pendingChanges,
     networkView,
     debouncedSearchTerm,
@@ -544,7 +561,7 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
     setCurrentPage(1)
   }, [debouncedSearchTerm, effectiveSelections, sortOption, collectionId, networkView, tableSort, effectiveDisplayMode, cardItemsPerPage])
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     setTableColumnSlots(getDefaultTableColumnSlots(getStationNetworkView()))
     setViewportWidth(window.innerWidth)
     setViewportMeasured(true)
@@ -564,10 +581,14 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+    if (minSkeletonMs <= 0) {
+      setMinSkeletonElapsed(true)
+      return
+    }
 
-    const timer = window.setTimeout(() => setMinSkeletonElapsed(true), MIN_SKELETON_MS)
+    const timer = window.setTimeout(() => setMinSkeletonElapsed(true), minSkeletonMs)
     return () => window.clearTimeout(timer)
-  }, [])
+  }, [minSkeletonMs])
 
   useEffect(() => {
     if (isInitialNetworkViewRef.current) {
@@ -841,14 +862,16 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
         </main>
       </div>
 
-      <StationsTableColumnsModal
-        open={isTableColumnsModalOpen}
-        slots={tableColumnSlots}
-        networkView={networkView}
-        fieldSchema={tableHeaderFieldSchemaForModal}
-        onApply={setTableColumnSlots}
-        onClose={() => setIsTableColumnsModalOpen(false)}
-      />
+      {isTableColumnsModalOpen ? (
+        <StationsTableColumnsModal
+          open={isTableColumnsModalOpen}
+          slots={tableColumnSlots}
+          networkView={networkView}
+          fieldSchema={tableHeaderFieldSchemaForModal}
+          onApply={setTableColumnSlots}
+          onClose={() => setIsTableColumnsModalOpen(false)}
+        />
+      ) : null}
     </div>
   )
 }

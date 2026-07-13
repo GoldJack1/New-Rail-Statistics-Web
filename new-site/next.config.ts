@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const emptyPolyfill = "./src/lib/empty-polyfill.js";
 
@@ -25,8 +26,8 @@ const nextConfig: NextConfig = {
   webpack(config) {
     config.resolve.alias = {
       ...config.resolve.alias,
-      "../build/polyfills/polyfill-module": false,
-      "next/dist/build/polyfills/polyfill-module": false,
+      "../build/polyfills/polyfill-module": path.resolve(__dirname, emptyPolyfill),
+      "next/dist/build/polyfills/polyfill-module": path.resolve(__dirname, emptyPolyfill),
     };
     return config;
   },
