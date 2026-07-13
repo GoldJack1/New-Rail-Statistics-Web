@@ -1,6 +1,26 @@
 import type { NextConfig } from "next";
 
+const emptyPolyfill = "./src/lib/empty-polyfill.js";
+
 const nextConfig: NextConfig = {
+  experimental: {
+    // Inline route CSS in HTML to remove render-blocking stylesheet chains on first paint.
+    inlineCss: true,
+  },
+  turbopack: {
+    resolveAlias: {
+      "../build/polyfills/polyfill-module": emptyPolyfill,
+      "next/dist/build/polyfills/polyfill-module": emptyPolyfill,
+    },
+  },
+  webpack(config) {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "../build/polyfills/polyfill-module": false,
+      "next/dist/build/polyfills/polyfill-module": false,
+    };
+    return config;
+  },
   async redirects() {
     return [
       { source: "/stations", destination: "/admin/stations", permanent: false },
