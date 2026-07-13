@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { scheduleLayoutRead } from '@/utils/scheduleLayoutRead'
 
 /**
  * Mirrors the fixed `.universal-header` height into `--app-header-offset` so main padding,
@@ -18,16 +19,17 @@ export function useAppHeaderOffset<T extends HTMLElement>(resyncWhen?: unknown) 
       const height = el.getBoundingClientRect().height
       document.documentElement.style.setProperty('--app-header-offset', `${height}px`)
     }
+    const onResize = () => scheduleLayoutRead(sync)
 
-    sync()
+    scheduleLayoutRead(sync)
 
-    const ro = new ResizeObserver(sync)
+    const ro = new ResizeObserver(onResize)
     ro.observe(el)
-    window.addEventListener('resize', sync)
+    window.addEventListener('resize', onResize)
 
     return () => {
       ro.disconnect()
-      window.removeEventListener('resize', sync)
+      window.removeEventListener('resize', onResize)
       document.documentElement.style.removeProperty('--app-header-offset')
     }
   }, [resyncWhen])

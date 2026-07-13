@@ -38,14 +38,40 @@ export default function FirebaseAnalytics() {
       }
     }
 
-    if (typeof window.requestIdleCallback === 'function') {
-      idleHandle = window.requestIdleCallback(() => void logPageView(), { timeout: 5_000 })
+    const isMarketingHome = pathname === '/' || pathname === '/home'
+    const scheduleLog = () => {
+      if (typeof window.requestIdleCallback === 'function') {
+        idleHandle = window.requestIdleCallback(() => void logPageView(), { timeout: 5_000 })
+      } else {
+        timeoutHandle = setTimeout(() => void logPageView(), 2_000)
+      }
+    }
+
+    let onFirstScroll: (() => void) | undefined
+
+    if (isMarketingHome) {
+      onFirstScroll = () => {
+        if (onFirstScroll) {
+          window.removeEventListener('scroll', onFirstScroll, { capture: true })
+        }
+        if (!cancelled) scheduleLog()
+      }
+      window.addEventListener('scroll', onFirstScroll, { passive: true, capture: true })
+      timeoutHandle = setTimeout(() => {
+        if (onFirstScroll) {
+          window.removeEventListener('scroll', onFirstScroll, { capture: true })
+        }
+        if (!cancelled) scheduleLog()
+      }, 8_000)
     } else {
-      timeoutHandle = setTimeout(() => void logPageView(), 2_000)
+      scheduleLog()
     }
 
     return () => {
       cancelled = true
+      if (onFirstScroll) {
+        window.removeEventListener('scroll', onFirstScroll, { capture: true })
+      }
       if (idleHandle !== undefined) window.cancelIdleCallback(idleHandle)
       if (timeoutHandle !== undefined) clearTimeout(timeoutHandle)
     }

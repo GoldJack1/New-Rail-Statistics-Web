@@ -10,6 +10,7 @@ export const geologica = localFont({
   weight: '400',
   style: 'normal',
   display: 'swap',
+  adjustFontFallback: 'Arial',
   variable: '--ff-geologica',
 })
 
@@ -22,6 +23,7 @@ export const aronetiv = localFont({
     { path: '../../public/fonts/Aronetiv-IrpinType-Bold.otf', weight: '700', style: 'normal' },
   ],
   display: 'swap',
+  adjustFontFallback: 'Arial',
   variable: '--ff-aronetiv',
 })
 
@@ -31,5 +33,6 @@ export const aronetivNormal = localFont({
   weight: '400',
   style: 'normal',
   display: 'swap',
+  adjustFontFallback: 'Arial',
   variable: '--ff-aronetiv-normal',
 })

@@ -22,7 +22,10 @@ const Footer: React.FC = () => {
   const router = useRouter()
   const adminModeActive = useStationAdminMode()
   const syncAdminSearchParam =
-    pathname === '/stations/map' || pathname === '/admin/stations' || pathname === '/admin/map'
+    pathname === '/stations' ||
+    pathname === '/stations/map' ||
+    pathname === '/admin/stations' ||
+    pathname === '/admin/map'
 
   useEffect(() => {
     if (user && isStationAdminSearchParam(search)) {
@@ -98,7 +101,7 @@ const Footer: React.FC = () => {
               />
             </div>
             <div className="site-footer-links site-footer-links--logged-in-row">
-              <BUTFooterLink to="/admin/stations">
+              <BUTFooterLink to="/stations">
                 Stations
               </BUTFooterLink>
               <BUTFooterLink to="/admin/api-status">

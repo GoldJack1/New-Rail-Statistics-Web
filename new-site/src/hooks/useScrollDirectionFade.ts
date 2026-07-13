@@ -1,5 +1,6 @@
-import { useCallback, useLayoutEffect, useState, type RefObject } from 'react'
+import { useCallback, useEffect, useState, type RefObject } from 'react'
 import { usePrefersReducedMotion } from './usePrefersReducedMotion'
+import { scheduleLayoutRead } from '@/utils/scheduleLayoutRead'
 
 export type ScrollDirectionFadeOptions = {
   /**
@@ -48,7 +49,7 @@ function useScrollDirectionFadeCore(
   const minVisibleFractionMobile = options?.minVisibleFractionMobile ?? 0.1
   const mobileMediaQuery = options?.mobileMediaQuery ?? '(max-width: 767px)'
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (reducedMotion) {
       setVisible(true)
       return
@@ -93,7 +94,7 @@ function useScrollDirectionFadeCore(
       tryReveal(rect)
     }
 
-    measureInitial()
+    scheduleLayoutRead(measureInitial)
 
     let raf = 0
     const onScroll = () => {
@@ -110,7 +111,7 @@ function useScrollDirectionFadeCore(
       if (raf) cancelAnimationFrame(raf)
       raf = requestAnimationFrame(() => {
         raf = 0
-        syncLayout()
+        scheduleLayoutRead(syncLayout)
       })
     }
 

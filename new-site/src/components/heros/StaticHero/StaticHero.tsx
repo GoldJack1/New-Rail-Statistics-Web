@@ -89,7 +89,7 @@ export interface StaticHeroProps {
 const StaticHero: React.FC<StaticHeroProps> = ({
   slide,
   defaultImageSources = DEFAULT_HERO_STACK_IMAGE_SOURCES,
-  imageLoading = 'eager',
+  imageLoading = 'lazy',
   className = '',
   ariaLabel = 'Featured',
   contentFill = 'bgSecondary',
@@ -188,10 +188,9 @@ const StaticHero: React.FC<StaticHeroProps> = ({
     return () => ro.disconnect()
   }, [maxCtaCount, scheduleMeasure, slide.ctas?.length])
 
-  useLayoutEffect(() => {
-    measureTallestSlideText()
-    measureTallestCtaRow()
-  }, [slide.title, slide.body, slide.ctas?.length, textStyle, measureTallestSlideText, measureTallestCtaRow])
+  useEffect(() => {
+    scheduleMeasure()
+  }, [slide.title, slide.body, slide.ctas?.length, textStyle, scheduleMeasure])
 
   const textBlockScrollLayoutKey = `${tallestSlideTextPx ?? ''}|${slide.title}|${textStyle}|${titleHeadingLevel}`
   useLockedHeroTextBlockScroll(

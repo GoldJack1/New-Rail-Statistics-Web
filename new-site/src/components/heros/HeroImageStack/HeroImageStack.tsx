@@ -44,6 +44,8 @@ export interface HeroImageStackProps {
   loading?: 'eager' | 'lazy'
   /** Video preload strategy; defaults to `auto` for eager, `metadata` for lazy. */
   videoPreload?: 'none' | 'metadata' | 'auto'
+  /** IntersectionObserver root margin before starting video download (lazy heroes use a tighter margin). */
+  approachRootMargin?: string
   /** When set, replaces built-in paths (e.g. merged per-slide sources). */
   sources?: HeroImageStackSources
   /** Optional themed videos. When present, videos render instead of image sources. */
@@ -81,6 +83,17 @@ function mp4FallbackSrc(webmSrc: string | undefined): string | undefined {
   return webmSrc.toLowerCase().endsWith('.webm') ? `${webmSrc.slice(0, -'.webm'.length)}.mp4` : undefined
 }
 
+function readDocumentTheme(): 'light' | 'dark' {
+  if (typeof document === 'undefined') return 'light'
+  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
+}
+
+function browserSupportsWebM(): boolean {
+  if (typeof document === 'undefined') return true
+  const probe = document.createElement('video')
+  return probe.canPlayType('video/webm; codecs="vp9"') !== '' || probe.canPlayType('video/webm') !== ''
+}
+
 const VARIANT_MODIFIER: Record<HeroImageStackVariant, string> = {
   carousel: 'rs-home-hero-image-stack--carousel-hero',
   static: 'rs-home-hero-image-stack--static-hero'
@@ -90,6 +103,7 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
   variant,
   loading = 'eager',
   videoPreload,
+  approachRootMargin,
   sources,
   videoSources,
   mobileTabletMediaMode = 'cropped',
@@ -106,8 +120,7 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
   const lightMobile = sources?.lightMobile ?? HERO_IMAGE_LIGHT_MOBILE
   const decorative = alt.trim() === ''
   const rootRef = useRef<HTMLDivElement | null>(null)
-  const darkVideoRef = useRef<HTMLVideoElement | null>(null)
-  const lightVideoRef = useRef<HTMLVideoElement | null>(null)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
   const [isInViewport, setIsInViewport] = useState(false)
   /**
    * Once a hero has scrolled near the viewport we keep preloading its video permanently — this only
@@ -116,6 +129,11 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
    */
   const [hasApproachedViewport, setHasApproachedViewport] = useState(false)
   const [isMobileTabletViewport, setIsMobileTabletViewport] = useState(false)
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => readDocumentTheme())
+  const [supportsWebM] = useState(() => browserSupportsWebM())
+
+  const resolvedApproachMargin =
+    approachRootMargin ?? (loading === 'eager' ? '400px 0px' : '120px 0px')
 
   useEffect(() => {
     const root = rootRef.current
@@ -133,13 +151,11 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
       },
       { threshold: 0.2 }
     )
-    // Start buffering slightly before a hero scrolls into view so playback doesn't visibly pop in,
-    // while still keeping far-below-the-fold heroes from downloading on initial page load.
     const approachObserver = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) setHasApproachedViewport(true)
       },
-      { rootMargin: '800px 0px' }
+      { rootMargin: resolvedApproachMargin }
     )
 
     observer.observe(root)
@@ -148,6 +164,14 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
       observer.disconnect()
       approachObserver.disconnect()
     }
+  }, [resolvedApproachMargin])
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const onThemeChange = () => setTheme(readDocumentTheme())
+    const observer = new MutationObserver(onThemeChange)
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => observer.disconnect()
   }, [])
 
   useEffect(() => {
@@ -166,11 +190,6 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
   }, [])
 
   const eagerVideoPreload = loading === 'eager' ? 'auto' : 'metadata'
-  /**
-   * Regardless of `loading`, never eagerly download video bytes for a hero that hasn't scrolled
-   * near the viewport yet — otherwise every hero/carousel-slide on the page (there can be 15+)
-   * starts downloading at once on load and starves the one the user can actually see.
-   */
   const resolvedVideoPreload = videoPreload ?? (hasApproachedViewport ? eagerVideoPreload : 'none')
 
   const preferLowQuality = videoQuality === 'low'
@@ -180,46 +199,43 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
   const lightVideoSrc = isMobileTabletViewport && videoSources?.lightMobileTablet
     ? videoSources.lightMobileTablet
     : videoSources?.light
+  const activeVideoSrc = theme === 'dark' ? darkVideoSrc : lightVideoSrc
+
+  /** Carousel cells only mount video for the active slide; static heroes mount once approached. */
+  const shouldMountVideo =
+    Boolean(videoSources) &&
+    hasApproachedViewport &&
+    (variant === 'static' || isActive) &&
+    Boolean(activeVideoSrc)
 
   useEffect(() => {
-    if (!hasApproachedViewport || !videoSources) return
-    // Some browsers only consult `preload` during initial resource selection, so bumping it from
-    // `none` to `auto`/`metadata` after the fact needs an explicit `load()` nudge to take effect.
-    // Videos are declared via `<source>` children (for the mp4 fallback), so `el.src` is always
-    // empty — check for an actual `<source>` child instead of a `src` attribute.
-    const nudge = (el: HTMLVideoElement | null) => {
-      if (!el || el.readyState > 0 || !el.querySelector('source')) return
-      el.load()
-    }
-    nudge(darkVideoRef.current)
-    nudge(lightVideoRef.current)
-  }, [hasApproachedViewport, videoSources])
+    if (!shouldMountVideo || !videoSources) return
+    const el = videoRef.current
+    if (!el || el.readyState > 0 || !el.querySelector('source')) return
+    el.load()
+  }, [shouldMountVideo, videoSources, activeVideoSrc])
 
   useEffect(() => {
     if (!videoSources) return
 
-    const syncVideo = (el: HTMLVideoElement | null) => {
-      if (!el) return
-      if (!isActive) {
-        el.pause()
-        el.currentTime = 0
-        return
-      }
-      if (!isInViewport) {
-        el.pause()
-        return
-      }
-      if (el.ended) {
-        return
-      }
-      void el.play().catch(() => {
-        // Ignore failed autoplay attempts; muted inline videos should usually play.
-      })
+    const el = videoRef.current
+    if (!el) return
+    if (!isActive) {
+      el.pause()
+      el.currentTime = 0
+      return
     }
-
-    syncVideo(darkVideoRef.current)
-    syncVideo(lightVideoRef.current)
-  }, [isActive, isInViewport, videoSources])
+    if (!isInViewport) {
+      el.pause()
+      return
+    }
+    if (el.ended) {
+      return
+    }
+    void el.play().catch(() => {
+      // Ignore failed autoplay attempts; muted inline videos should usually play.
+    })
+  }, [isActive, isInViewport, videoSources, shouldMountVideo])
 
   return (
     <div
@@ -285,11 +301,18 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
     >
       <div className="rs-home-hero-image-stack__frame">
         {videoSources ? (
-          <>
-            <div className="rs-home-hero-image-stack__picture rs-home-hero-image-stack__picture--dark">
+          shouldMountVideo ? (
+            <div
+              className={[
+                'rs-home-hero-image-stack__picture',
+                theme === 'dark'
+                  ? 'rs-home-hero-image-stack__picture--dark'
+                  : 'rs-home-hero-image-stack__picture--light'
+              ].join(' ')}
+            >
               <video
-                key={darkVideoSrc ?? 'dark-video-disabled'}
-                ref={darkVideoRef}
+                key={activeVideoSrc ?? 'hero-video-disabled'}
+                ref={videoRef}
                 className="rs-home-hero-image-stack__media"
                 muted
                 playsInline
@@ -297,34 +320,16 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
                 preload={preferLowQuality && isMobileTabletViewport ? 'metadata' : resolvedVideoPreload}
                 aria-hidden={decorative ? true : undefined}
               >
-                {darkVideoSrc ? (
-                  <>
-                    <source src={darkVideoSrc} type="video/webm" />
-                    <source src={mp4FallbackSrc(darkVideoSrc)} type="video/mp4" />
-                  </>
+                {activeVideoSrc ? (
+                  supportsWebM ? (
+                    <source src={activeVideoSrc} type="video/webm" />
+                  ) : (
+                    <source src={mp4FallbackSrc(activeVideoSrc)} type="video/mp4" />
+                  )
                 ) : null}
               </video>
             </div>
-            <div className="rs-home-hero-image-stack__picture rs-home-hero-image-stack__picture--light">
-              <video
-                key={lightVideoSrc ?? 'light-video-disabled'}
-                ref={lightVideoRef}
-                className="rs-home-hero-image-stack__media"
-                muted
-                playsInline
-                loop={videoLoop}
-                preload={preferLowQuality && isMobileTabletViewport ? 'metadata' : resolvedVideoPreload}
-                aria-hidden={decorative ? true : undefined}
-              >
-                {lightVideoSrc ? (
-                  <>
-                    <source src={lightVideoSrc} type="video/webm" />
-                    <source src={mp4FallbackSrc(lightVideoSrc)} type="video/mp4" />
-                  </>
-                ) : null}
-              </video>
-            </div>
-          </>
+          ) : null
         ) : (
           <>
             <picture className="rs-home-hero-image-stack__picture rs-home-hero-image-stack__picture--dark">

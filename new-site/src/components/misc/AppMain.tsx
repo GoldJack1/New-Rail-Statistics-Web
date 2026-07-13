@@ -10,7 +10,9 @@ import { usePathname } from 'next/navigation'
 export default function AppMain({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isStationsLayout =
-    pathname.startsWith('/admin/stations') || pathname === '/stations/map'
+    pathname === '/stations' ||
+    pathname.startsWith('/admin/stations') ||
+    pathname === '/stations/map'
 
   return (
     <main className={`main-content app-main${isStationsLayout ? ' app-main--stations-layout' : ''}`}>

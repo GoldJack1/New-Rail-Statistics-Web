@@ -2,7 +2,16 @@ import type { NextConfig } from "next";
 
 const emptyPolyfill = "./src/lib/empty-polyfill.js";
 
+const buildId =
+  process.env.NETLIFY_DEPLOY_ID ||
+  process.env.DEPLOY_ID ||
+  process.env.VERCEL_GIT_COMMIT_SHA ||
+  "local-dev";
+
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_BUILD_ID: buildId,
+  },
   experimental: {
     // Inline route CSS in HTML to remove render-blocking stylesheet chains on first paint.
     inlineCss: true,
@@ -23,7 +32,6 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
-      { source: "/stations", destination: "/admin/stations", permanent: false },
       { source: "/stations/edit", destination: "/admin/stations", permanent: false },
       {
         source: "/stations/pending-review",

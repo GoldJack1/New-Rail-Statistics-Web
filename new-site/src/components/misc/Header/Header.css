@@ -177,7 +177,8 @@
     align-items: center;
     gap: 0.35rem;
     flex-shrink: 0;
-    line-height: 1;
+    line-height: 1.25;
+    min-height: 1.25rem;
     color: var(--text-secondary);
     text-decoration: none;
     font-size: var(--text-sm);

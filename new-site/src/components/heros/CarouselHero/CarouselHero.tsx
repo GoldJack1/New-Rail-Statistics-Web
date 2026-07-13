@@ -363,18 +363,9 @@ const CarouselHero: React.FC<CarouselHeroProps> = ({
     return () => ro.disconnect()
   }, [maxCtaCountAcrossSlides, scheduleMeasure, slides, textStyle])
 
-  useLayoutEffect(() => {
-    measureTallestSlideText()
-    measureTallestCtaRow()
-  }, [
-    safeIndex,
-    measureTallestSlideText,
-    measureTallestCtaRow,
-    current.title,
-    current.ctas?.length,
-    textStyle,
-    titleHeadingLevel
-  ])
+  useEffect(() => {
+    scheduleMeasure()
+  }, [safeIndex, current.title, current.ctas?.length, textStyle, titleHeadingLevel, scheduleMeasure])
 
   const textBlockScrollLayoutKey = `${tallestSlideTextPx ?? ''}|${safeIndex}|${textStyle}|${titleHeadingLevel}`
   useLockedHeroTextBlockScroll(
@@ -604,7 +595,7 @@ const CarouselHero: React.FC<CarouselHeroProps> = ({
             <div key={i} className="rs-carousel-hero-image-strip__cell">
               <HeroImageStack
                 variant="carousel"
-                loading="eager"
+                loading={i === safeIndex ? 'eager' : 'lazy'}
                 sources={mergeCarouselHeroSlideSources(slide, defaultImageSources)}
                 videoSources={slide.videoSources}
                 mobileTabletMediaMode={slide.mobileTabletMediaMode ?? mobileTabletMediaMode}
@@ -624,7 +615,7 @@ const CarouselHero: React.FC<CarouselHeroProps> = ({
             <div key="strip-clone-0" className="rs-carousel-hero-image-strip__cell">
               <HeroImageStack
                 variant="carousel"
-                loading="eager"
+                loading={safeIndex === 0 ? 'eager' : 'lazy'}
                 sources={mergeCarouselHeroSlideSources(slides[0], defaultImageSources)}
                 videoSources={slides[0].videoSources}
                 mobileTabletMediaMode={slides[0].mobileTabletMediaMode ?? mobileTabletMediaMode}

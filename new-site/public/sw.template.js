@@ -4,8 +4,8 @@
  *
  * Generated from this template at build time — edit sw.template.js, not sw.js.
  */
-const CACHE_VERSION = 'rail-stats-static-local-1783945493891'
-const STATION_CACHE_VERSION = 'rail-stats-station-bundles-local-1783945493891'
+const CACHE_VERSION = 'rail-stats-static-__BUILD_ID__'
+const STATION_CACHE_VERSION = 'rail-stats-station-bundles-__BUILD_ID__'
 const PRECACHE_URLS = [
   '/manifest.json',
   '/favicon.svg',

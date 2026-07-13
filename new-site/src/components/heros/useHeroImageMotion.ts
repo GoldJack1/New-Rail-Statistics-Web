@@ -89,7 +89,7 @@ export function useHeroImageMotion(
       })
     }
 
-    computeAndSetScale()
+    schedule()
 
     window.addEventListener('scroll', schedule, { passive: true })
     const docScrollOpts: AddEventListenerOptions = { passive: true, capture: true }

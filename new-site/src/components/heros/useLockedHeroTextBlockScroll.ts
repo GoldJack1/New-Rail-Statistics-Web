@@ -1,4 +1,5 @@
 import { useLayoutEffect, type RefObject } from 'react'
+import { scheduleLayoutRead } from '@/utils/scheduleLayoutRead'
 
 /**
  * Locked hero copy shells use a fixed height; only enable `overflow-y: auto` when content actually overflows
@@ -25,7 +26,9 @@ export function useLockedHeroTextBlockScroll(
       el.classList.toggle(scrollClassName, needsScroll)
     }
     sync()
-    const ro = new ResizeObserver(sync)
+    const ro = new ResizeObserver(() => {
+      scheduleLayoutRead(sync)
+    })
     ro.observe(block)
     return () => {
       ro.disconnect()

@@ -97,6 +97,41 @@ let app: FirebaseApp | null = null
 let auth: Auth | null = null
 let db: Firestore | null = null
 let analytics: Analytics | null = null
+let appCheckReady = false
+
+/**
+ * Loads reCAPTCHA / App Check only when auth is needed (login, admin, stations).
+ * Keeps marketing pages free of ~400 KiB of unused third-party JS on initial load.
+ */
+export const ensureFirebaseAppCheck = async (): Promise<void> => {
+  if (appCheckReady || !app) return
+
+  const appCheckSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+  const appCheckExplicitlyDisabled = process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_DISABLED === 'true'
+  const isDev = process.env.NODE_ENV === 'development'
+  const canEnableAppCheck =
+    !isDev && !appCheckExplicitlyDisabled && !!appCheckSiteKey && appCheckSiteKey !== 'placeholder'
+
+  if (canEnableAppCheck) {
+    initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider(appCheckSiteKey),
+      isTokenAutoRefreshEnabled: true,
+    })
+    console.log('🔥 Firebase App Check enabled (reCAPTCHA v3)')
+  } else if (!isDev && appCheckExplicitlyDisabled) {
+    console.warn(
+      '🔥 NEXT_PUBLIC_FIREBASE_APP_CHECK_DISABLED=true — App Check is off in this build. ' +
+        'If Firebase still enforces App Check on Authentication, sign-in may fail until you use Monitoring (not enforce) or remove this flag and set a valid NEXT_PUBLIC_FIREBASE_APP_CHECK_RECAPTCHA_SITE_KEY.'
+    )
+  } else if (!isDev && (!appCheckSiteKey || appCheckSiteKey === 'placeholder')) {
+    console.warn(
+      '🔥 No NEXT_PUBLIC_FIREBASE_APP_CHECK_RECAPTCHA_SITE_KEY in this production build. ' +
+        'If App Check enforcement is ON for Authentication in Firebase Console, add the reCAPTCHA v3 site key from App Check → your web app, or turn enforcement to Monitoring.'
+    )
+  }
+
+  appCheckReady = true
+}
 
 export const initializeFirebase = async () => {
   if (app) return { app, auth, db, analytics }
@@ -105,32 +140,6 @@ export const initializeFirebase = async () => {
     validateFirebaseConfigForDev()
     app = initializeApp(firebaseConfig)
     auth = getAuth(app)
-
-    // App Check: optional in prod. If Firebase Console enforces App Check on *Authentication*, this build must
-    // initialize with the correct reCAPTCHA v3 site key or some Auth calls can fail.
-    const appCheckSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
-    const appCheckExplicitlyDisabled = process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_DISABLED === 'true'
-    const isDev = process.env.NODE_ENV === 'development'
-    const canEnableAppCheck =
-      !isDev && !appCheckExplicitlyDisabled && !!appCheckSiteKey && appCheckSiteKey !== 'placeholder'
-
-    if (canEnableAppCheck) {
-      initializeAppCheck(app, {
-        provider: new ReCaptchaV3Provider(appCheckSiteKey),
-        isTokenAutoRefreshEnabled: true
-      })
-      console.log('🔥 Firebase App Check enabled (reCAPTCHA v3)')
-    } else if (!isDev && appCheckExplicitlyDisabled) {
-      console.warn(
-        '🔥 NEXT_PUBLIC_FIREBASE_APP_CHECK_DISABLED=true — App Check is off in this build. ' +
-          'If Firebase still enforces App Check on Authentication, sign-in may fail until you use Monitoring (not enforce) or remove this flag and set a valid NEXT_PUBLIC_FIREBASE_APP_CHECK_RECAPTCHA_SITE_KEY.'
-      )
-    } else if (!isDev && (!appCheckSiteKey || appCheckSiteKey === 'placeholder')) {
-      console.warn(
-        '🔥 No NEXT_PUBLIC_FIREBASE_APP_CHECK_RECAPTCHA_SITE_KEY in this production build. ' +
-          'If App Check enforcement is ON for Authentication in Firebase Console, add the reCAPTCHA v3 site key from App Check → your web app, or turn enforcement to Monitoring.'
-      )
-    }
 
     db = getFirestore(app)
     
@@ -189,8 +198,10 @@ export const tryDevAutoSignInFromEnv = async (): Promise<void> => {
 }
 
 // Auth helpers (call after initializeFirebase)
-export const loginWithEmail = (email: string, password: string) =>
-  signInWithEmailAndPassword(auth!, email, password)
+export const loginWithEmail = async (email: string, password: string) => {
+  await ensureFirebaseAppCheck()
+  return signInWithEmailAndPassword(auth!, email, password)
+}
 export const logout = () => firebaseSignOut(auth!)
 
 /** Send Firebase email verification (required for verified-email gates in this app). */
@@ -199,6 +210,7 @@ export const sendUserEmailVerification = (user: User) => sendEmailVerification(u
 /** Sign in with Google. Uses redirect (no popup) so it works when popups are blocked. */
 export const loginWithGoogle = async () => {
   if (!auth) await initializeFirebase().then(() => {})
+  await ensureFirebaseAppCheck()
   const a = getFirebaseAuth()
   if (!a) throw new Error('Firebase Auth not initialized')
   const provider = new GoogleAuthProvider()
@@ -210,6 +222,7 @@ export const loginWithGoogle = async () => {
 /** Sign in with Apple. Uses redirect (no popup) so it works when popups are blocked. */
 export const loginWithApple = async () => {
   if (!auth) await initializeFirebase().then(() => {})
+  await ensureFirebaseAppCheck()
   const a = getFirebaseAuth()
   if (!a) throw new Error('Firebase Auth not initialized')
   const provider = new OAuthProvider('apple.com')
