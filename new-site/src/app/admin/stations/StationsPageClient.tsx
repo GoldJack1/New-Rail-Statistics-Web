@@ -143,7 +143,7 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
   const [isTableColumnsModalOpen, setIsTableColumnsModalOpen] = useState(false)
   const [viewportWidth, setViewportWidth] = useState(0)
   const [viewportMeasured, setViewportMeasured] = useState(false)
-  const [minSkeletonElapsed, setMinSkeletonElapsed] = useState(false)
+  const [minSkeletonElapsed, setMinSkeletonElapsed] = useState(() => minSkeletonMs <= 0)
   const [networkTabSkeletonActive, setNetworkTabSkeletonActive] = useState(false)
   const isInitialNetworkViewRef = useRef(true)
   const { collectionId, networkView, setNetworkView } = useStationCollection()
@@ -561,7 +561,7 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
     setCurrentPage(1)
   }, [debouncedSearchTerm, effectiveSelections, sortOption, collectionId, networkView, tableSort, effectiveDisplayMode, cardItemsPerPage])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setTableColumnSlots(getDefaultTableColumnSlots(getStationNetworkView()))
     setViewportWidth(window.innerWidth)
     setViewportMeasured(true)
@@ -605,9 +605,10 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
   }, [effectiveNetworkView])
 
   const showMainSkeleton =
-    !error && (loading || !minSkeletonElapsed || networkTabSkeletonActive)
+    !error && (loading || (minSkeletonMs > 0 && !minSkeletonElapsed) || networkTabSkeletonActive)
   const showMainError = Boolean(error)
   const showMainContent = !showMainSkeleton && !showMainError
+  const sidebarShowsLoadingChrome = showMainSkeleton && minSkeletonMs > 0
 
   return (
     <div
@@ -639,11 +640,11 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
       <div className="stations-content">
         {/* Sidebar */}
         <aside
-          className={['stations-sidebar', showMainSkeleton ? 'stations-sidebar--loading' : '']
+          className={['stations-sidebar', sidebarShowsLoadingChrome ? 'stations-sidebar--loading' : '']
             .filter(Boolean)
             .join(' ')}
-          aria-busy={showMainSkeleton}
-          aria-disabled={showMainSkeleton}
+          aria-busy={sidebarShowsLoadingChrome}
+          aria-disabled={sidebarShowsLoadingChrome}
         >
           <div className="stations-sidebar-panel">
           <SidebarDropdownSection

@@ -1,18 +1,10 @@
 'use client'
 
-import dynamic from 'next/dynamic'
-import StationsCardGridSkeleton from '@/components/cards/StationsCardGridSkeleton/StationsCardGridSkeleton'
+import StationsPageClient from '@/app/admin/stations/StationsPageClient'
+import '@/app/admin/stations/StationsPageRefactored.css'
 import type { NetworkViewFilter } from '@/constants/stationCollections'
 import type { StationAdminDisplayMode } from '@/utils/stationAdminDisplayModeStorage'
 import type { StationAdminSidebarSectionsState } from '@/utils/stationAdminSidebarSectionsStorage'
-
-const StationsPageClient = dynamic(() => import('@/app/admin/stations/StationsPageClient'), {
-  loading: () => (
-    <div className="stations-page" aria-busy="true" aria-label="Loading stations">
-      <StationsCardGridSkeleton count={24} />
-    </div>
-  ),
-})
 
 export interface StationsBrowseClientProps {
   initialDisplayMode: StationAdminDisplayMode
