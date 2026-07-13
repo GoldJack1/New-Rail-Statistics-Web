@@ -12,7 +12,7 @@
   publish = ".next"
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "22"
   NETLIFY = "true"
   # Env vars are pre-loaded in Netlify for Phase 2. NEXT_PUBLIC_* are intentionally
   # inlined into client bundles; DARWIN_* server keys belong in route handlers only.

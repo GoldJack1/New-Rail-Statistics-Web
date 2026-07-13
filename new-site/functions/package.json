@@ -3,10 +3,10 @@
   "private": true,
   "main": "lib/index.js",
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=lib/index.js --packages=external --alias:@=../src",
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node22 --format=cjs --outfile=lib/index.js --packages=external --alias:@=../src",
     "serve": "npm run build && firebase emulators:start --only functions",
     "deploy": "npm run build && firebase deploy --only functions:exportStationSnapshotsAfterPublish,functions:exportStationSnapshotsOnScheduledPublish,functions:exportStationSnapshotsManual"
   },
