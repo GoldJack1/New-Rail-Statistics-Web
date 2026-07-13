@@ -4,8 +4,6 @@ import { geologica, aronetiv, aronetivNormal } from './fonts'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { StationCollectionProvider } from '@/contexts/StationCollectionContext'
-import { StationsCacheProvider } from '@/contexts/StationsCacheContext'
-import { PendingStationChangesProvider } from '@/contexts/PendingStationChangesContext'
 import { PhosphorIconProvider } from '@/components/icons/PhosphorIconProvider'
 import Header from '@/components/misc/Header/Header'
 import Footer from '@/components/misc/Footer/Footer'
@@ -125,21 +123,17 @@ export default function RootLayout({
           <PhosphorIconProvider>
           <AuthProvider>
             <StationCollectionProvider>
-              <StationsCacheProvider>
-                <PendingStationChangesProvider>
-                  <ServiceWorkerRegistration />
-                  <div className="app">
-                    <Header />
-                    <AppMain>
-                      <Suspense fallback={null}>{children}</Suspense>
-                    </AppMain>
-                    <Suspense fallback={null}>
-                      <Footer />
-                      <FirebaseAnalytics />
-                    </Suspense>
-                  </div>
-                </PendingStationChangesProvider>
-              </StationsCacheProvider>
+              <ServiceWorkerRegistration />
+              <div className="app">
+                <Header />
+                <AppMain>
+                  <Suspense fallback={null}>{children}</Suspense>
+                </AppMain>
+                <Suspense fallback={null}>
+                  <Footer />
+                  <FirebaseAnalytics />
+                </Suspense>
+              </div>
             </StationCollectionProvider>
           </AuthProvider>
           </PhosphorIconProvider>

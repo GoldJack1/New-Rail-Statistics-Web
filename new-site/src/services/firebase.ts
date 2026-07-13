@@ -251,7 +251,6 @@ export {
 import { isLightRailCollection, LIGHT_RAIL_DOC_FIELDS } from '@/utils/lightRailStationFields'
 import {
   mapFirestoreDocToStation,
-  parseLocationString,
   type StationFetchDetailLevel,
 } from '@/services/stationFirestoreMapper'
 import { parseStationsOffThread } from '@/services/parseStationsOffThread'
@@ -259,130 +258,19 @@ import { parseStationsOffThread } from '@/services/parseStationsOffThread'
 export { parseLocationString, type StationFetchDetailLevel } from '@/services/stationFirestoreMapper'
 
 import {
-  DEFAULT_NETWORK_COLLECTION_ID,
-  DEFAULT_NETWORK_VIEW,
   NETWORK_COLLECTION_IDS,
-  SANDBOX_COLLECTION_ID,
-  STATION_COLLECTION_STORAGE_KEY,
-  STATION_NETWORK_STORAGE_KEY,
-  STATION_NETWORK_VIEW_STORAGE_KEY,
-  STATION_NETWORK_VIEW_COOKIE,
-  STATION_SANDBOX_STORAGE_KEY,
-  deriveCollectionId,
-  isNetworkCollection,
-  isNetworkViewFilter,
-  type NetworkCollectionId,
-  type NetworkViewFilter,
   type StationCollectionId,
 } from '@/constants/stationCollections'
+import { getStationCollectionName } from '@/utils/stationCollectionStorage'
 
-function syncDerivedCollectionStorage(): void {
-  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') return
-  try {
-    const collectionId = deriveCollectionId(getStationNetworkView(), getStationNetworkId())
-    window.localStorage.setItem(STATION_COLLECTION_STORAGE_KEY, collectionId)
-  } catch {
-    // ignore
-  }
-}
-
-function readLegacyCollectionStorage(): StationCollectionId | null {
-  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
-    return null
-  }
-  try {
-    const stored = window.localStorage.getItem(STATION_COLLECTION_STORAGE_KEY)
-    if (stored != null && isNetworkCollection(stored)) return stored
-    if (stored === 'stations2603') return 'stations_gbnr'
-  } catch {
-    // ignore
-  }
-  return null
-}
-
-/** Read persisted network tab selection. */
-export const getStationNetworkId = (): NetworkCollectionId => {
-  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
-    return DEFAULT_NETWORK_COLLECTION_ID
-  }
-  try {
-    const stored = window.localStorage.getItem(STATION_NETWORK_STORAGE_KEY)
-    if (stored != null && isNetworkCollection(stored)) return stored
-    const legacy = readLegacyCollectionStorage()
-    if (legacy && isNetworkCollection(legacy)) return legacy
-  } catch {
-    // ignore
-  }
-  return DEFAULT_NETWORK_COLLECTION_ID
-}
-
-/** Persist network tab selection. */
-export const setStationNetworkId = (id: NetworkCollectionId): void => {
-  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') return
-  try {
-    window.localStorage.setItem(STATION_NETWORK_STORAGE_KEY, id)
-    syncDerivedCollectionStorage()
-  } catch {
-    // ignore
-  }
-}
-
-function syncNetworkViewCookie(view: NetworkViewFilter): void {
-  if (typeof document === 'undefined') return
-  document.cookie = `${STATION_NETWORK_VIEW_COOKIE}=${view}; path=/; max-age=31536000; SameSite=Lax`
-}
-
-/** Read persisted network view filter (All or a single network). */
-export const getStationNetworkView = (): NetworkViewFilter => {
-  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
-    return DEFAULT_NETWORK_VIEW
-  }
-  try {
-    const stored = window.localStorage.getItem(STATION_NETWORK_VIEW_STORAGE_KEY)
-    if (stored != null && isNetworkViewFilter(stored)) {
-      syncNetworkViewCookie(stored)
-      return stored
-    }
-  } catch {
-    // ignore
-  }
-  return DEFAULT_NETWORK_VIEW
-}
-
-/** Persist network view filter and sync derived collection id. */
-export const setStationNetworkView = (view: NetworkViewFilter): void => {
-  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') return
-  try {
-    window.localStorage.setItem(STATION_NETWORK_VIEW_STORAGE_KEY, view)
-    if (view !== 'all') {
-      window.localStorage.setItem(STATION_NETWORK_STORAGE_KEY, view)
-    }
-    syncNetworkViewCookie(view)
-    syncDerivedCollectionStorage()
-  } catch {
-    // ignore
-  }
-}
-
-/** Read the currently active station collection. */
-export const getStationCollectionName = (): StationCollectionId => {
-  return deriveCollectionId(getStationNetworkView(), getStationNetworkId())
-}
-
-/** Persist derived collection id (keeps network keys in sync). */
-export const setStationCollectionName = (id: StationCollectionId): void => {
-  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
-    return
-  }
-  try {
-    window.localStorage.setItem(STATION_COLLECTION_STORAGE_KEY, id)
-    if (isNetworkCollection(id)) {
-      window.localStorage.setItem(STATION_NETWORK_STORAGE_KEY, id)
-    }
-  } catch {
-    // Ignore storage errors; selection just won't persist
-  }
-}
+export {
+  getStationCollectionName,
+  getStationNetworkId,
+  getStationNetworkView,
+  setStationCollectionName,
+  setStationNetworkId,
+  setStationNetworkView,
+} from '@/utils/stationCollectionStorage'
 
 // Fetch stations from Firebase (optional collection override so caller can pass dropdown value at click time)
 export const fetchStationsFromFirebase = async (

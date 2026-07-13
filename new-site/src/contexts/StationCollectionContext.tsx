@@ -18,7 +18,7 @@ import {
   getStationNetworkView,
   setStationNetworkView,
   setStationCollectionName,
-} from '@/services/firebase'
+} from '@/utils/stationCollectionStorage'
 
 interface StationCollectionContextValue {
   networkView: NetworkViewFilter

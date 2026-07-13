@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import './home.css'
 import CarouselHero, { type CarouselHeroSlide } from '@/components/heros/CarouselHero/CarouselHero'
 import HomeDownloadPlatformModal from '@/components/models/HomeDownloadPlatformModal/HomeDownloadPlatformModal'
@@ -388,154 +388,10 @@ const HOME_CAROUSEL_SUBSCRIPTION_SLIDES: CarouselHeroSlide[] = [
 ]
 
 export default function HomePage() {
-  const [platform, setPlatform] = useState<Platform>('desktop')
   const [downloadModalOpen, setDownloadModalOpen] = useState(false)
 
-  useEffect(() => {
-    setPlatform(detectPlatform())
-  }, [])
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof document === 'undefined') return
-
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
-    const isMobileTablet = window.matchMedia?.('(max-width: 1199px)').matches ?? false
-    const preferLowQuality = isMobileTablet
-    const pickQuality = (standard: string, mobileTablet?: string): string =>
-      preferLowQuality && mobileTablet ? mobileTablet : standard
-
-    const heroVideoOrder: string[][] = [
-      // Hero 1
-      isDark
-        ? [HOME_PRIMARY_HERO1_VIDEO_SOURCES.dark, HOME_PRIMARY_HERO1_VIDEO_SOURCES.light]
-        : [HOME_PRIMARY_HERO1_VIDEO_SOURCES.light, HOME_PRIMARY_HERO1_VIDEO_SOURCES.dark],
-      // Hero 2 (first carousel slide)
-      isDark
-        ? [
-            HOME_CAROUSEL_TOP_FEATURES_SLIDES[0].videoSources?.dark ?? '',
-            HOME_CAROUSEL_TOP_FEATURES_SLIDES[0].videoSources?.light ?? ''
-          ]
-        : [
-            HOME_CAROUSEL_TOP_FEATURES_SLIDES[0].videoSources?.light ?? '',
-            HOME_CAROUSEL_TOP_FEATURES_SLIDES[0].videoSources?.dark ?? ''
-          ],
-      // Hero 3
-      isDark
-        ? [HOME_STATIC_STATION_DETAIL.videoSources?.dark ?? '', HOME_STATIC_STATION_DETAIL.videoSources?.light ?? '']
-        : [HOME_STATIC_STATION_DETAIL.videoSources?.light ?? '', HOME_STATIC_STATION_DETAIL.videoSources?.dark ?? ''],
-      // Hero 4
-      isDark
-        ? [HOME_STATIC_FAVOURITES.videoSources?.dark ?? '', HOME_STATIC_FAVOURITES.videoSources?.light ?? '']
-        : [HOME_STATIC_FAVOURITES.videoSources?.light ?? '', HOME_STATIC_FAVOURITES.videoSources?.dark ?? ''],
-      // Hero 5 (first carousel slide)
-      isDark
-        ? [
-            HOME_CAROUSEL_SEARCH_AND_FILTER_SLIDES[0].videoSources?.dark ?? '',
-            HOME_CAROUSEL_SEARCH_AND_FILTER_SLIDES[0].videoSources?.light ?? ''
-          ]
-        : [
-            HOME_CAROUSEL_SEARCH_AND_FILTER_SLIDES[0].videoSources?.light ?? '',
-            HOME_CAROUSEL_SEARCH_AND_FILTER_SLIDES[0].videoSources?.dark ?? ''
-          ],
-      // Hero 6
-      isDark
-        ? [
-            HOME_STATIC_EASY_VISIT_TRACKING.videoSources?.dark ?? '',
-            HOME_STATIC_EASY_VISIT_TRACKING.videoSources?.light ?? ''
-          ]
-        : [
-            HOME_STATIC_EASY_VISIT_TRACKING.videoSources?.light ?? '',
-            HOME_STATIC_EASY_VISIT_TRACKING.videoSources?.dark ?? ''
-          ],
-      // Hero 7 (first carousel slide)
-      isDark
-        ? [
-            HOME_CAROUSEL_SUBSCRIPTION_SLIDES[0].videoSources?.dark ?? '',
-            HOME_CAROUSEL_SUBSCRIPTION_SLIDES[0].videoSources?.light ?? ''
-          ]
-        : [
-            HOME_CAROUSEL_SUBSCRIPTION_SLIDES[0].videoSources?.light ?? '',
-            HOME_CAROUSEL_SUBSCRIPTION_SLIDES[0].videoSources?.dark ?? ''
-          ],
-      // Hero 8
-      isDark
-        ? [HOME_PRIMARY_HERO8_VIDEO_SOURCES.dark, HOME_PRIMARY_HERO8_VIDEO_SOURCES.light]
-        : [HOME_PRIMARY_HERO8_VIDEO_SOURCES.light, HOME_PRIMARY_HERO8_VIDEO_SOURCES.dark],
-      // Hero 9
-      isDark
-        ? [
-            pickQuality(
-              HOME_PRIMARY_HERO9_VIDEO_SOURCES.dark,
-              HOME_PRIMARY_HERO9_VIDEO_SOURCES.darkMobileTablet
-            ),
-            pickQuality(
-              HOME_PRIMARY_HERO9_VIDEO_SOURCES.light,
-              HOME_PRIMARY_HERO9_VIDEO_SOURCES.lightMobileTablet
-            )
-          ]
-        : [
-            pickQuality(
-              HOME_PRIMARY_HERO9_VIDEO_SOURCES.light,
-              HOME_PRIMARY_HERO9_VIDEO_SOURCES.lightMobileTablet
-            ),
-            pickQuality(
-              HOME_PRIMARY_HERO9_VIDEO_SOURCES.dark,
-              HOME_PRIMARY_HERO9_VIDEO_SOURCES.darkMobileTablet
-            )
-          ]
-    ].map((group) => group.filter(Boolean))
-
-    let cancelled = false
-    const activeVideos: HTMLVideoElement[] = []
-
-    const preloadOne = (src: string): Promise<void> =>
-      new Promise((resolve) => {
-        const video = document.createElement('video')
-        activeVideos.push(video)
-        let settled = false
-        const done = () => {
-          if (settled) return
-          settled = true
-          video.onloadeddata = null
-          video.onerror = null
-          resolve()
-        }
-        video.preload = 'auto'
-        video.muted = true
-        video.playsInline = true
-        video.onloadeddata = done
-        video.onerror = done
-        video.src = src
-        video.load()
-        window.setTimeout(done, 9000)
-      })
-
-    const runQueue = async () => {
-      const uniqueByOrder = new Set<string>()
-      for (const group of heroVideoOrder) {
-        for (const src of group) {
-          if (!uniqueByOrder.has(src)) uniqueByOrder.add(src)
-        }
-      }
-      for (const src of uniqueByOrder) {
-        if (cancelled) return
-        await preloadOne(src)
-      }
-    }
-
-    void runQueue()
-
-    return () => {
-      cancelled = true
-      activeVideos.forEach((video) => {
-        video.pause()
-        video.removeAttribute('src')
-        video.load()
-      })
-    }
-  }, [])
-
   const onDownloadCta = useCallback(() => {
+    const platform = detectPlatform()
     if (platform === 'ios') {
       window.location.href = IOS_APP_URL
     } else if (platform === 'android') {
@@ -543,7 +399,7 @@ export default function HomePage() {
     } else {
       setDownloadModalOpen(true)
     }
-  }, [platform])
+  }, [])
 
   const homePrimaryHero1Slide = useMemo(
     (): CarouselHeroSlide => ({

@@ -43,7 +43,7 @@ import {
 } from '@/hooks/useStationAdminDisplayMode'
 import { useStationAdminSidebarSections } from '@/hooks/useStationAdminSidebarSections'
 import { useStationCollectionFieldSchema } from '@/hooks/useStationCollectionFieldSchema'
-import { getStationNetworkView } from '@/services/firebase'
+import { getStationNetworkView } from '@/utils/stationCollectionStorage'
 import {
   writeStationAdminDisplayMode,
   type StationAdminDisplayMode,

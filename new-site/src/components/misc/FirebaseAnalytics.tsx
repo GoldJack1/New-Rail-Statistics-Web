@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { initializeFirebase, getFirebaseAnalytics } from '@/services/firebase'
 
 /**
  * Logs SPA-style `page_view` events when the route changes (parity with implicit
@@ -19,11 +18,16 @@ export default function FirebaseAnalytics() {
     if (lastLogged.current === pagePath) return
     lastLogged.current = pagePath
 
-    void (async () => {
+    let cancelled = false
+    let idleHandle: number | undefined
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined
+
+    const logPageView = async () => {
       try {
-        await initializeFirebase()
-        const analytics = getFirebaseAnalytics()
-        if (!analytics) return
+        const firebase = await import('@/services/firebase')
+        await firebase.initializeFirebase()
+        const analytics = firebase.getFirebaseAnalytics()
+        if (!analytics || cancelled) return
         const { logEvent } = await import('firebase/analytics')
         logEvent(analytics, 'page_view', {
           page_path: pagePath,
@@ -32,7 +36,19 @@ export default function FirebaseAnalytics() {
       } catch {
         /* analytics blocked or unavailable */
       }
-    })()
+    }
+
+    if (typeof window.requestIdleCallback === 'function') {
+      idleHandle = window.requestIdleCallback(() => void logPageView(), { timeout: 5_000 })
+    } else {
+      timeoutHandle = setTimeout(() => void logPageView(), 2_000)
+    }
+
+    return () => {
+      cancelled = true
+      if (idleHandle !== undefined) window.cancelIdleCallback(idleHandle)
+      if (timeoutHandle !== undefined) clearTimeout(timeoutHandle)
+    }
   }, [pathname, searchParams])
 
   return null

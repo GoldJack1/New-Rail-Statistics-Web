@@ -1,18 +1,8 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import {
-  initializeFirebase,
-  getFirebaseAuth,
-  onAuthStateChanged,
-  handleRedirectResult,
-  tryDevAutoSignInFromEnv,
-  loginWithEmail,
-  loginWithGoogle as firebaseLoginWithGoogle,
-  loginWithApple as firebaseLoginWithApple,
-  logout as firebaseLogout,
-  type User,
-} from '@/services/firebase'
+import { usePathname } from 'next/navigation'
+import type { User } from 'firebase/auth'
 
 interface AuthContextValue {
   user: User | null
@@ -28,17 +18,24 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const pathname = usePathname() ?? '/'
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined
-    const init = async () => {
-      await initializeFirebase()
-      await tryDevAutoSignInFromEnv()
+    let cancelled = false
+    let idleHandle: number | undefined
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined
 
-      const auth = getFirebaseAuth()
+    const init = async () => {
+      const firebase = await import('@/services/firebase')
+      await firebase.initializeFirebase()
+      await firebase.tryDevAutoSignInFromEnv()
+      if (cancelled) return
+
+      const auth = firebase.getFirebaseAuth()
       if (auth) {
         try {
-          const result = await handleRedirectResult()
+          const result = await firebase.handleRedirectResult()
           if (result?.user) {
             setUser(result.user)
             setLoading(false)
@@ -46,7 +43,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (err) {
           console.warn('Redirect result error:', err)
         }
-        unsubscribe = onAuthStateChanged(auth, (u) => {
+        if (cancelled) return
+        unsubscribe = firebase.onAuthStateChanged(auth, (u) => {
           setUser(u)
           setLoading(false)
         })
@@ -54,26 +52,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoading(false)
       }
     }
-    void init()
-    return () => {
-      if (unsubscribe) unsubscribe()
+
+    const authIsRouteCritical =
+      pathname === '/log-in' ||
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/stations')
+
+    if (authIsRouteCritical) {
+      void init()
+    } else if (typeof window.requestIdleCallback === 'function') {
+      idleHandle = window.requestIdleCallback(() => void init(), { timeout: 3_000 })
+    } else {
+      timeoutHandle = setTimeout(() => void init(), 1_500)
     }
-  }, [])
+
+    return () => {
+      cancelled = true
+      if (unsubscribe) unsubscribe()
+      if (idleHandle !== undefined) window.cancelIdleCallback(idleHandle)
+      if (timeoutHandle !== undefined) clearTimeout(timeoutHandle)
+    }
+  }, [pathname])
 
   const login = useCallback(async (email: string, password: string) => {
-    await loginWithEmail(email, password)
+    const firebase = await import('@/services/firebase')
+    await firebase.initializeFirebase()
+    await firebase.loginWithEmail(email, password)
   }, [])
 
   const loginWithGoogle = useCallback(async () => {
-    await firebaseLoginWithGoogle()
+    const firebase = await import('@/services/firebase')
+    await firebase.loginWithGoogle()
   }, [])
 
   const loginWithApple = useCallback(async () => {
-    await firebaseLoginWithApple()
+    const firebase = await import('@/services/firebase')
+    await firebase.loginWithApple()
   }, [])
 
   const logout = useCallback(async () => {
-    await firebaseLogout()
+    const firebase = await import('@/services/firebase')
+    await firebase.initializeFirebase()
+    await firebase.logout()
   }, [])
 
   const value: AuthContextValue = { user, loading, login, loginWithGoogle, loginWithApple, logout }
