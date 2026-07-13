@@ -10,9 +10,18 @@ import {
 import type { ScheduledJobStationPayload } from '@/utils/scheduledJobPendingMatch'
 import { parseScheduledJobDocForDisplay } from '@/utils/scheduledJobDocParse'
 
-import type { ServerScheduledJobDetail } from '@/contexts/pendingStationChangesTypes'
-
-export type { ServerScheduledJobDetail }
+export interface ServerScheduledJobDetail {
+  jobId: string
+  runAtMs: number
+  status: string
+  errorMessage?: string
+  /** Stations included in this server job (from Firestore). */
+  stationIds: string[]
+  /** Names captured in the job payload when available. */
+  stationLabels: Record<string, string>
+  /** Raw scheduled payload keyed by station id (used for merge/cleanup decisions). */
+  scheduledChanges: Record<string, ScheduledJobStationPayload> | null
+}
 
 interface ScheduledServerJobFirestoreSyncProps {
   jobId: string | null

@@ -6,7 +6,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const publicRoutes = [
     '',
     '/home',
-    '/stations',
     '/stations/map',
     '/migration',
     '/departures',

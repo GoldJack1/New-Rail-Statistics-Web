@@ -61,6 +61,11 @@ export interface UseStationsMapReturn {
 
 export const useStations = (): UseStationsReturn => {
   const { networkView } = useStationCollection()
+  const [hydrated, setHydrated] = useState(false)
+
+  useEffect(() => {
+    setHydrated(true)
+  }, [])
 
   const revision = useSyncExternalStore(
     subscribeStationsData,
@@ -69,6 +74,7 @@ export const useStations = (): UseStationsReturn => {
   )
 
   const snapshot = useMemo(() => {
+    if (!hydrated) return SERVER_STATION_SNAPSHOT
     const stations = getMergedNetworkStationsForDisplay()
     const loading =
       isStationsInitialSyncPending() ||
@@ -76,7 +82,7 @@ export const useStations = (): UseStationsReturn => {
     const isRefreshing = isAnyNetworkCollectionRefreshing()
     const error = stations.length === 0 ? buildStationsError() : null
     return { stations, loading, isRefreshing, error }
-  }, [revision])
+  }, [hydrated, revision])
 
   const deferredStations = useDeferredValue(snapshot.stations)
   const stats = useMemo(() => calculateStats(deferredStations), [deferredStations])

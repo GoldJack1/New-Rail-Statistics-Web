@@ -49,7 +49,7 @@ const Header: React.FC = () => {
 
   const isHomeActive = pathname === '/' || pathname === '/home'
   const isMigrationActive = pathname === '/migration'
-  const isStationsListActive = pathname === '/stations' || pathname.startsWith('/admin/stations')
+  const isStationsActive = pathname.startsWith('/admin/stations')
   const isMapActive = pathname === '/stations/map'
   const isMessagesActive = pathname.startsWith('/admin/messages')
 
@@ -58,7 +58,7 @@ const Header: React.FC = () => {
   const navItems = [
     { to: '/' as const, label: 'Home', active: isHomeActive, show: true, showBeta: false },
     { to: '/migration' as const, label: 'Migration', active: isMigrationActive, show: true, showBeta: false },
-    { to: '/stations' as const, label: 'Stations', active: isStationsListActive && !isMapActive, show: true, showBeta: false },
+    { to: '/admin/stations' as const, label: 'Stations', active: isStationsActive && !isMapActive, show: Boolean(user), showBeta: false },
     { to: '/stations/map' as const, label: 'Map', active: isMapActive, show: true, showBeta: true },
     { to: '/admin/messages' as const, label: 'Messages', active: isMessagesActive, show: Boolean(user), showBeta: false },
   ].filter((item) => item.show)

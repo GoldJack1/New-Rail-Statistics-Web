@@ -33,6 +33,7 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      { source: "/stations", destination: "/admin/stations", permanent: false },
       { source: "/stations/edit", destination: "/admin/stations", permanent: false },
       {
         source: "/stations/pending-review",

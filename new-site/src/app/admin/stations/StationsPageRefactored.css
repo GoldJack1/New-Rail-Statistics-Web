@@ -484,7 +484,7 @@
     width: 100%;
     max-width: 100%;
     min-width: 0;
-    min-height: min(60dvh, 720px);
+    min-height: auto;
     display: flex;
     flex-direction: column;
     overflow-x: visible;

@@ -1,19 +1,7 @@
 'use client'
 
-import dynamic from 'next/dynamic'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-
-const StationLocationMapView = dynamic(() => import('./StationLocationMapView'), {
-  ssr: false,
-  loading: () => (
-    <div
-      className="station-location-map station-location-map--loading"
-      style={{ minHeight: 240 }}
-      aria-busy="true"
-      aria-label="Loading map"
-    />
-  ),
-})
+import StationLocationMapView from './StationLocationMapView'
 
 interface StationResponsiveLocationMapProps {
   latitude: number

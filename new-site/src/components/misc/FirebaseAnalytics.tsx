@@ -39,9 +39,7 @@ export default function FirebaseAnalytics() {
     }
 
     const isMarketingHome = pathname === '/' || pathname === '/home'
-    const isPublicStationsBrowse =
-      pathname === '/stations' || pathname === '/stations/map'
-    const deferUntilScroll = isMarketingHome || isPublicStationsBrowse
+    const deferUntilScroll = isMarketingHome
     const scheduleLog = () => {
       if (typeof window.requestIdleCallback === 'function') {
         idleHandle = window.requestIdleCallback(() => void logPageView(), { timeout: 5_000 })

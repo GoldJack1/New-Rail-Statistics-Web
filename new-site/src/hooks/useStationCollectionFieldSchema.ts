@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import type { StationCollectionId } from '../constants/stationCollections'
 import { isNetworkCollection, isStationCollectionId, NETWORK_STNAREA_DEFAULTS } from '../constants/stationCollections'
 import type { Station } from '../types'
+import { fetchStationCollectionSampleDocs } from '../services/firebase'
 import {
   EMPTY_STATION_COLLECTION_FIELD_SCHEMA,
   inferStationCollectionFieldSchema,
@@ -31,8 +32,7 @@ export function useStationCollectionFieldSchema(collectionId: StationCollectionI
     setLoading(true)
 
     const runFetch = () => {
-      void import('../services/firebase')
-        .then(({ fetchStationCollectionSampleDocs }) => fetchStationCollectionSampleDocs(collectionId))
+      void fetchStationCollectionSampleDocs(collectionId)
         .then((docs) => {
           if (!cancelled) {
             setFieldSchema(inferStationCollectionFieldSchema(docs, collectionId))
