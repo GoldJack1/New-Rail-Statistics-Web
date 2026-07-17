@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
+import { isPublicStationsBrowsePath } from '@/utils/publicStationsPaths'
 
 function isLabAutomationBrowser(): boolean {
   if (typeof navigator === 'undefined') return false
@@ -14,8 +15,8 @@ function isLabAutomationBrowser(): boolean {
  * Logs SPA-style `page_view` events when the route changes (parity with implicit
  * Firebase Analytics behaviour on the old React Router app).
  *
- * Public `/stations` never auto-loads gtag — only after a real user gesture — so
- * mobile PSI/Lighthouse runs do not pull ~145 KiB of unused analytics onto LCP.
+ * Public stations list + detail never auto-load gtag — only after a real user gesture —
+ * so mobile PSI/Lighthouse runs do not pull analytics onto LCP.
  */
 export default function FirebaseAnalytics() {
   const pathname = usePathname()
@@ -51,13 +52,13 @@ export default function FirebaseAnalytics() {
     }
 
     const isMarketingHome = pathname === '/' || pathname === '/home'
-    const isPublicStationsList = pathname === '/stations'
+    const isPublicStationsBrowse = isPublicStationsBrowsePath(pathname)
     const isHeavyAppRoute =
       pathname.startsWith('/admin') ||
-      (pathname.startsWith('/stations') && !isPublicStationsList) ||
+      (pathname.startsWith('/stations') && !isPublicStationsBrowse) ||
       pathname.startsWith('/departures')
     const deferUntilScroll = isMarketingHome
-    const deferUntilInteraction = isPublicStationsList
+    const deferUntilInteraction = isPublicStationsBrowse
     const scheduleLog = () => {
       if (typeof window.requestIdleCallback === 'function') {
         idleHandle = window.requestIdleCallback(() => void logPageView(), {
@@ -72,7 +73,7 @@ export default function FirebaseAnalytics() {
     let onFirstInteraction: (() => void) | undefined
 
     if (deferUntilInteraction) {
-      // Interaction-only: no timer fallback (mobile PSI runs long enough to hit 30s).
+      // Interaction-only: no timer fallback (mobile PSI runs long enough to hit short timers).
       onFirstInteraction = () => {
         if (onFirstInteraction) {
           window.removeEventListener('pointerdown', onFirstInteraction, { capture: true })

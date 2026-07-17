@@ -1,16 +1,12 @@
 'use client'
 
-import { useRouter, usePathname, useSearchParams, useParams } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
-import { useStations } from '@/hooks/useStations'
-import { useStationCollectionFieldSchema } from '@/hooks/useStationCollectionFieldSchema'
-import type { SandboxStationDoc, Station } from '@/types'
-import { fetchStationDocumentById } from '@/services/firebase'
+import { useStationDetailsRoute } from '@/hooks/useStationDetailsRoute'
+import type { SandboxStationDoc } from '@/types'
 import {
   buildStationPath,
-  findStationByRoute,
-  getCollectionIdFromNetworkUrlSlug,
   getStationNetworkCollectionId,
 } from '@/utils/stationAreaSlug'
 import { isStationCollectionId } from '@/constants/stationCollections'
@@ -23,19 +19,19 @@ import {
   mergeStationWithPendingUpdate,
 } from '@/utils/applyPendingChangesForDisplay'
 import {
+  EMPTY_STATION_COLLECTION_FIELD_SCHEMA,
   getVisibleStationDetailsTabs,
+  inferStationCollectionFieldSchema,
   stationDetailsShowsAdditionalTab,
   type StationDetailsTab,
 } from '@/utils/stationCollectionFieldSchema'
-import { StationDetailsView } from '@/components/models'
-import { StationDetailsEditForm } from '@/components/models'
+import StationDetailsView from '@/components/models/StationDetails/StationDetailsView'
 import { BUTWideButton } from '@/components/buttons'
 import { BUTCircleButton } from '@/components/buttons'
 import { BackIcon } from '@/components/icons'
-import { PageTopHeader } from '@/components/misc'
+import PageTopHeader from '@/components/misc/PageTopHeader/PageTopHeader'
 import '@/components/models/StationModal/StationModal.css'
-import '@/components/models/StationEditModal/StationEditModal.css'
-import { PencilSimple, Eye } from '@phosphor-icons/react'
+import { PencilSimple } from '@phosphor-icons/react'
 import { paramAsString } from '@/utils/nextParams'
 import { setStationDetailsNavigationState, readStationDetailsNavigationState } from '@/utils/clientNavigationState'
 import './StationDetailsPage.css'
@@ -49,11 +45,7 @@ function getStationDetailsReturnPath(state: unknown): string {
 }
 
 function StationDetailsPage() {
-  const mode = 'view' as 'view' | 'edit'
   const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const location = { pathname, search: searchParams.toString() ? `?${searchParams}` : '', state: null as unknown }
   const backPath = getStationDetailsReturnPath(readStationDetailsNavigationState())
   const navigationState = readStationDetailsNavigationState()
   const params = useParams()
@@ -62,20 +54,13 @@ function StationDetailsPage() {
   const { collectionId } = useStationCollection()
   const { user, loading: authLoading } = useAuth()
   const canEdit = !authLoading && Boolean(user)
-  const { stations, loading, error } = useStations()
+  const { station, loading, error, routeCollectionId } = useStationDetailsRoute(network, stationSlug)
   const [additionalDoc, setAdditionalDoc] = useState<SandboxStationDoc | null>(null)
   const [additionalLoading, setAdditionalLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<StationDetailsTab>('details')
-  const [isMobile, setIsMobile] = useState(false)
-  const [editFormHasUnsavedChanges, setEditFormHasUnsavedChanges] = useState(false)
   const [maxTabContentHeight, setMaxTabContentHeight] = useState(0)
   const visibleBodyRef = useRef<HTMLDivElement | null>(null)
   const tabMeasureRefs = useRef<Partial<Record<StationDetailsTab, HTMLDivElement | null>>>({})
-
-  const station: Station | null = useMemo(() => {
-    if (!network || !stationSlug) return null
-    return findStationByRoute(stations, network, stationSlug, collectionId)
-  }, [stations, network, stationSlug, collectionId])
 
   const { pendingChanges } = usePendingStationChanges()
   const pendingEntry = station ? pendingChanges[station.id] : undefined
@@ -93,23 +78,28 @@ function StationDetailsPage() {
   )
   const showPendingOverlay = canEdit && Boolean(pendingEntry) && pendingFieldChanges.length > 0
 
-  const routeCollectionId = getCollectionIdFromNetworkUrlSlug(network)
   const schemaCollectionId = useMemo(() => {
-    if (!station) return null
-    const resolved = getStationNetworkCollectionId(station, routeCollectionId ?? collectionId)
-    return resolved && isStationCollectionId(resolved) ? resolved : null
+    if (station) {
+      const resolved = getStationNetworkCollectionId(station, routeCollectionId ?? collectionId)
+      return resolved && isStationCollectionId(resolved) ? resolved : null
+    }
+    return routeCollectionId && isStationCollectionId(routeCollectionId) ? routeCollectionId : null
   }, [station, routeCollectionId, collectionId])
-  const { fieldSchema, loading: schemaLoading } = useStationCollectionFieldSchema(schemaCollectionId)
+  // Catalog defaults only — no Firestore schema sampling on public detail.
+  const fieldSchema = useMemo(
+    () =>
+      schemaCollectionId
+        ? inferStationCollectionFieldSchema([], schemaCollectionId)
+        : EMPTY_STATION_COLLECTION_FIELD_SCHEMA,
+    [schemaCollectionId]
+  )
   const showAdditionalTab = stationDetailsShowsAdditionalTab(fieldSchema)
   const visibleTabs = useMemo(() => getVisibleStationDetailsTabs(fieldSchema), [fieldSchema])
-
-  useEffect(() => {
-    const mql = window.matchMedia('(max-width: 768px)')
-    const update = () => setIsMobile(mql.matches)
-    update()
-    mql.addEventListener('change', update)
-    return () => mql.removeEventListener('change', update)
-  }, [])
+  // Measuring the location tab mounts Leaflet/ORM tiles — skip it for height measurement.
+  const measureTabs = useMemo(
+    () => visibleTabs.filter((tab) => tab !== 'location'),
+    [visibleTabs]
+  )
 
   useEffect(() => {
     if (activeTab === 'additional' && !showAdditionalTab) setActiveTab('details')
@@ -128,21 +118,21 @@ function StationDetailsPage() {
 
   useEffect(() => {
     if (!station) return
-    document.title =
-      mode === 'edit'
-        ? `Edit ${station.stationName || 'Station'} | Rail Statistics`
-        : `${station.stationName || 'Station'} | Rail Statistics`
-  }, [mode, station])
+    document.title = `${station.stationName || 'Station'} | Rail Statistics`
+  }, [station])
 
   useEffect(() => {
-    if (!station) return
+    // Defer Firestore additional-doc fetch until the Additional tab is opened.
+    if (!station || activeTab !== 'additional' || !showAdditionalTab) return
     let cancelled = false
     setAdditionalLoading(true)
-    setAdditionalDoc(null)
-    fetchStationDocumentById(
-      station.id,
-      getStationNetworkCollectionId(station, routeCollectionId ?? collectionId) ?? collectionId
-    )
+    void import('@/services/firebase')
+      .then(({ fetchStationDocumentById }) =>
+        fetchStationDocumentById(
+          station.id,
+          getStationNetworkCollectionId(station, routeCollectionId ?? collectionId) ?? collectionId
+        )
+      )
       .then((data) => {
         if (cancelled) return
         setAdditionalDoc((data as SandboxStationDoc) ?? null)
@@ -153,13 +143,18 @@ function StationDetailsPage() {
     return () => {
       cancelled = true
     }
-  }, [station?.id, station?.sourceCollectionId, collectionId, routeCollectionId])
+  }, [
+    station?.id,
+    station?.sourceCollectionId,
+    collectionId,
+    routeCollectionId,
+    activeTab,
+    showAdditionalTab,
+  ])
 
   useLayoutEffect(() => {
-    if (mode !== 'view') return
-
     const measureHeights = () => {
-      const heights = visibleTabs
+      const heights = measureTabs
         .map((tab) => {
           const pane = tabMeasureRefs.current[tab]
           if (!pane) return 0
@@ -182,20 +177,13 @@ function StationDetailsPage() {
       window.cancelAnimationFrame(frameB)
       window.removeEventListener('resize', measureHeights)
     }
-  }, [mode, station?.id, additionalDoc, additionalLoading, visibleTabs])
+  }, [station?.id, additionalDoc, additionalLoading, measureTabs])
 
   useEffect(() => {
     setMaxTabContentHeight(0)
-  }, [station?.id, mode])
+  }, [station?.id])
 
-  useEffect(() => {
-    const visibleMap = document.querySelector('.station-details-visible-body .location-map-preview-osm') as HTMLElement | null
-    const measureMap = document.querySelector('.station-details-measure-layer .location-map-preview-osm') as HTMLElement | null
-    const visibleRect = visibleMap?.getBoundingClientRect()
-    const measureRect = measureMap?.getBoundingClientRect()
-  }, [mode, activeTab, isMobile, maxTabContentHeight, station?.id])
-
-  if (loading || schemaLoading) {
+  if (loading) {
     return (
       <div className="container">
         <div className="loading-state">
@@ -206,7 +194,7 @@ function StationDetailsPage() {
     )
   }
 
-  if (error) {
+  if (error && !station) {
     return (
       <div className="container">
         <div className="error-state">
@@ -234,9 +222,8 @@ function StationDetailsPage() {
   return (
     <div className="container container--station-details">
       <PageTopHeader
-        title={`${mode === 'edit' ? 'Edit station' : 'Station details'}: ${(displayStation ?? station).stationName || 'Station'}`}
+        title={`Station details: ${(displayStation ?? station).stationName || 'Station'}`}
         subtitle={`${(displayStation ?? station).crsCode || 'No CRS'} · ID: ${station.id}${showPendingOverlay ? ' · Unpublished changes' : ''}`}
-        actionContent={canEdit && !isMobile && mode === 'edit' ? <div id="station-details-header-actions" className="station-details-header-actions-slot" /> : undefined}
       />
       <div className="station-details-page">
         <div className="station-details-layout">
@@ -246,37 +233,22 @@ function StationDetailsPage() {
                 type="button"
                 width="hug"
                 icon={<BackIcon />}
-                onClick={() => {
-                  if (mode === 'edit' && editFormHasUnsavedChanges && !window.confirm('Are you sure you want to go back? All data will not be saved.')) return
-                  router.push(backPath)
-                }}
+                onClick={() => router.push(backPath)}
               >
                 Back
               </BUTWideButton>
               {canEdit && (
                 <>
                   <div className="station-details-sidebar-actions-spacer" aria-hidden="true" />
-                  {mode === 'view' ? (
-                    <BUTCircleButton
-                      type="button"
-                      ariaLabel="Edit station"
-                      onClick={() => {
-                        setStationDetailsNavigationState(navigationState)
-                        router.push(`/admin/stations/${buildStationPath(station, collectionId)}/edit`)
-                      }}
-                      icon={<PencilSimple size={16} aria-hidden />}
-                    />
-                  ) : (
-                    <BUTCircleButton
-                      type="button"
-                      ariaLabel="View station"
-                      onClick={() => {
-                        setStationDetailsNavigationState(navigationState)
-                        router.push(`/stations/${buildStationPath(station, collectionId)}`)
-                      }}
-                      icon={<Eye size={16} aria-hidden />}
-                    />
-                  )}
+                  <BUTCircleButton
+                    type="button"
+                    ariaLabel="Edit station"
+                    onClick={() => {
+                      setStationDetailsNavigationState(navigationState)
+                      router.push(`/admin/stations/${buildStationPath(station, collectionId)}/edit`)
+                    }}
+                    icon={<PencilSimple size={16} aria-hidden />}
+                  />
                 </>
               )}
             </div>
@@ -369,56 +341,43 @@ function StationDetailsPage() {
           </aside>
 
           <main className="station-details-main">
-            <section className={`station-details-card modal-content ${mode === 'edit' ? 'modal-content-edit' : ''}`}>
-              {canEdit && mode === 'edit' ? (
-                <StationDetailsEditForm
-                  station={station}
-                  pendingEntry={pendingEntry}
-                  onCancel={() => router.push(backPath)}
-                  onSaved={() => router.push(backPath)}
+            <section className="station-details-card modal-content">
+              <div
+                className="modal-body station-details-visible-body"
+                ref={visibleBodyRef}
+                style={maxTabContentHeight > 0 ? { minHeight: `${maxTabContentHeight}px` } : undefined}
+              >
+                <StationDetailsView
+                  station={displayStation ?? station}
+                  additionalDoc={displayAdditionalDoc}
+                  additionalLoading={additionalLoading}
                   activeTab={activeTab}
                   fieldSchema={fieldSchema}
-                  actionsPortalId={isMobile ? 'station-details-sidebar-actions' : 'station-details-header-actions'}
-                  onUnsavedChangesChange={setEditFormHasUnsavedChanges}
+                  pendingFieldChanges={showPendingOverlay ? pendingFieldChanges : undefined}
+                  isPendingNew={pendingEntry?.isNew === true}
                 />
-              ) : (
-                <div
-                  className="modal-body station-details-visible-body"
-                  ref={visibleBodyRef}
-                  style={maxTabContentHeight > 0 ? { minHeight: `${maxTabContentHeight}px` } : undefined}
-                >
-                  <StationDetailsView
-                    station={displayStation ?? station}
-                    additionalDoc={displayAdditionalDoc}
-                    additionalLoading={additionalLoading}
-                    activeTab={activeTab}
-                    fieldSchema={fieldSchema}
-                    pendingFieldChanges={showPendingOverlay ? pendingFieldChanges : undefined}
-                    isPendingNew={pendingEntry?.isNew === true}
-                  />
-                  <div className="station-details-measure-layer" aria-hidden="true">
-                    {visibleTabs.map((tab) => (
-                      <div
-                        key={tab}
-                        className="station-details-measure-pane"
-                        ref={(el) => {
-                          tabMeasureRefs.current[tab] = el
-                        }}
-                      >
-                        <StationDetailsView
-                          station={displayStation ?? station}
-                          additionalDoc={displayAdditionalDoc}
-                          additionalLoading={additionalLoading}
-                          activeTab={tab}
-                          fieldSchema={fieldSchema}
-                          pendingFieldChanges={showPendingOverlay ? pendingFieldChanges : undefined}
-                          isPendingNew={pendingEntry?.isNew === true}
-                        />
-                      </div>
-                    ))}
-                  </div>
+                <div className="station-details-measure-layer" aria-hidden="true">
+                  {measureTabs.map((tab) => (
+                    <div
+                      key={tab}
+                      className="station-details-measure-pane"
+                      ref={(el) => {
+                        tabMeasureRefs.current[tab] = el
+                      }}
+                    >
+                      <StationDetailsView
+                        station={displayStation ?? station}
+                        additionalDoc={displayAdditionalDoc}
+                        additionalLoading={additionalLoading}
+                        activeTab={tab}
+                        fieldSchema={fieldSchema}
+                        pendingFieldChanges={showPendingOverlay ? pendingFieldChanges : undefined}
+                        isPendingNew={pendingEntry?.isNew === true}
+                      />
+                    </div>
+                  ))}
                 </div>
-              )}
+              </div>
             </section>
           </main>
         </div>

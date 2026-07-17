@@ -3,14 +3,12 @@
 import { useRouter, usePathname, useSearchParams, useParams } from 'next/navigation'
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
-import { useStations } from '@/hooks/useStations'
+import { useStationDetailsRoute } from '@/hooks/useStationDetailsRoute'
 import { useStationCollectionFieldSchema } from '@/hooks/useStationCollectionFieldSchema'
-import type { SandboxStationDoc, Station } from '@/types'
+import type { SandboxStationDoc } from '@/types'
 import { fetchStationDocumentById } from '@/services/firebase'
 import {
   buildStationPath,
-  findStationByRoute,
-  getCollectionIdFromNetworkUrlSlug,
   getStationNetworkCollectionId,
 } from '@/utils/stationAreaSlug'
 import { isStationCollectionId } from '@/constants/stationCollections'
@@ -23,7 +21,9 @@ import {
   mergeStationWithPendingUpdate,
 } from '@/utils/applyPendingChangesForDisplay'
 import {
+  EMPTY_STATION_COLLECTION_FIELD_SCHEMA,
   getVisibleStationDetailsTabs,
+  inferStationCollectionFieldSchema,
   stationDetailsShowsAdditionalTab,
   type StationDetailsTab,
 } from '@/utils/stationCollectionFieldSchema'
@@ -62,7 +62,7 @@ function AdminStationEditPage() {
   const { collectionId } = useStationCollection()
   const { user, loading: authLoading } = useAuth()
   const canEdit = !authLoading && Boolean(user)
-  const { stations, loading, error } = useStations()
+  const { station, loading, error, routeCollectionId } = useStationDetailsRoute(network, stationSlug)
   const [additionalDoc, setAdditionalDoc] = useState<SandboxStationDoc | null>(null)
   const [additionalLoading, setAdditionalLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<StationDetailsTab>('details')
@@ -71,11 +71,6 @@ function AdminStationEditPage() {
   const [maxTabContentHeight, setMaxTabContentHeight] = useState(0)
   const visibleBodyRef = useRef<HTMLDivElement | null>(null)
   const tabMeasureRefs = useRef<Partial<Record<StationDetailsTab, HTMLDivElement | null>>>({})
-
-  const station: Station | null = useMemo(() => {
-    if (!network || !stationSlug) return null
-    return findStationByRoute(stations, network, stationSlug, collectionId)
-  }, [stations, network, stationSlug, collectionId])
 
   const { pendingChanges } = usePendingStationChanges()
   const pendingEntry = station ? pendingChanges[station.id] : undefined
@@ -93,13 +88,24 @@ function AdminStationEditPage() {
   )
   const showPendingOverlay = canEdit && Boolean(pendingEntry) && pendingFieldChanges.length > 0
 
-  const routeCollectionId = getCollectionIdFromNetworkUrlSlug(network)
   const schemaCollectionId = useMemo(() => {
-    if (!station) return null
-    const resolved = getStationNetworkCollectionId(station, routeCollectionId ?? collectionId)
-    return resolved && isStationCollectionId(resolved) ? resolved : null
+    if (station) {
+      const resolved = getStationNetworkCollectionId(station, routeCollectionId ?? collectionId)
+      return resolved && isStationCollectionId(resolved) ? resolved : null
+    }
+    return routeCollectionId && isStationCollectionId(routeCollectionId) ? routeCollectionId : null
   }, [station, routeCollectionId, collectionId])
-  const { fieldSchema, loading: schemaLoading } = useStationCollectionFieldSchema(schemaCollectionId)
+  const catalogFieldSchema = useMemo(
+    () =>
+      schemaCollectionId
+        ? inferStationCollectionFieldSchema([], schemaCollectionId)
+        : EMPTY_STATION_COLLECTION_FIELD_SCHEMA,
+    [schemaCollectionId]
+  )
+  const { fieldSchema: fetchedFieldSchema, loading: schemaLoading } =
+    useStationCollectionFieldSchema(schemaCollectionId)
+  // Paint immediately with catalog defaults; refine when Firestore sample arrives.
+  const fieldSchema = schemaLoading ? catalogFieldSchema : fetchedFieldSchema
   const showAdditionalTab = stationDetailsShowsAdditionalTab(fieldSchema)
   const visibleTabs = useMemo(() => getVisibleStationDetailsTabs(fieldSchema), [fieldSchema])
 
@@ -195,7 +201,7 @@ function AdminStationEditPage() {
     const measureRect = measureMap?.getBoundingClientRect()
   }, [mode, activeTab, isMobile, maxTabContentHeight, station?.id])
 
-  if (loading || schemaLoading) {
+  if (loading) {
     return (
       <div className="container">
         <div className="loading-state">
@@ -206,7 +212,7 @@ function AdminStationEditPage() {
     )
   }
 
-  if (error) {
+  if (error && !station) {
     return (
       <div className="container">
         <div className="error-state">

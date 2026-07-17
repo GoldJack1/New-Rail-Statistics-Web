@@ -1,7 +1,7 @@
 'use client'
 
 /* eslint-disable react-refresh/only-export-components */
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useStationCollection } from '@/contexts/StationCollectionContext'
 import {
@@ -12,17 +12,47 @@ import {
   invalidateStationsCache,
   loadAllNetworkStationsProgressive,
 } from '@/services/stationsDataService'
-import { NETWORK_COLLECTION_IDS } from '@/constants/stationCollections'
+import {
+  NETWORK_COLLECTION_IDS,
+  isNetworkCollection,
+  type NetworkViewFilter,
+} from '@/constants/stationCollections'
 import {
   readDeviceCapabilityFromBrowser,
   resolveDevicePerformanceTier,
 } from '@/utils/deviceCapability'
+import { getCollectionIdFromNetworkUrlSlug } from '@/utils/stationAreaSlug'
+import {
+  isPublicStationDetailPath,
+  isPublicStationsListPath,
+} from '@/utils/publicStationsPaths'
+
+/** Prefer the network in the URL so detail pages don't wait on the wrong collection. */
+function getPriorityNetworkFromPath(pathname: string): NetworkViewFilter | null {
+  const parts = pathname.split('/').filter(Boolean)
+  let collectionId = null as ReturnType<typeof getCollectionIdFromNetworkUrlSlug>
+  if (parts[0] === 'stations' && parts[1] && parts[1] !== 'map') {
+    collectionId = getCollectionIdFromNetworkUrlSlug(parts[1])
+  } else if (
+    parts[0] === 'admin' &&
+    parts[1] === 'stations' &&
+    parts[2] &&
+    parts[2] !== 'new' &&
+    parts[2] !== 'pending-review'
+  ) {
+    collectionId = getCollectionIdFromNetworkUrlSlug(parts[2])
+  }
+  return collectionId && isNetworkCollection(collectionId) ? collectionId : null
+}
 
 export const StationsCacheProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { networkView } = useStationCollection()
   const pathname = usePathname() ?? '/'
   const [isLiteDataMode, setIsLiteDataMode] = useState(false)
-  const isPublicStationsList = pathname === '/stations'
+  const isPublicStationsList = isPublicStationsListPath(pathname)
+  const isPublicStationDetail = isPublicStationDetailPath(pathname)
+  const urlPriorityNetwork = useMemo(() => getPriorityNetworkFromPath(pathname), [pathname])
+  const bootstrapNetworkView: NetworkViewFilter = urlPriorityNetwork ?? networkView
 
   useEffect(() => {
     const input = readDeviceCapabilityFromBrowser()
@@ -32,14 +62,18 @@ export const StationsCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   const runBootstrap = useCallback(
     (force = false) => {
       beginStationsInitialSync()
-      // Priority network first (list detail), then remaining collections in the background.
-      // Avoid racing loadAllNetworkStationsProgressive in parallel — that pulled all.list.json.gz
-      // (~480 KiB) before the active network could paint.
-      void bootstrapStationsData({ networkView, detailLevel: 'list', force }).finally(() => {
+      // Detail pages: load only the URL network list (no progressive other networks / full).
+      // List page: priority network first, then remaining in background.
+      void bootstrapStationsData({
+        networkView: bootstrapNetworkView,
+        detailLevel: 'list',
+        force,
+        priorityOnly: isPublicStationDetail,
+      }).finally(() => {
         endStationsInitialSync()
       })
     },
-    [networkView]
+    [bootstrapNetworkView, isPublicStationDetail]
   )
 
   useEffect(() => {
@@ -50,10 +84,25 @@ export const StationsCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     const onRefetch = () => {
       invalidateStationsCache()
       beginStationsInitialSync()
-      void bootstrapStationsData({ networkView, detailLevel: 'lean', force: true })
-        .then(() => loadAllNetworkStationsProgressive({ detailLevel: 'list', force: true }))
+      void bootstrapStationsData({
+        networkView: bootstrapNetworkView,
+        detailLevel: 'lean',
+        force: true,
+        priorityOnly: isPublicStationDetail,
+      })
         .then(() => {
-          if (isLiteDataMode || isPublicStationsList) return
+          if (isPublicStationDetail) {
+            return bootstrapStationsData({
+              networkView: bootstrapNetworkView,
+              detailLevel: 'list',
+              force: true,
+              priorityOnly: true,
+            })
+          }
+          return loadAllNetworkStationsProgressive({ detailLevel: 'list', force: true })
+        })
+        .then(() => {
+          if (isLiteDataMode || isPublicStationsList || isPublicStationDetail) return
           return loadAllNetworkStationsProgressive({ detailLevel: 'full', force: true })
         })
         .finally(() => {
@@ -62,11 +111,11 @@ export const StationsCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     }
     window.addEventListener('railstats-stations-refetch', onRefetch)
     return () => window.removeEventListener('railstats-stations-refetch', onRefetch)
-  }, [isLiteDataMode, isPublicStationsList, networkView])
+  }, [bootstrapNetworkView, isLiteDataMode, isPublicStationDetail, isPublicStationsList])
 
   useEffect(() => {
-    // Public list only needs list-level rows; skip full detail preload (PSI + main-thread).
-    if (isLiteDataMode || isPublicStationsList) return
+    // Public list/detail only need list-level rows; skip full detail preload.
+    if (isLiteDataMode || isPublicStationsList || isPublicStationDetail) return
 
     const runFullLoad = () => {
       const hasListData = NETWORK_COLLECTION_IDS.every(
@@ -86,7 +135,7 @@ export const StationsCacheProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const timer = window.setTimeout(runFullLoad, 6_000)
     return () => window.clearTimeout(timer)
-  }, [isLiteDataMode, isPublicStationsList, networkView])
+  }, [isLiteDataMode, isPublicStationsList, isPublicStationDetail, bootstrapNetworkView])
 
   return <>{children}</>
 }

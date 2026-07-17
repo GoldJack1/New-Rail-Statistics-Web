@@ -3,6 +3,10 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 import type { User } from '@/services/firebaseAuthBootstrap'
+import {
+  isPublicStationDetailPath,
+  isPublicStationsBrowsePath,
+} from '@/utils/publicStationsPaths'
 
 interface AuthContextValue {
   user: User | null
@@ -43,13 +47,8 @@ function isMarketingHomePath(pathname: string): boolean {
   return pathname === '/' || pathname === '/home'
 }
 
-/** Exact public stations list — not detail/map under `/stations/...`. */
-function isPublicStationsListPath(pathname: string): boolean {
-  return pathname === '/stations'
-}
-
 function isColdVisitorAuthDeferPath(pathname: string): boolean {
-  return isMarketingHomePath(pathname) || isPublicStationsListPath(pathname)
+  return isMarketingHomePath(pathname) || isPublicStationsBrowsePath(pathname)
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -64,11 +63,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let timeoutHandle: ReturnType<typeof setTimeout> | undefined
     let onFirstInteraction: (() => void) | undefined
 
-    // Public `/stations` list is CDN browse — defer Auth/App Check. Detail/map stay critical.
+    // Public list + detail are CDN browse — defer Auth/App Check. Map/admin stay critical.
     const authIsRouteCritical =
       pathname === '/log-in' ||
       pathname.startsWith('/admin') ||
-      (pathname.startsWith('/stations') && !isPublicStationsListPath(pathname))
+      (pathname.startsWith('/stations') && !isPublicStationsBrowsePath(pathname))
 
     const init = async (options?: { deferAppCheck?: boolean }) => {
       // Lean auth-only module — must not pull Firestore into the Header/Auth chunk.
@@ -127,7 +126,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else if (isColdVisitorAuthDeferPath(pathname) && !readAuthSessionHint()) {
       setLoading(false)
     } else if (isColdVisitorAuthDeferPath(pathname)) {
-      scheduleDeferredInit(12_000)
+      // Detail pages: interaction-only auth when a session hint exists (no short timer → no reCAPTCHA in PSI).
+      if (isPublicStationDetailPath(pathname)) {
+        onFirstInteraction = () => {
+          if (onFirstInteraction) {
+            window.removeEventListener('pointerdown', onFirstInteraction, { capture: true })
+            window.removeEventListener('keydown', onFirstInteraction, { capture: true })
+          }
+          if (!cancelled) void init()
+        }
+        window.addEventListener('pointerdown', onFirstInteraction, { once: true, capture: true })
+        window.addEventListener('keydown', onFirstInteraction, { once: true, capture: true })
+        setLoading(false)
+      } else {
+        scheduleDeferredInit(12_000)
+      }
     } else if (typeof window.requestIdleCallback === 'function') {
       idleHandle = window.requestIdleCallback(() => void init(), { timeout: 5_000 })
     } else {

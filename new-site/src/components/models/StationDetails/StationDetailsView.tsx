@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import React from 'react'
 import { ArrowSquareOut, MapPin } from '@phosphor-icons/react'
 import type { Station, SandboxStationDoc } from '../../../types'
 import { formatFareZoneDisplay } from '../../../utils/formatFareZone'
@@ -11,11 +11,16 @@ import { useStationFieldSchema } from '../../../hooks/useStationCollectionFieldS
 import { BUTBaseButton as Button } from '../../buttons'
 import { StationDetailField } from './StationDetailField'
 import { StationPendingChangesBanner } from './StationPendingChangesBanner'
-import StationResponsiveLocationMap from './StationResponsiveLocationMap'
 import type { StationFieldChange } from '../../../utils/stationFieldDiffs'
 import { LIGHT_RAIL_DOC_FIELDS, readLightRailDocString } from '../../../utils/lightRailStationFields'
 import { LightRailLinesServedChips } from './LightRailLinesServedChips'
 import './StationPendingChangesBanner.css'
+import dynamic from 'next/dynamic'
+
+const StationResponsiveLocationMap = dynamic(() => import('./StationResponsiveLocationMap'), {
+  ssr: false,
+  loading: () => <div className="station-details-location-map-wrap" aria-hidden />,
+})
 
 const BLANK_DISPLAY = '---'
 
@@ -162,13 +167,6 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
   )
   const stationUrlHref = resolveStationUrlHref(stationUrlValue)
   const lightRailDoc = fieldSchema.isLightRail ? (additionalDoc as Record<string, unknown> | null) : null
-
-  useEffect(() => {
-    if (!showLocationTab || !showLocation) return
-    // #region agent log
-    fetch('http://127.0.0.1:7371/ingest/b6fa4275-bcd2-40b2-a149-9100e5c19d6d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d0517c'},body:JSON.stringify({sessionId:'d0517c',runId:'pre-fix',hypothesisId:'H4',location:'StationDetailsView.tsx:location-render',message:'Location tab render state',data:{activeTab:activeTab ?? 'all',showLocationTab,showLocation,lat:geoLat ?? station.latitude,lng:geoLng ?? station.longitude},timestamp:Date.now()})}).catch(()=>{})
-    // #endregion
-  }, [activeTab, showLocationTab, showLocation, geoLat, geoLng, station.latitude, station.longitude])
 
   return (
     <>

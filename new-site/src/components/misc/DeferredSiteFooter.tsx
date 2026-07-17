@@ -4,15 +4,17 @@ import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { usePathname } from 'next/navigation'
 
+import { isPublicStationsBrowsePath } from '@/utils/publicStationsPaths'
+
 const Footer = dynamic(() => import('./Footer/Footer'), { ssr: false })
 
 /**
- * On public `/stations`, keep the footer chunk off the LCP critical path until
+ * On public stations list/detail, keep the footer chunk off the LCP critical path until
  * the main thread is idle (or a short fallback). Other routes mount immediately.
  */
 export default function DeferredSiteFooter() {
   const pathname = usePathname() ?? '/'
-  const deferForStations = pathname === '/stations'
+  const deferForStations = isPublicStationsBrowsePath(pathname)
   const [ready, setReady] = useState(!deferForStations)
 
   useEffect(() => {

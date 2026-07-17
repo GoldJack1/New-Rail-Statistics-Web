@@ -689,8 +689,10 @@ export async function bootstrapStationsData(options: {
   networkView: NetworkViewFilter
   detailLevel?: StationFetchDetailLevel
   force?: boolean
+  /** When true, only load the priority network — skip background progressive loads. */
+  priorityOnly?: boolean
 }): Promise<void> {
-  const { networkView, detailLevel = 'list', force = false } = options
+  const { networkView, detailLevel = 'list', force = false, priorityOnly = false } = options
 
   if (process.env.NEXT_PUBLIC_USE_LOCAL_DATA_ONLY === 'true') {
     const localStations = await fetchLocalStations()
@@ -720,11 +722,18 @@ export async function bootstrapStationsData(options: {
 
   if (networkView !== 'all') {
     await ensureCollectionLoaded(networkView, { detailLevel, force })
-    void loadAllNetworkStationsProgressive({
-      priorityCollectionId: networkView,
-      detailLevel,
-      force: false,
-    })
+    if (!priorityOnly) {
+      void loadAllNetworkStationsProgressive({
+        priorityCollectionId: networkView,
+        detailLevel,
+        force: false,
+      })
+    }
+    return
+  }
+
+  if (priorityOnly) {
+    await ensureCollectionLoaded(DEFAULT_NETWORK_COLLECTION_ID, { detailLevel, force })
     return
   }
 

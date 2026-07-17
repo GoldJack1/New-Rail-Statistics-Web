@@ -34,6 +34,7 @@ const isPlaceholder = (value: unknown): boolean =>
 let app: FirebaseApp | null = null
 let auth: Auth | null = null
 let appCheckReady = false
+let appCheckInflight: Promise<void> | null = null
 
 function validateFirebaseConfigForDev(): void {
   if (process.env.NODE_ENV !== 'development') return
@@ -69,22 +70,29 @@ export async function ensureFirebaseAuthApp(): Promise<{ app: FirebaseApp; auth:
 
 export async function ensureFirebaseAppCheck(): Promise<void> {
   if (appCheckReady || !app) return
+  if (appCheckInflight) return appCheckInflight
 
-  const appCheckSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
-  const appCheckExplicitlyDisabled = process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_DISABLED === 'true'
-  const isDev = process.env.NODE_ENV === 'development'
-  const canEnableAppCheck =
-    !isDev && !appCheckExplicitlyDisabled && !!appCheckSiteKey && appCheckSiteKey !== 'placeholder'
+  appCheckInflight = (async () => {
+    const appCheckSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+    const appCheckExplicitlyDisabled = process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_DISABLED === 'true'
+    const isDev = process.env.NODE_ENV === 'development'
+    const canEnableAppCheck =
+      !isDev && !appCheckExplicitlyDisabled && !!appCheckSiteKey && appCheckSiteKey !== 'placeholder'
 
-  if (canEnableAppCheck) {
-    const { initializeAppCheck, ReCaptchaV3Provider } = await import('firebase/app-check')
-    initializeAppCheck(app, {
-      provider: new ReCaptchaV3Provider(appCheckSiteKey),
-      isTokenAutoRefreshEnabled: true,
-    })
-  }
+    if (canEnableAppCheck && app) {
+      const { initializeAppCheck, ReCaptchaV3Provider } = await import('firebase/app-check')
+      initializeAppCheck(app, {
+        provider: new ReCaptchaV3Provider(appCheckSiteKey),
+        isTokenAutoRefreshEnabled: true,
+      })
+    }
 
-  appCheckReady = true
+    appCheckReady = true
+  })().finally(() => {
+    appCheckInflight = null
+  })
+
+  return appCheckInflight
 }
 
 export async function tryDevAutoSignInFromEnv(): Promise<void> {

@@ -58,7 +58,8 @@ export interface UseStationsMapReturn {
   loadStationDetails: (station: Station) => Promise<void>
 }
 
-export const useStations = (): UseStationsReturn => {
+export const useStations = (options?: { defer?: boolean }): UseStationsReturn => {
+  const deferStations = options?.defer !== false
   const { networkView } = useStationCollection()
   const [hydrated, setHydrated] = useState(false)
 
@@ -86,6 +87,7 @@ export const useStations = (): UseStationsReturn => {
   const deferredStations = useDeferredValue(snapshot.stations)
   // Stats are unused by the stations list UI; skip scanning thousands of rows on every update.
   const stats = SERVER_STATION_SNAPSHOT.stats
+  const stations = deferStations ? deferredStations : snapshot.stations
 
   const refetch = useCallback(() => {
     invalidateStationsCache()
@@ -98,14 +100,14 @@ export const useStations = (): UseStationsReturn => {
 
   return useMemo(
     () => ({
-      stations: deferredStations,
+      stations,
       loading: snapshot.loading,
       isRefreshing: snapshot.isRefreshing,
       error: snapshot.error,
       stats,
       refetch,
     }),
-    [deferredStations, snapshot.loading, snapshot.isRefreshing, snapshot.error, stats, refetch]
+    [stations, snapshot.loading, snapshot.isRefreshing, snapshot.error, stats, refetch]
   )
 }
 
