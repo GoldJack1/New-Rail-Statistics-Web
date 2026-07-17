@@ -29,10 +29,10 @@ export const StationsCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   const runBootstrap = useCallback(
     (force = false) => {
       beginStationsInitialSync()
-      void Promise.all([
-        loadAllNetworkStationsProgressive({ detailLevel: 'list', force }),
-        bootstrapStationsData({ networkView, detailLevel: 'lean', force }),
-      ]).finally(() => {
+      // Priority network first (list detail), then remaining collections in the background.
+      // Avoid racing loadAllNetworkStationsProgressive in parallel — that pulled all.list.json.gz
+      // (~480 KiB) before the active network could paint.
+      void bootstrapStationsData({ networkView, detailLevel: 'list', force }).finally(() => {
         endStationsInitialSync()
       })
     },

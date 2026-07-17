@@ -653,7 +653,9 @@ export async function loadAllNetworkStationsProgressive(options?: {
     return
   }
 
-  if (!force && isStationCdnEnabled()) {
+  // Prefer per-collection progressive loads for list/lean so the priority network can paint
+  // before downloading the merged all.*.json.gz bundle (~480 KiB). Use merged only for full.
+  if (!force && isStationCdnEnabled() && detailLevel === 'full') {
     const loadedMerged = await loadMergedBundleIntoCollections(detailLevel)
     if (loadedMerged) return
   }

@@ -2,9 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { reload } from 'firebase/auth'
 import { useAuth } from '@/contexts/AuthContext'
-import { initializeFirebase, getFirebaseAuth } from '@/services/firebase'
 import { userMustEnrollTotpMfaOnFirebase } from '@/services/firebaseTotpMfa'
 
 interface ProtectedRouteProps {
@@ -47,15 +45,17 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
     void (async () => {
       try {
-        await initializeFirebase()
-        const u = getFirebaseAuth()?.currentUser
+        const firebase = await import('@/services/firebase')
+        await firebase.initializeFirebase()
+        const auth = await import('firebase/auth')
+        const u = firebase.getFirebaseAuth()?.currentUser
         if (cancelled) return
         if (!u) {
           setProfileCheck('need-email-verify')
           return
         }
         try {
-          await reload(u)
+          await auth.reload(u)
         } catch {
           /* still check with cached user */
         }

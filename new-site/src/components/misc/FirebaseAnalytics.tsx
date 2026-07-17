@@ -25,8 +25,7 @@ export default function FirebaseAnalytics() {
     const logPageView = async () => {
       try {
         const firebase = await import('@/services/firebase')
-        await firebase.initializeFirebase()
-        const analytics = firebase.getFirebaseAnalytics()
+        const analytics = await firebase.ensureFirebaseAnalytics()
         if (!analytics || cancelled) return
         const { logEvent } = await import('firebase/analytics')
         logEvent(analytics, 'page_view', {
@@ -39,12 +38,18 @@ export default function FirebaseAnalytics() {
     }
 
     const isMarketingHome = pathname === '/' || pathname === '/home'
+    const isHeavyAppRoute =
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/stations') ||
+      pathname.startsWith('/departures')
     const deferUntilScroll = isMarketingHome
     const scheduleLog = () => {
       if (typeof window.requestIdleCallback === 'function') {
-        idleHandle = window.requestIdleCallback(() => void logPageView(), { timeout: 5_000 })
+        idleHandle = window.requestIdleCallback(() => void logPageView(), {
+          timeout: isHeavyAppRoute ? 12_000 : 5_000,
+        })
       } else {
-        timeoutHandle = setTimeout(() => void logPageView(), 2_000)
+        timeoutHandle = setTimeout(() => void logPageView(), isHeavyAppRoute ? 6_000 : 2_000)
       }
     }
 

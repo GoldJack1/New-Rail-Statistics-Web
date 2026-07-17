@@ -64,11 +64,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       pathname.startsWith('/admin') ||
       pathname.startsWith('/stations')
 
-    const init = async () => {
+    const init = async (options?: { deferAppCheck?: boolean }) => {
       const firebase = await import('@/services/firebase')
       await firebase.initializeFirebase()
       if (authIsRouteCritical) {
-        await firebase.ensureFirebaseAppCheck()
+        if (options?.deferAppCheck) {
+          // Restore auth session first so the page can paint; load reCAPTCHA after idle.
+          const scheduleAppCheck = () => {
+            void firebase.ensureFirebaseAppCheck()
+          }
+          if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(scheduleAppCheck, { timeout: 4_000 })
+          } else {
+            window.setTimeout(scheduleAppCheck, 1_500)
+          }
+        } else {
+          await firebase.ensureFirebaseAppCheck()
+        }
       }
       await firebase.tryDevAutoSignInFromEnv()
       if (cancelled) return
@@ -110,7 +122,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     if (authIsRouteCritical) {
-      void init()
+      // Returning visitors already have a session hint — defer ~400 KiB reCAPTCHA past first paint.
+      // Fresh / login flows still load App Check before interacting with Auth.
+      void init({ deferAppCheck: readAuthSessionHint() && pathname !== '/log-in' })
     } else if (isColdVisitorAuthDeferPath(pathname) && !readAuthSessionHint()) {
       // Cold marketing visits: skip Firebase Auth (and its iframe.js) until the user navigates away
       // or signs in on another route. PSI / first-time visitors won't download the auth iframe.

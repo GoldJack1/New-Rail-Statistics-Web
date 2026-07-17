@@ -1,5 +1,4 @@
 import { initializeApp, FirebaseApp } from 'firebase/app'
-import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check'
 import {
   getAuth,
   signInWithEmailAndPassword,
@@ -102,6 +101,7 @@ let appCheckReady = false
 /**
  * Loads reCAPTCHA / App Check only when auth is needed (login, admin, stations).
  * Keeps marketing pages free of ~400 KiB of unused third-party JS on initial load.
+ * App Check is imported dynamically so the reCAPTCHA provider is not in the critical parse path.
  */
 export const ensureFirebaseAppCheck = async (): Promise<void> => {
   if (appCheckReady || !app) return
@@ -113,6 +113,7 @@ export const ensureFirebaseAppCheck = async (): Promise<void> => {
     !isDev && !appCheckExplicitlyDisabled && !!appCheckSiteKey && appCheckSiteKey !== 'placeholder'
 
   if (canEnableAppCheck) {
+    const { initializeAppCheck, ReCaptchaV3Provider } = await import('firebase/app-check')
     initializeAppCheck(app, {
       provider: new ReCaptchaV3Provider(appCheckSiteKey),
       isTokenAutoRefreshEnabled: true,
@@ -152,21 +153,29 @@ export const initializeFirebase = async () => {
         console.warn('Firebase emulator connection failed:', (emulatorError as Error).message)
       }
     }
-    
-    // Initialize analytics (optional, won't fail if blocked)
-    try {
-      const { getAnalytics } = await import('firebase/analytics')
-      analytics = getAnalytics(app)
-    } catch {
-      // Analytics blocked by ad blockers or not available
-      analytics = null
-    }
+
+    // Analytics is initialized separately via ensureFirebaseAnalytics so auth/data
+    // boot does not pull gtag onto the critical path (stations / admin LCP).
     
     return { app, auth, db, analytics }
   } catch (error) {
     console.error('Firebase initialization failed:', error)
     throw error
   }
+}
+
+/** Lazy-load Firebase Analytics / gtag after the page has painted. */
+export const ensureFirebaseAnalytics = async (): Promise<Analytics | null> => {
+  if (analytics) return analytics
+  if (!app) await initializeFirebase()
+  if (!app) return null
+  try {
+    const { getAnalytics } = await import('firebase/analytics')
+    analytics = getAnalytics(app)
+  } catch {
+    analytics = null
+  }
+  return analytics
 }
 
 export const getFirebaseApp = (): FirebaseApp | null => app
