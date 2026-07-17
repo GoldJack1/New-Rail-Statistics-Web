@@ -228,6 +228,19 @@
     color: var(--text-primary);
 }
 
+/* Match station-details tab hover — solid primary on fine pointer only. */
+@media (hover: hover) and (pointer: fine) {
+    .stations-sidebar-panel .sidebar-dropdown__header-row:has(.sidebar-dropdown__header:hover) {
+        background-color: var(--bg-primary);
+    }
+
+    .stations-sidebar-panel .sidebar-dropdown__header:hover {
+        color: var(--text-primary);
+        background-color: var(--bg-primary);
+        border-radius: 0;
+    }
+}
+
 .stations-sidebar-panel .sidebar-dropdown__chevron {
     color: var(--text-primary);
 }

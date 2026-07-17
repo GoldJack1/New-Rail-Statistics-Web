@@ -3,14 +3,14 @@
   /* Active Button Colors - Light Mode */
   --button-bg-active: hsl(0 0% 100%);
   --button-text-active: #000000;
-  /* Shadow + clearer hairline so primary buttons match dark-mode contrast feel */
+  /* Soft cool edge — keep 1px but lower opacity so it reads thinner */
   --button-drop-shadow:
-    0 3px 8px rgba(20, 30, 45, 0.22),
-    0 0 0 1px color-mix(in srgb, hsl(210 18% 28%) 22%, transparent);
+    0 3px 8px hsl(210 35% 18% / 0.16),
+    0 0 0 1px hsl(210 24% 45% / 0.14);
   --button-inner-shadow-active: inset 0px 0px 4.5px rgba(0, 0, 0, 0.2);
   
-  /* Pressed & Disabled Button Colors - Light Mode */
-  --button-bg-inactive: hsl(0 0% 77%);
+  /* Pressed & Disabled Button Colors - Light Mode — match cool tertiary */
+  --button-bg-inactive: var(--bg-tertiary);
   --button-text-inactive: #000000;
   --button-inner-shadow-pressed: inset 0px 0px 4.5px rgba(0, 0, 0, 0.25);
   
@@ -27,12 +27,12 @@
   --button-bg-active: var(--bg-primary);
   --button-text-active: #ffffff;
   --button-drop-shadow:
-    0 3px 8px rgba(0, 0, 0, 0.4),
-    0 0 0 1px color-mix(in srgb, #ffffff 12%, transparent);
+    0 3px 8px hsl(210 40% 2% / 0.45),
+    0 0 0 1px hsl(210 20% 75% / 0.08);
   --button-inner-shadow-active: inset 0px 0px 4.5px rgba(255, 255, 255, 0.2);
   
-  /* Pressed & Disabled Button Colors - Dark Mode */
-  --button-bg-inactive: hsl(0 0% 12%);
+  /* Pressed & Disabled Button Colors - Dark Mode — match cool tertiary */
+  --button-bg-inactive: var(--bg-tertiary);
   --button-text-inactive: #ffffff;
   --button-inner-shadow-pressed: inset 0px 0px 4.5px rgba(255, 255, 255, 0.25);
 

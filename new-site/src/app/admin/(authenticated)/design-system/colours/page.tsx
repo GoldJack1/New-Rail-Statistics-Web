@@ -43,8 +43,8 @@ const ALL_TOKENS = [...SURFACE_TOKENS, ...TEXT_TOKENS, ...ACCENT_TOKENS, ...UI_C
 
 const LIGHT_TOKEN_FILLS: Record<string, string> = {
   '--bg-primary': '#FCFCFD',
-  '--bg-secondary': '#EBEDEF',
-  '--bg-tertiary': '#D3D9DE',
+  '--bg-secondary': '#E2E6E9',
+  '--bg-tertiary': '#C5CCD3',
   '--text-primary': '#000000',
   '--text-secondary': '#404040',
   '--text-disabled': '#737373',
@@ -57,13 +57,13 @@ const LIGHT_TOKEN_FILLS: Record<string, string> = {
   '--accent-color': '#B20016',
   '--accent-hover': '#000000',
   '--accent-pressed': '#990000',
-  '--accent-light': '#EBEDEF',
+  '--accent-light': '#E2E6E9',
 }
 
 const DARK_TOKEN_FILLS: Record<string, string> = {
-  '--bg-primary': '#31383F',
-  '--bg-secondary': '#252B32',
-  '--bg-tertiary': '#13171B',
+  '--bg-primary': '#2C333A',
+  '--bg-secondary': '#1A1F23',
+  '--bg-tertiary': '#090A0C',
   '--text-primary': '#FFFFFF',
   '--text-secondary': '#BFBFBF',
   '--text-disabled': '#8C8C8C',
@@ -76,7 +76,7 @@ const DARK_TOKEN_FILLS: Record<string, string> = {
   '--accent-color': '#B20016',
   '--accent-hover': '#FFFFFF',
   '--accent-pressed': '#990000',
-  '--accent-light': '#252B32',
+  '--accent-light': '#1F2429',
 }
 
 type ColorVariant = 'primary' | 'secondary' | 'accent' | 'green-action' | 'red-action' | 'fav-action'
@@ -133,19 +133,19 @@ const VARIANT_TOKENS: VariantToken[] = [
     label: 'Primary',
     active: {
       light: { bg: { hsl: 'hsl(0 0% 100%)', hex: '#FFFFFF' }, text: { hsl: 'hsl(0 0% 0%)', hex: '#000000' } },
-      dark: { bg: { hsl: 'hsl(0 0% 24%)', hex: '#3D3D3D' }, text: { hsl: 'hsl(0 0% 100%)', hex: '#FFFFFF' } },
+      dark: { bg: { hsl: 'hsl(210 14% 20%)', hex: '#2C333A' }, text: { hsl: 'hsl(0 0% 100%)', hex: '#FFFFFF' } },
     },
     pressed: {
-      light: { bg: { hsl: 'hsl(0 0% 77%)', hex: '#C4C4C4' }, text: { hsl: 'hsl(0 0% 0%)', hex: '#000000' } },
-      dark: { bg: { hsl: 'hsl(0 0% 12%)', hex: '#1F1F1F' }, text: { hsl: 'hsl(0 0% 100%)', hex: '#FFFFFF' } },
+      light: { bg: { hsl: 'hsl(210 14% 80%)', hex: '#C5CCD3' }, text: { hsl: 'hsl(0 0% 0%)', hex: '#000000' } },
+      dark: { bg: { hsl: 'hsl(210 14% 4%)', hex: '#090A0C' }, text: { hsl: 'hsl(0 0% 100%)', hex: '#FFFFFF' } },
     },
     disabled: {
       light: {
-        bg: { hsl: 'hsl(0 0% 77%)', hex: '#C4C4C4' },
+        bg: { hsl: 'hsl(210 14% 80%)', hex: '#C5CCD3' },
         text: { hsl: 'hsl(0 0% 45%)', hex: '#737373' },
       },
       dark: {
-        bg: { hsl: 'hsl(0 0% 12%)', hex: '#1F1F1F' },
+        bg: { hsl: 'hsl(210 14% 4%)', hex: '#090A0C' },
         text: { hsl: 'hsl(0 0% 55%)', hex: '#8C8C8C' },
       },
     },
@@ -299,20 +299,20 @@ Dark theme
 
 const SITE_COLOURS_PROMPT = `Site colour tokens
 
-Light theme (cool neutrals, dark-like layer steps)
+Light theme (cool neutrals, wider layer steps)
 - Background primary: hsl(210 14% 99%) / #FCFCFD
-- Background secondary: hsl(210 13% 93%) / #EBEDEF
-- Background tertiary: hsl(210 14% 85%) / #D3D9DE
+- Background secondary: hsl(210 14% 90%) / #E2E6E9
+- Background tertiary: hsl(210 14% 80%) / #C5CCD3
 - Accent bright: #E50000
 - Accent strong: #CC0000
 - Accent base: #B20016
 - Accent deep: #990000
 - Accent darkest: #7F0000
 
-Dark theme (A primary/tertiary + D secondary)
-- Background primary: hsl(210 13% 22%) / #31383F
-- Background secondary: hsl(210 15% 17%) / #252B32
-- Background tertiary: hsl(210 16% 9%) / #13171B
+Dark theme (cool neutrals, darker wider layer steps)
+- Background primary: hsl(210 14% 20%) / #2C333A
+- Background secondary: hsl(210 14% 12%) / #1A1F23
+- Background tertiary: hsl(210 14% 4%) / #090A0C
 - Accent bright: #E50000
 - Accent strong: #CC0000
 - Accent base: #B20016
@@ -334,20 +334,20 @@ const LIVE_SURFACE_OPTIONS: SurfaceNeutralOption[] = [
   {
     id: 'light',
     label: 'Light',
-    note: 'Live site tokens — layer steps aligned with dark',
+    note: 'Live — wider P/S/T steps',
     primary: 'hsl(210 14% 99%)',
-    secondary: 'hsl(210 13% 93%)',
-    tertiary: 'hsl(210 14% 85%)',
+    secondary: 'hsl(210 14% 90%)',
+    tertiary: 'hsl(210 14% 80%)',
     text: '#000000',
     textSecondary: 'hsl(0 0% 25%)',
   },
   {
     id: 'dark',
     label: 'Dark',
-    note: 'Live site tokens',
-    primary: 'hsl(210 13% 22%)',
-    secondary: 'hsl(210 15% 17%)',
-    tertiary: 'hsl(210 16% 9%)',
+    note: 'Live — wider P/S/T steps',
+    primary: 'hsl(210 14% 20%)',
+    secondary: 'hsl(210 14% 12%)',
+    tertiary: 'hsl(210 14% 4%)',
     text: '#ffffff',
     textSecondary: 'hsl(0 0% 75%)',
   },
