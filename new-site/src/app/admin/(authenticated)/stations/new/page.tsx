@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import React, { useEffect, useMemo, useState } from 'react'
 
 import { useNextStationId } from '@/hooks/useNextStationId'
@@ -11,7 +11,7 @@ import { PageTopHeader } from '@/components/misc'
 import ChooseNetworkForNewStationModal from '@/components/models/ChooseNetworkForNewStationModal/ChooseNetworkForNewStationModal'
 import { stationDetailsShowsAdditionalTab, type StationDetailsTab } from '@/utils/stationCollectionFieldSchema'
 import { BUTWideButton } from '@/components/buttons'
-import { BackIcon } from '@/components/icons'
+import { BackIcon, ChevronRightIcon } from '@/components/icons'
 import { NETWORK_LABELS } from '@/constants/stationCollections'
 import type { NetworkCollectionId } from '@/constants/stationCollections'
 import type { NewStationNavigationState } from '@/types/newStationNavigation'
@@ -19,10 +19,11 @@ import {
   buildPendingNewStationDraftPrefill,
   isPendingNewStationEntry,
 } from '@/utils/pendingNewStationEdit'
+import '@/components/misc/SidebarDropdownSection/SidebarDropdownSection.css'
 import '@/components/models/StationModal/StationModal.css'
 import '@/components/models/StationEditModal/StationEditModal.css'
 import { readNewStationNavigationState } from '@/utils/clientNavigationState'
-import './StationDetailsPage.css'
+import '@/app/stations/[network]/[stationSlug]/StationDetailsPage.css'
 
 interface NewStationPageContentProps {
   targetCollectionId: NetworkCollectionId
@@ -60,16 +61,24 @@ const NewStationPageContent: React.FC<NewStationPageContentProps> = ({
   const [activeTab, setActiveTab] = useState<StationDetailsTab>(() =>
     initialLatitude != null && initialLongitude != null ? 'location' : 'details'
   )
-  const [isMobile, setIsMobile] = useState(false)
   const [formIsDirty, setFormIsDirty] = useState(false)
-
-  useEffect(() => {
-    const mql = window.matchMedia('(max-width: 768px)')
-    const update = () => setIsMobile(mql.matches)
-    update()
-    mql.addEventListener('change', update)
-    return () => mql.removeEventListener('change', update)
-  }, [])
+  const sectionTabs = useMemo(() => {
+    const tabs: Array<{ id: StationDetailsTab; label: string }> = [{ id: 'details', label: 'Details' }]
+    if (showAdditionalTab) tabs.push({ id: 'additional', label: 'Additional details' })
+    if (fieldSchema.showServiceTab) tabs.push({ id: 'service', label: 'Service & Connections' })
+    tabs.push({ id: 'location', label: 'Location' })
+    if (fieldSchema.showUsageTab) tabs.push({ id: 'usage', label: 'Usage' })
+    if (fieldSchema.showStepFreeTab) tabs.push({ id: 'stepFree', label: fieldSchema.stepFreeTabLabel })
+    if (fieldSchema.showFacilitiesTab) tabs.push({ id: 'facilities', label: 'Facilities' })
+    return tabs
+  }, [
+    showAdditionalTab,
+    fieldSchema.showServiceTab,
+    fieldSchema.showUsageTab,
+    fieldSchema.showStepFreeTab,
+    fieldSchema.stepFreeTabLabel,
+    fieldSchema.showFacilitiesTab,
+  ])
 
   useEffect(() => {
     document.title = isEditDraft ? 'Edit draft station | Rail Statistics' : 'New Station | Rail Statistics'
@@ -123,128 +132,71 @@ const NewStationPageContent: React.FC<NewStationPageContentProps> = ({
           </>
         }
         actionContent={
-          !isMobile ? (
+          <div className="station-details-header-actions">
+            <BUTWideButton
+              type="button"
+              width="hug"
+              icon={<BackIcon />}
+              onClick={() => {
+                if (formIsDirty && !window.confirm('Are you sure you want to go back? All data will not be saved.')) return
+                if (returnTo) {
+                  router.push(returnTo)
+                  return
+                }
+                router.back()
+              }}
+            >
+              Back
+            </BUTWideButton>
+            {!isEditDraft && (
+              <BUTWideButton
+                type="button"
+                width="hug"
+                onClick={() => {
+                  if (formIsDirty && !window.confirm('Change network? Unsaved data will be lost.')) return
+                  onChangeNetwork()
+                }}
+              >
+                Change network
+              </BUTWideButton>
+            )}
             <div id="station-details-header-actions" className="station-details-header-actions-slot" />
-          ) : undefined
+          </div>
         }
       />
       <div className="station-details-page">
         <div className="station-details-layout">
           <aside className="station-details-sidebar">
-            <div className="station-details-sidebar-actions">
-              <BUTWideButton
-                type="button"
-                width="hug"
-                icon={<BackIcon />}
-                onClick={() => {
-                  if (formIsDirty && !window.confirm('Are you sure you want to go back? All data will not be saved.')) return
-                  if (returnTo) {
-                    router.push(returnTo)
-                    return
-                  }
-                  router.back()
-                }}
-              >
-                Back
-              </BUTWideButton>
-              {!isEditDraft && (
-                <BUTWideButton
-                  type="button"
-                  width="hug"
-                  onClick={() => {
-                    if (formIsDirty && !window.confirm('Change network? Unsaved data will be lost.')) return
-                    onChangeNetwork()
-                  }}
-                >
-                  Change network
-                </BUTWideButton>
-              )}
+            <div className="station-details-sidebar-panel">
+              <nav className="station-details-tabs" aria-label="Form sections">
+                {sectionTabs.map((tab) => {
+                  const isActive = activeTab === tab.id
+                  return (
+                    <div
+                      key={tab.id}
+                      className={[
+                        'sidebar-dropdown',
+                        'station-details-tab',
+                        'rs-button--color-primary',
+                        isActive ? 'station-details-tab--active' : 'station-details-tab--idle',
+                      ].join(' ')}
+                    >
+                      <div className="sidebar-dropdown__header-row">
+                        <button
+                          type="button"
+                          className="sidebar-dropdown__header"
+                          aria-current={isActive ? 'page' : undefined}
+                          onClick={() => setActiveTab(tab.id)}
+                        >
+                          <span className="sidebar-dropdown__title">{tab.label}</span>
+                          <ChevronRightIcon className="sidebar-dropdown__chevron" aria-hidden />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </nav>
             </div>
-            <div className="station-details-sidebar-secondary-actions">
-              <div id="station-details-sidebar-actions" />
-            </div>
-            <nav className="station-details-tabs" aria-label="Form sections">
-              <BUTWideButton
-                type="button"
-                width="hug"
-                colorVariant="accent"
-                className="station-details-tab"
-                state={activeTab === 'details' ? 'active' : 'pressed'}
-                onClick={() => setActiveTab('details')}
-              >
-                Details
-              </BUTWideButton>
-              {showAdditionalTab && (
-                <BUTWideButton
-                  type="button"
-                  width="hug"
-                  colorVariant="accent"
-                  className="station-details-tab"
-                  state={activeTab === 'additional' ? 'active' : 'pressed'}
-                  onClick={() => setActiveTab('additional')}
-                >
-                  Additional details
-                </BUTWideButton>
-              )}
-              {fieldSchema.showServiceTab && (
-                <BUTWideButton
-                  type="button"
-                  width="hug"
-                  colorVariant="accent"
-                  className="station-details-tab"
-                  state={activeTab === 'service' ? 'active' : 'pressed'}
-                  onClick={() => setActiveTab('service')}
-                >
-                  Service & Connections
-                </BUTWideButton>
-              )}
-              <BUTWideButton
-                type="button"
-                width="hug"
-                colorVariant="accent"
-                className="station-details-tab"
-                state={activeTab === 'location' ? 'active' : 'pressed'}
-                onClick={() => setActiveTab('location')}
-              >
-                Location
-              </BUTWideButton>
-              {fieldSchema.showUsageTab && (
-                <BUTWideButton
-                  type="button"
-                  width="hug"
-                  colorVariant="accent"
-                  className="station-details-tab"
-                  state={activeTab === 'usage' ? 'active' : 'pressed'}
-                  onClick={() => setActiveTab('usage')}
-                >
-                  Usage
-                </BUTWideButton>
-              )}
-              {fieldSchema.showStepFreeTab && (
-                <BUTWideButton
-                  type="button"
-                  width="hug"
-                  colorVariant="accent"
-                  className="station-details-tab"
-                  state={activeTab === 'stepFree' ? 'active' : 'pressed'}
-                  onClick={() => setActiveTab('stepFree')}
-                >
-                  {fieldSchema.stepFreeTabLabel}
-                </BUTWideButton>
-              )}
-              {fieldSchema.showFacilitiesTab && (
-                <BUTWideButton
-                  type="button"
-                  width="hug"
-                  colorVariant="accent"
-                  className="station-details-tab"
-                  state={activeTab === 'facilities' ? 'active' : 'pressed'}
-                  onClick={() => setActiveTab('facilities')}
-                >
-                  Facilities
-                </BUTWideButton>
-              )}
-            </nav>
           </aside>
 
           <main className="station-details-main">
@@ -256,7 +208,7 @@ const NewStationPageContent: React.FC<NewStationPageContentProps> = ({
                 onCreated={() => router.push(returnTo ?? '/admin/stations/pending-review')}
                 activeTab={activeTab}
                 hideNetworkPicker
-                actionsPortalId={isMobile ? 'station-details-sidebar-actions' : 'station-details-header-actions'}
+                actionsPortalId="station-details-header-actions"
                 onDirtyChange={setFormIsDirty}
                 fieldSchema={fieldSchema}
                 initialLatitude={initialLatitude}
