@@ -42,9 +42,9 @@ const UI_COLOUR_TOKENS: TokenItem[] = [
 const ALL_TOKENS = [...SURFACE_TOKENS, ...TEXT_TOKENS, ...ACCENT_TOKENS, ...UI_COLOUR_TOKENS]
 
 const LIGHT_TOKEN_FILLS: Record<string, string> = {
-  '--bg-primary': '#FCFCFC',
-  '--bg-secondary': '#DBDBDB',
-  '--bg-tertiary': '#C2C2C2',
+  '--bg-primary': '#FCFCFD',
+  '--bg-secondary': '#EBEDEF',
+  '--bg-tertiary': '#D3D9DE',
   '--text-primary': '#000000',
   '--text-secondary': '#404040',
   '--text-disabled': '#737373',
@@ -53,17 +53,17 @@ const LIGHT_TOKEN_FILLS: Record<string, string> = {
   '--accent-base': '#B20016',
   '--accent-deep': '#990000',
   '--accent-darkest': '#7F0000',
-  '--border-color': '#B8B8B8',
+  '--border-color': 'transparent',
   '--accent-color': '#B20016',
-  '--accent-hover': '#CC0000',
+  '--accent-hover': '#000000',
   '--accent-pressed': '#990000',
-  '--accent-light': '#F3C8CD',
+  '--accent-light': '#EBEDEF',
 }
 
 const DARK_TOKEN_FILLS: Record<string, string> = {
-  '--bg-primary': '#3D3D3D',
-  '--bg-secondary': '#262626',
-  '--bg-tertiary': '#141414',
+  '--bg-primary': '#31383F',
+  '--bg-secondary': '#252B32',
+  '--bg-tertiary': '#13171B',
   '--text-primary': '#FFFFFF',
   '--text-secondary': '#BFBFBF',
   '--text-disabled': '#8C8C8C',
@@ -72,11 +72,11 @@ const DARK_TOKEN_FILLS: Record<string, string> = {
   '--accent-base': '#B20016',
   '--accent-deep': '#990000',
   '--accent-darkest': '#7F0000',
-  '--border-color': '#525252',
+  '--border-color': 'transparent',
   '--accent-color': '#B20016',
-  '--accent-hover': '#CC0000',
+  '--accent-hover': '#FFFFFF',
   '--accent-pressed': '#990000',
-  '--accent-light': '#4D0E16',
+  '--accent-light': '#252B32',
 }
 
 type ColorVariant = 'primary' | 'secondary' | 'accent' | 'green-action' | 'red-action' | 'fav-action'
@@ -299,26 +299,103 @@ Dark theme
 
 const SITE_COLOURS_PROMPT = `Site colour tokens
 
-Light theme
-- Background primary: hsl(0 0% 99%) / #FCFCFC
-- Background secondary: hsl(0 0% 86%) / #DBDBDB
-- Background tertiary: hsl(0 0% 76%) / #C2C2C2
+Light theme (cool neutrals, dark-like layer steps)
+- Background primary: hsl(210 14% 99%) / #FCFCFD
+- Background secondary: hsl(210 13% 93%) / #EBEDEF
+- Background tertiary: hsl(210 14% 85%) / #D3D9DE
 - Accent bright: #E50000
 - Accent strong: #CC0000
 - Accent base: #B20016
 - Accent deep: #990000
 - Accent darkest: #7F0000
 
-Dark theme
-- Background primary: hsl(0 0% 24%) / #3D3D3D
-- Background secondary: hsl(0 0% 15%) / #262626
-- Background tertiary: hsl(0 0% 8%) / #141414
+Dark theme (A primary/tertiary + D secondary)
+- Background primary: hsl(210 13% 22%) / #31383F
+- Background secondary: hsl(210 15% 17%) / #252B32
+- Background tertiary: hsl(210 16% 9%) / #13171B
 - Accent bright: #E50000
 - Accent strong: #CC0000
 - Accent base: #B20016
 - Accent deep: #990000
 - Accent darkest: #7F0000`
 
+type SurfaceNeutralOption = {
+  id: string
+  label: string
+  note: string
+  primary: string
+  secondary: string
+  tertiary: string
+  text: string
+  textSecondary: string
+}
+
+const LIVE_SURFACE_OPTIONS: SurfaceNeutralOption[] = [
+  {
+    id: 'light',
+    label: 'Light',
+    note: 'Live site tokens — layer steps aligned with dark',
+    primary: 'hsl(210 14% 99%)',
+    secondary: 'hsl(210 13% 93%)',
+    tertiary: 'hsl(210 14% 85%)',
+    text: '#000000',
+    textSecondary: 'hsl(0 0% 25%)',
+  },
+  {
+    id: 'dark',
+    label: 'Dark',
+    note: 'Live site tokens',
+    primary: 'hsl(210 13% 22%)',
+    secondary: 'hsl(210 15% 17%)',
+    tertiary: 'hsl(210 16% 9%)',
+    text: '#ffffff',
+    textSecondary: 'hsl(0 0% 75%)',
+  },
+]
+
+const SurfaceNeutralPreview: React.FC<{ option: SurfaceNeutralOption }> = ({ option }) => (
+  <article
+    className="ds-colours__neutral-card"
+    style={
+      {
+        '--preview-primary': option.primary,
+        '--preview-secondary': option.secondary,
+        '--preview-tertiary': option.tertiary,
+        '--preview-text': option.text,
+        '--preview-text-secondary': option.textSecondary,
+      } as React.CSSProperties
+    }
+  >
+    <header className="ds-colours__neutral-card-head">
+      <h3>{option.label}</h3>
+      <p>{option.note}</p>
+    </header>
+    <div className="ds-colours__neutral-stage" aria-hidden="true">
+      <div className="ds-colours__neutral-panel">
+        <div className="ds-colours__neutral-chrome">Chrome / primary</div>
+        <div className="ds-colours__neutral-surface">
+          <div className="ds-colours__neutral-card-surface">
+            <span className="ds-colours__neutral-card-title">Elevated card</span>
+            <span className="ds-colours__neutral-card-meta">Secondary panel over tertiary page</span>
+            <span className="ds-colours__neutral-accent">Accent</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div className="ds-colours__neutral-swatches" aria-hidden="true">
+      <span className="ds-colours__neutral-swatch" style={{ background: option.primary }} title="Primary" />
+      <span className="ds-colours__neutral-swatch" style={{ background: option.secondary }} title="Secondary" />
+      <span className="ds-colours__neutral-swatch" style={{ background: option.tertiary }} title="Tertiary" />
+      <span className="ds-colours__neutral-swatch ds-colours__neutral-swatch--accent" title="Accent base" />
+    </div>
+    <div className="ds-colours__value-block">
+      <div><strong>Primary</strong> {option.primary}</div>
+      <div><strong>Secondary</strong> {option.secondary}</div>
+      <div><strong>Tertiary</strong> {option.tertiary}</div>
+      <div><strong>Accent</strong> #B20016</div>
+    </div>
+  </article>
+)
 
 const StateColorChips: React.FC<{ values: { light: StateValues; dark: StateValues } }> = ({ values }) => (
   <div className="ds-colours__chip-grid">
@@ -363,6 +440,18 @@ const ColoursPage: React.FC = () => {
       />
       <div className="container container--full-bleed">
         <div className="ds-colours">
+          <section className="ds-colours__section-panel">
+            <h2>Surface neutrals</h2>
+            <p className="ds-colours__hint">
+              Live site ladder with matched light/dark layer contrast. Accent stays railway red (#B20016).
+            </p>
+            <div className="ds-colours__neutral-grid">
+              {LIVE_SURFACE_OPTIONS.map((option) => (
+                <SurfaceNeutralPreview key={option.id} option={option} />
+              ))}
+            </div>
+          </section>
+
           <section className="ds-colours__section-panel ds-colours__section-panel--comparison">
             <h2>Token Light vs Dark Comparison</h2>
             <p className="ds-colours__hint">

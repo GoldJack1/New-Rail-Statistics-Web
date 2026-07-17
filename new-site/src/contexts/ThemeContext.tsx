@@ -21,8 +21,8 @@ const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 /** Matches [data-theme] --bg-chrome / --bg-primary (header / footer / Safari UI tint). */
 const THEME_COLOR_HEX = {
-  light: '#FCFCFC',
-  dark: '#3D3D3D',
+  light: '#FCFCFD',
+  dark: '#31383F',
 } as const
 
 export function readThemeFromDocument(): ThemeMode {

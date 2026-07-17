@@ -3,7 +3,10 @@
   /* Active Button Colors - Light Mode */
   --button-bg-active: hsl(0 0% 100%);
   --button-text-active: #000000;
-  --button-drop-shadow: 0px 3px 3px rgba(0, 0, 0, 0.2);
+  /* Shadow + clearer hairline so primary buttons match dark-mode contrast feel */
+  --button-drop-shadow:
+    0 3px 8px rgba(20, 30, 45, 0.22),
+    0 0 0 1px color-mix(in srgb, hsl(210 18% 28%) 22%, transparent);
   --button-inner-shadow-active: inset 0px 0px 4.5px rgba(0, 0, 0, 0.2);
   
   /* Pressed & Disabled Button Colors - Light Mode */
@@ -23,6 +26,9 @@
   /* Active Button Colors - Dark Mode */
   --button-bg-active: var(--bg-primary);
   --button-text-active: #ffffff;
+  --button-drop-shadow:
+    0 3px 8px rgba(0, 0, 0, 0.4),
+    0 0 0 1px color-mix(in srgb, #ffffff 12%, transparent);
   --button-inner-shadow-active: inset 0px 0px 4.5px rgba(255, 255, 255, 0.2);
   
   /* Pressed & Disabled Button Colors - Dark Mode */

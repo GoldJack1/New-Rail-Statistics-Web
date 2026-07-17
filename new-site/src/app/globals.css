@@ -25,10 +25,10 @@
     --font-aronetiv: var(--ff-aronetiv), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-aronetiv-normal: var(--ff-aronetiv-normal), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
-    /* Light Theme Colors */
-    --bg-primary: hsl(0 0% 99%);
-    --bg-secondary: hsl(0 0% 86%);
-    --bg-tertiary: hsl(0 0% 76%);
+    /* Light Theme Colors — cool neutrals with dark-like layer steps */
+    --bg-primary: hsl(210 14% 99%);
+    --bg-secondary: hsl(210 13% 93%);
+    --bg-tertiary: hsl(210 14% 85%);
     /* Site nav / footer chrome — light matches primary */
     --bg-chrome: var(--bg-primary);
     --text-primary: #000000;
@@ -106,11 +106,11 @@ html[data-theme='dark'] {
     color-scheme: dark;
 }
 
-/* Dark Theme Colors */
+/* Dark Theme Colors — A primary/tertiary + D secondary (cool, complements red) */
 [data-theme="dark"] {
-    --bg-primary: hsl(0 0% 24%);
-    --bg-secondary: hsl(0 0% 15%);
-    --bg-tertiary: hsl(0 0% 8%);
+    --bg-primary: hsl(210 13% 22%);
+    --bg-secondary: hsl(210 15% 17%);
+    --bg-tertiary: hsl(210 16% 9%);
     /* Site nav / footer match primary button surface */
     --bg-chrome: var(--bg-primary);
     --text-primary: #ffffff;

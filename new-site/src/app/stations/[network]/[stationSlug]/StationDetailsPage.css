@@ -250,7 +250,7 @@
 @media (hover: hover) and (pointer: fine) {
   .station-details-tab--idle .sidebar-dropdown__header:hover {
     color: var(--text-primary);
-    background-color: color-mix(in srgb, var(--bg-primary) 80%, transparent);
+    background-color: var(--bg-primary);
     border-radius: 0;
   }
 }

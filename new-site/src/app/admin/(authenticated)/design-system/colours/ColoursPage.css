@@ -153,6 +153,111 @@
   margin: 0 0 var(--space-md) 0;
 }
 
+.ds-colours__neutral-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-md);
+}
+
+.ds-colours__neutral-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-primary);
+  min-width: 0;
+}
+
+.ds-colours__neutral-card-head h3 {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--text-primary);
+}
+
+.ds-colours__neutral-card-head p {
+  margin: var(--space-xs) 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.ds-colours__neutral-stage {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--preview-tertiary);
+  border: 1px solid color-mix(in srgb, var(--preview-text) 12%, transparent);
+}
+
+.ds-colours__neutral-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 148px;
+}
+
+.ds-colours__neutral-chrome {
+  padding: 0.55rem 0.7rem;
+  background: var(--preview-primary);
+  color: var(--preview-text);
+  font-size: var(--text-xs);
+  border-bottom: 1px solid color-mix(in srgb, var(--preview-text) 10%, transparent);
+}
+
+.ds-colours__neutral-surface {
+  flex: 1;
+  padding: 0.7rem;
+  background: var(--preview-tertiary);
+}
+
+.ds-colours__neutral-card-surface {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.7rem;
+  background: var(--preview-secondary);
+  color: var(--preview-text);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 2px 4px color-mix(in srgb, #000 18%, transparent);
+}
+
+.ds-colours__neutral-card-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.ds-colours__neutral-card-meta {
+  font-size: var(--text-xs);
+  color: var(--preview-text-secondary);
+}
+
+.ds-colours__neutral-accent {
+  align-self: flex-start;
+  margin-top: 0.2rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  background: var(--accent-base);
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.ds-colours__neutral-swatches {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.ds-colours__neutral-swatch {
+  height: 1.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--text-primary) 12%, transparent);
+}
+
+.ds-colours__neutral-swatch--accent {
+  background: var(--accent-base);
+}
+
 .ds-colours__theme-preview {
   background: transparent;
   border: 1px solid var(--border-color);

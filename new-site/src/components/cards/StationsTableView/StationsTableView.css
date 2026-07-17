@@ -32,12 +32,12 @@
 
 html[data-theme='light'] .stations-table-wrap,
 html:not([data-theme]) .stations-table-wrap {
-  --stations-table-surface: hsl(0 0% 88%);
-  --stations-table-row-default: hsl(0 0% 89%);
-  --stations-table-row-striped: hsl(0 0% 85%);
-  --stations-table-row-hover: color-mix(in srgb, var(--accent-base) 8%, hsl(0 0% 79%));
-  --stations-table-header-bg: hsl(0 0% 86%);
-  --stations-table-cell-border: hsl(0 0% 77%);
+  --stations-table-surface: color-mix(in srgb, var(--bg-secondary) 45%, var(--bg-tertiary));
+  --stations-table-row-default: var(--bg-secondary);
+  --stations-table-row-striped: color-mix(in srgb, var(--bg-tertiary) 65%, var(--bg-secondary));
+  --stations-table-row-hover: color-mix(in srgb, var(--accent-base) 8%, var(--bg-tertiary));
+  --stations-table-header-bg: var(--bg-secondary);
+  --stations-table-cell-border: color-mix(in srgb, var(--text-secondary) 16%, transparent);
 }
 
 html[data-theme='dark'] .stations-table-wrap {
