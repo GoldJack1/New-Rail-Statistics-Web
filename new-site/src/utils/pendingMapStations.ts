@@ -1,5 +1,5 @@
 import { resolvePendingTargetCollectionId } from './pendingChangesByCollection'
-import type { PendingChangeEntry } from '../contexts/PendingStationChangesContext'
+import type { PendingChangeEntry } from '../contexts/pendingStationChangesTypes'
 import type { NetworkViewFilter } from '../constants/stationCollections'
 import { isNetworkCollection } from '../constants/stationCollections'
 import type { Station } from '../types'

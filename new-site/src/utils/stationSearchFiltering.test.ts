@@ -148,7 +148,13 @@ describe('stationSearchFiltering', () => {
     const options = getStationFilterOptions(stations)
     const defaults = getDefaultStationFilterSelections(options)
     const results = filterStations(stations, '', defaults, options)
-    expect(results).toHaveLength(3)
+    expect(results).toBe(stations)
+  })
+
+  it('skips copy+sort when stations are already name-asc', () => {
+    const nameAsc = [stations[0], stations[2], stations[1]] as Station[]
+    const sorted = sortStations(nameAsc, 'name-asc')
+    expect(sorted).toBe(nameAsc)
   })
 
   it('filters by subset selections only', () => {

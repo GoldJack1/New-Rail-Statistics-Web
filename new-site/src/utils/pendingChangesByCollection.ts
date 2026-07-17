@@ -1,4 +1,4 @@
-import type { PendingChangeEntry } from '../contexts/PendingStationChangesContext'
+import type { PendingChangeEntry } from '../contexts/pendingStationChangesTypes'
 import type { StationCollectionId } from '../constants/stationCollections'
 import { DEFAULT_NETWORK_COLLECTION_ID, isStationCollectionId } from '../constants/stationCollections'
 import { getStationNetworkCollectionId } from './stationAreaSlug'

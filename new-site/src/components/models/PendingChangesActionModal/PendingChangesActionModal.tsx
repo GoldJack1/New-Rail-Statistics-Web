@@ -4,8 +4,8 @@ import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 
 import type { User } from '@/services/firebase'
 import { BUTBaseButton as Button } from '../../buttons'
 import FirebaseReauthPanel from '../../firebase/FirebaseReauthPanel'
-import type { PendingChangeEntry } from '../../../contexts/PendingStationChangesContext'
-import type { ServerScheduledJobDetail } from '../../../contexts/ScheduledServerJobFirestoreSync'
+import type { PendingChangeEntry } from '../../../contexts/pendingStationChangesTypes'
+import type { ServerScheduledJobDetail } from '../../../contexts/pendingStationChangesTypes'
 import { toDatetimeLocalValue } from '../../../utils/datetimeLocal'
 import {
   PENDING_PUBLISH_SCHEDULE_DEFAULT_OFFSET_MS,

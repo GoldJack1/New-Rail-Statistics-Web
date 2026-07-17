@@ -22,7 +22,7 @@ const StationCard: React.FC<StationCardProps> = ({
     <article className="rs-station-card-stack">
       <section className="rs-station-text-card" onClick={onCardClick}>
         <p className="rs-station-operator">{station.toc || 'Unknown Operator'}</p>
-        <h3 className="rs-station-name">{station.stationName || 'Unknown Station'}</h3>
+        <h2 className="rs-station-name">{station.stationName || 'Unknown Station'}</h2>
         <p className="rs-station-location">{locationDisplay}</p>
       </section>
       <StationCardActionBar onInfoClick={onInfoClick} />

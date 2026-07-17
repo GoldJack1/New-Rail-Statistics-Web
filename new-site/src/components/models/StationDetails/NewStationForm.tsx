@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { X } from '@phosphor-icons/react'
 import type { SandboxStationDoc, Station, YearlyPassengers } from '../../../types'
-import { usePendingStationChanges } from '../../../contexts/PendingStationChangesContext'
+import { usePendingStationChanges } from '@/hooks/usePendingStationChanges'
 import { BUTBaseButton as Button, BUTBaseButtonBar } from '../../buttons'
 import { NETWORK_COLLECTION_IDS, NETWORK_LABELS } from '../../../constants/stationCollections'
 import type { NetworkCollectionId } from '../../../constants/stationCollections'

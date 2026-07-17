@@ -1,4 +1,4 @@
-import { initializeApp, FirebaseApp } from 'firebase/app'
+import { initializeApp, getApps, FirebaseApp } from 'firebase/app'
 import {
   getAuth,
   signInWithEmailAndPassword,
@@ -135,11 +135,21 @@ export const ensureFirebaseAppCheck = async (): Promise<void> => {
 }
 
 export const initializeFirebase = async () => {
-  if (app) return { app, auth, db, analytics }
+  if (app && auth && db) return { app, auth, db, analytics }
   
   try {
     validateFirebaseConfigForDev()
-    app = initializeApp(firebaseConfig)
+    // Prefer an app already created by the lean auth bootstrap (dynamic to avoid cycles).
+    let existingApp: FirebaseApp | null = getApps().length > 0 ? getApps()[0]! : null
+    if (!existingApp) {
+      try {
+        const authBootstrap = await import('@/services/firebaseAuthBootstrap')
+        existingApp = authBootstrap.getFirebaseAuthApp()
+      } catch {
+        /* ignore */
+      }
+    }
+    app = existingApp ?? initializeApp(firebaseConfig)
     auth = getAuth(app)
 
     db = getFirestore(app)

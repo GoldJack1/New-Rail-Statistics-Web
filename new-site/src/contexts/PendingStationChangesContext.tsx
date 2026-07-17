@@ -1,7 +1,7 @@
 'use client'
 
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import type { SandboxStationDoc, Station } from '@/types'
 import {
@@ -15,9 +15,14 @@ import {
   pendingEntryMatchesScheduledPayload,
   type ScheduledJobStationPayload
 } from '@/utils/scheduledJobPendingMatch'
-import type { ServerScheduledJobDetail } from '@/contexts/ScheduledServerJobFirestoreSync'
 import type { StationCollectionId } from '@/constants/stationCollections'
 import { migratePendingEntryTarget } from '@/utils/pendingChangesByCollection'
+import { PendingStationChangesContext } from '@/contexts/pendingStationChangesStore'
+import type {
+  PendingChangeEntry,
+  PendingStationChangesContextValue,
+  ServerScheduledJobDetail,
+} from '@/contexts/pendingStationChangesTypes'
 
 const ScheduledServerJobFirestoreSync = dynamic(
   () => import('@/contexts/ScheduledServerJobFirestoreSync'),
@@ -48,44 +53,7 @@ function loadPendingChangesFromStorage(): Record<string, PendingChangeEntry> {
   }
 }
 
-export interface PendingChangeEntry {
-  targetCollectionId: StationCollectionId
-  original: Station
-  updated: Partial<Station>
-  /** Optional sandbox-only extra fields (for newsandboxstations1). */
-  sandboxUpdated?: Partial<SandboxStationDoc> | null
-  /** Snapshot of additional fields before edit (for per-field review diffs). */
-  sandboxOriginal?: Partial<SandboxStationDoc> | null
-  isNew?: boolean
-}
-
-interface PendingStationChangesContextValue {
-  pendingChanges: Record<string, PendingChangeEntry>
-  upsertPendingChange: (
-    station: Station,
-    updated: Partial<Station>,
-    targetCollectionId: StationCollectionId,
-    sandboxUpdated?: Partial<SandboxStationDoc> | null,
-    sandboxOriginal?: Partial<SandboxStationDoc> | null
-  ) => void
-  addNewPendingStation: (
-    stationId: string,
-    updated: Partial<Station>,
-    targetCollectionId: StationCollectionId,
-    sandboxUpdated?: Partial<SandboxStationDoc> | null
-  ) => void
-  clearPendingChange: (stationId: string) => void
-  clearAllPendingChanges: () => void
-  clearPendingChangesForIds: (stationIds: string[]) => void
-  /** Firestore scheduled publish job id (persisted in localStorage). */
-  trackedScheduledJobId: string | null
-  registerScheduledServerJob: (jobId: string) => void
-  clearTrackedScheduledServerJob: () => void
-  /** Latest snapshot summary for UI (pending / processing / failed). Cleared when job completes or is cancelled. */
-  serverScheduledJobDetail: ServerScheduledJobDetail | null
-}
-
-const PendingStationChangesContext = createContext<PendingStationChangesContextValue | null>(null)
+export type { PendingChangeEntry, PendingStationChangesContextValue, ServerScheduledJobDetail }
 
 export const PendingStationChangesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [pendingChanges, setPendingChanges] = useState<Record<string, PendingChangeEntry>>(loadPendingChangesFromStorage)
@@ -296,23 +264,4 @@ export const PendingStationChangesProvider: React.FC<{ children: React.ReactNode
       {children}
     </PendingStationChangesContext.Provider>
   )
-}
-
-const EMPTY_PENDING_CHANGES: PendingStationChangesContextValue = {
-  pendingChanges: {},
-  upsertPendingChange: () => {},
-  addNewPendingStation: () => {},
-  clearPendingChange: () => {},
-  clearAllPendingChanges: () => {},
-  clearPendingChangesForIds: () => {},
-  trackedScheduledJobId: null,
-  registerScheduledServerJob: () => {},
-  clearTrackedScheduledServerJob: () => {},
-  serverScheduledJobDetail: null,
-}
-
-export const usePendingStationChanges = (): PendingStationChangesContextValue => {
-  const ctx = useContext(PendingStationChangesContext)
-  // Public `/stations` list has no provider — return a no-op stub so Firestore stays out of the bundle.
-  return ctx ?? EMPTY_PENDING_CHANGES
 }

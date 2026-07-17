@@ -27,7 +27,7 @@ const LightRailStopCard: React.FC<LightRailStopCardProps> = ({
   return (
     <article className="rs-station-card-stack rs-station-card-stack--light-rail">
       <section className="rs-station-text-card rs-station-text-card--light-rail" onClick={onCardClick}>
-        <h3 className="rs-station-name">{station.stationName || 'Unknown Stop'}</h3>
+        <h2 className="rs-station-name">{station.stationName || 'Unknown Stop'}</h2>
         <p className="rs-station-location">{locationDisplay}</p>
         <p
           className="rs-station-operator rs-station-operator--light-rail-hidden"

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { fetchStationsFromFirebase } from '../services/firebase'
 import type { StationCollectionId } from '../constants/stationCollections'
 import { DEFAULT_NETWORK_COLLECTION_ID } from '../constants/stationCollections'
-import { usePendingStationChanges } from '../contexts/PendingStationChangesContext'
+import { usePendingStationChanges } from '@/hooks/usePendingStationChanges'
 import { resolvePendingTargetCollectionId } from '../utils/pendingChangesByCollection'
 
 export function useNextStationId(targetCollectionId: StationCollectionId): {

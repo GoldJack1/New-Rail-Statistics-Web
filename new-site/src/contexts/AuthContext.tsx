@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
-import type { User } from 'firebase/auth'
+import type { User } from '@/services/firebaseAuthBootstrap'
 
 interface AuthContextValue {
   user: User | null
@@ -71,13 +71,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       (pathname.startsWith('/stations') && !isPublicStationsListPath(pathname))
 
     const init = async (options?: { deferAppCheck?: boolean }) => {
-      const firebase = await import('@/services/firebase')
-      await firebase.initializeFirebase()
+      // Lean auth-only module — must not pull Firestore into the Header/Auth chunk.
+      const authBootstrap = await import('@/services/firebaseAuthBootstrap')
+      await authBootstrap.ensureFirebaseAuthApp()
       if (authIsRouteCritical) {
         if (options?.deferAppCheck) {
-          // Restore auth session first so the page can paint; load reCAPTCHA after idle.
           const scheduleAppCheck = () => {
-            void firebase.ensureFirebaseAppCheck()
+            void authBootstrap.ensureFirebaseAppCheck()
           }
           if (typeof window.requestIdleCallback === 'function') {
             window.requestIdleCallback(scheduleAppCheck, { timeout: 4_000 })
@@ -85,32 +85,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             window.setTimeout(scheduleAppCheck, 1_500)
           }
         } else {
-          await firebase.ensureFirebaseAppCheck()
+          await authBootstrap.ensureFirebaseAppCheck()
         }
       }
-      await firebase.tryDevAutoSignInFromEnv()
+      await authBootstrap.tryDevAutoSignInFromEnv()
       if (cancelled) return
 
-      const auth = firebase.getFirebaseAuth()
-      if (auth) {
-        try {
-          const result = await firebase.handleRedirectResult()
-          if (result?.user) {
-            setUser(result.user)
-            setLoading(false)
-          }
-        } catch (err) {
-          console.warn('Redirect result error:', err)
-        }
-        if (cancelled) return
-        unsubscribe = firebase.onAuthStateChanged(auth, (u) => {
-          setUser(u)
-          writeAuthSessionHint(Boolean(u))
+      try {
+        const result = await authBootstrap.handleRedirectResult()
+        if (result?.user) {
+          setUser(result.user)
           setLoading(false)
-        })
-      } else {
-        setLoading(false)
+        }
+      } catch (err) {
+        console.warn('Redirect result error:', err)
       }
+      if (cancelled) return
+      unsubscribe = authBootstrap.subscribeAuthState((u) => {
+        setUser(u)
+        writeAuthSessionHint(Boolean(u))
+        setLoading(false)
+      })
     }
 
     const scheduleDeferredInit = (fallbackMs: number) => {
@@ -128,12 +123,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     if (authIsRouteCritical) {
-      // Returning visitors already have a session hint — defer ~400 KiB reCAPTCHA past first paint.
-      // Fresh / login flows still load App Check before interacting with Auth.
       void init({ deferAppCheck: readAuthSessionHint() && pathname !== '/log-in' })
     } else if (isColdVisitorAuthDeferPath(pathname) && !readAuthSessionHint()) {
-      // Cold marketing / public stations list: skip Firebase Auth until navigation or sign-in.
-      // PSI / first-time visitors won't download reCAPTCHA or the auth iframe.
       setLoading(false)
     } else if (isColdVisitorAuthDeferPath(pathname)) {
       scheduleDeferredInit(12_000)
@@ -156,25 +147,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [pathname])
 
   const login = useCallback(async (email: string, password: string) => {
-    const firebase = await import('@/services/firebase')
-    await firebase.initializeFirebase()
-    await firebase.loginWithEmail(email, password)
+    const authBootstrap = await import('@/services/firebaseAuthBootstrap')
+    await authBootstrap.loginWithEmail(email, password)
   }, [])
 
   const loginWithGoogle = useCallback(async () => {
-    const firebase = await import('@/services/firebase')
-    await firebase.loginWithGoogle()
+    const authBootstrap = await import('@/services/firebaseAuthBootstrap')
+    await authBootstrap.loginWithGoogle()
   }, [])
 
   const loginWithApple = useCallback(async () => {
-    const firebase = await import('@/services/firebase')
-    await firebase.loginWithApple()
+    const authBootstrap = await import('@/services/firebaseAuthBootstrap')
+    await authBootstrap.loginWithApple()
   }, [])
 
   const logout = useCallback(async () => {
-    const firebase = await import('@/services/firebase')
-    await firebase.initializeFirebase()
-    await firebase.logout()
+    const authBootstrap = await import('@/services/firebaseAuthBootstrap')
+    await authBootstrap.logout()
     writeAuthSessionHint(false)
   }, [])
 

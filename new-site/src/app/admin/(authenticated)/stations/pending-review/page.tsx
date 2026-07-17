@@ -11,7 +11,7 @@ import PendingChangesReviewPanel, {
   type PendingReviewPageActionBarApi,
   type PendingReviewPageTab
 } from '@/components/models/PendingChangesReviewPanel/PendingChangesReviewPanel'
-import { usePendingStationChanges } from '@/contexts/PendingStationChangesContext'
+import { usePendingStationChanges } from '@/hooks/usePendingStationChanges'
 import { useStationCollection } from '@/contexts/StationCollectionContext'
 import { getStationCollectionDisplayLabel } from '@/services/firebase'
 import { NETWORK_COLLECTION_IDS } from '@/constants/stationCollections'

@@ -17,7 +17,7 @@ import {
   TOGToggleVisited,
   BUTWideButton,
 } from '@/components/buttons'
-import { PageTopHeader } from '@/components/misc'
+import PageTopHeader from '@/components/misc/PageTopHeader/PageTopHeader'
 import SidebarDropdownSection from '@/components/misc/SidebarDropdownSection/SidebarDropdownSection'
 import BUTDDMList from '@/components/buttons/ddm/BUTDDMList'
 import BUTDDMListActionDual from '@/components/buttons/ddm/BUTDDMListActionDual'
@@ -31,7 +31,7 @@ import { NETWORK_COLLECTION_IDS, DEFAULT_NETWORK_VIEW } from '@/constants/statio
 import type { NetworkViewFilter } from '@/constants/stationCollections'
 import { countPendingChangesForCollection } from '@/utils/pendingChangesByCollection'
 import { useStationCollection } from '@/contexts/StationCollectionContext'
-import { usePendingStationChanges } from '@/contexts/PendingStationChangesContext'
+import { usePendingStationChanges } from '@/hooks/usePendingStationChanges'
 import { buildStationPath, getStationMapKey } from '@/utils/stationAreaSlug'
 import { pathnameForReviewPendingSource } from '@/utils/reviewPendingNavigation'
 import { useStationAdminMode } from '@/hooks/useStationAdminMode'
@@ -39,7 +39,6 @@ import {
   useStationAdminDisplayMode,
 } from '@/hooks/useStationAdminDisplayMode'
 import { useStationAdminSidebarSections } from '@/hooks/useStationAdminSidebarSections'
-import { useStationCollectionFieldSchema } from '@/hooks/useStationCollectionFieldSchema'
 import { getStationNetworkView } from '@/utils/stationCollectionStorage'
 import {
   writeStationAdminDisplayMode,
@@ -192,23 +191,11 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
   }, [pendingChanges, collectionId, networkView])
   const isAdminPanelVisible =
     surface === 'admin' ? initialMode === 'edit' || isAdminMode : isAdminMode
-  const tableHeaderSchemaCollectionId = useMemo(() => {
-    // Skip Firestore sample fetch in cards mode (and on public until table is used).
-    if (effectiveDisplayMode !== 'table') return null
-    if (networkView === 'all') return null
-    return networkView
-  }, [effectiveDisplayMode, networkView])
-  const { fieldSchema: tableHeaderFieldSchema, loading: tableHeaderSchemaLoading } =
-    useStationCollectionFieldSchema(tableHeaderSchemaCollectionId)
-  const tableHeaderFieldSchemaForModal = useMemo(() => {
-    if (networkView === 'all') {
-      return getTableFieldSchemaForNetworkView('all')
-    }
-    if (tableHeaderSchemaLoading) {
-      return getTableFieldSchemaForNetworkView(networkView)
-    }
-    return tableHeaderFieldSchema
-  }, [networkView, tableHeaderSchemaLoading, tableHeaderFieldSchema])
+  // Catalog defaults only — avoid Firestore sample fetch on the list page critical path.
+  const tableHeaderFieldSchemaForModal = useMemo(
+    () => getTableFieldSchemaForNetworkView(networkView),
+    [networkView]
+  )
 
   useEffect(() => {
     if (initialMode === 'edit' || isAdminMode) {
@@ -713,7 +700,7 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
             expanded={sidebarSections.sort}
             onExpandedChange={(expanded) => setSectionExpanded('sort', expanded)}
           >
-            {sortControls}
+            {sidebarSections.sort ? sortControls : null}
           </SidebarDropdownSection>
 
           <SidebarDropdownSection
@@ -721,7 +708,7 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
             expanded={sidebarSections.filters}
             onExpandedChange={(expanded) => setSectionExpanded('filters', expanded)}
           >
-            {filterControls}
+            {sidebarSections.filters ? filterControls : null}
           </SidebarDropdownSection>
 
           {isAdminPanelVisible && (

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { PendingChangeEntry } from '../contexts/PendingStationChangesContext'
+import type { PendingChangeEntry } from '../contexts/pendingStationChangesTypes'
 import type { Station } from '../types'
 import {
   findPendingEntryForStation,

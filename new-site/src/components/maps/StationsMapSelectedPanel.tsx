@@ -10,7 +10,7 @@ import { NETWORK_LABELS, isNetworkCollection } from '../../constants/stationColl
 import { buildStationPath, getStationNetworkCollectionId } from '../../utils/stationAreaSlug'
 import { formatMapPanelLocationDisplay } from '../../utils/formatStationLocation'
 import { parseLightRailLinesServed } from '../../utils/lightRailStationFields'
-import { usePendingStationChanges } from '../../contexts/PendingStationChangesContext'
+import { usePendingStationChanges } from '@/hooks/usePendingStationChanges'
 import type { Station } from '../../types'
 import './StationsMapSelectedPanel.css'
 

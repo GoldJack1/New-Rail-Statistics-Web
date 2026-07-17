@@ -24,8 +24,8 @@ export default function FirebaseAnalytics() {
 
     const logPageView = async () => {
       try {
-        const firebase = await import('@/services/firebase')
-        const analytics = await firebase.ensureFirebaseAnalytics()
+        const { ensureFirebaseAnalytics } = await import('@/services/firebaseAnalyticsBootstrap')
+        const analytics = await ensureFirebaseAnalytics()
         if (!analytics || cancelled) return
         const { logEvent } = await import('firebase/analytics')
         logEvent(analytics, 'page_view', {

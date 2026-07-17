@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, useDeferredValue, useSyncExternalStore } from 'react'
 import { useStationCollection } from '@/contexts/StationCollectionContext'
-import { calculateStats } from '@/services/localData'
 import {
   bootstrapStationsData,
   ensureMapStationDetailsLoaded,
@@ -85,7 +84,8 @@ export const useStations = (): UseStationsReturn => {
   }, [hydrated, revision])
 
   const deferredStations = useDeferredValue(snapshot.stations)
-  const stats = useMemo(() => calculateStats(deferredStations), [deferredStations])
+  // Stats are unused by the stations list UI; skip scanning thousands of rows on every update.
+  const stats = SERVER_STATION_SNAPSHOT.stats
 
   const refetch = useCallback(() => {
     invalidateStationsCache()
@@ -98,14 +98,14 @@ export const useStations = (): UseStationsReturn => {
 
   return useMemo(
     () => ({
-      stations: snapshot.stations,
+      stations: deferredStations,
       loading: snapshot.loading,
       isRefreshing: snapshot.isRefreshing,
       error: snapshot.error,
       stats,
       refetch,
     }),
-    [snapshot, stats, refetch]
+    [deferredStations, snapshot.loading, snapshot.isRefreshing, snapshot.error, stats, refetch]
   )
 }
 

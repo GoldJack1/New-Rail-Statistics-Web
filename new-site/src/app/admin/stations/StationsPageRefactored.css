@@ -550,6 +550,9 @@
     min-width: 0;
     max-width: 100%;
     overflow: visible;
+    /* Skip layout/paint for off-screen cards (large paginated grids). */
+    content-visibility: auto;
+    contain-intrinsic-size: auto 120px;
 }
 
 /* ========================================
@@ -599,7 +602,7 @@
     user-select: none;
 }
 
-/* Loading: keep every control rendered, redact only its text with a shimmer bar. */
+/* Loading: keep every control rendered, redact text with a static bar (no infinite animation). */
 .stations-sidebar--loading {
     pointer-events: none;
     user-select: none;
@@ -617,26 +620,7 @@
     color: transparent !important;
     caret-color: transparent;
     border-radius: var(--radius-sm, 4px);
-    background-image: linear-gradient(
-        90deg,
-        var(--stations-redact-surface) 25%,
-        var(--stations-redact-highlight) 37%,
-        var(--stations-redact-surface) 63%
-    );
-    background-size: 400% 100%;
-    animation: stations-sidebar-text-redact 1.4s ease infinite;
-}
-
-.stations-sidebar--loading .search-input-shell.rs-button.rs-input:not(.rs-input--has-value)::after {
-    border-radius: var(--radius-sm, 4px);
-    background-image: linear-gradient(
-        90deg,
-        var(--stations-redact-surface) 25%,
-        var(--stations-redact-highlight) 37%,
-        var(--stations-redact-surface) 63%
-    );
-    background-size: 400% 100%;
-    animation: stations-sidebar-text-redact 1.4s ease infinite;
+    background-color: var(--stations-redact-surface);
 }
 
 /* Search placeholder: same shimmer bar as other labels, overlaid on the text line. */
@@ -663,19 +647,17 @@
     animation: none !important;
 }
 
+.stations-sidebar--loading .search-input-shell.rs-button.rs-input:not(.rs-input--has-value)::after {
+    border-radius: var(--radius-sm, 4px);
+    background-color: var(--stations-redact-surface);
+}
+
 .stations-sidebar--loading .search-input-shell.rs-input--has-value .rs-input__field {
     color: transparent !important;
     border-radius: var(--radius-sm, 4px);
-    background-image: linear-gradient(
-        90deg,
-        var(--stations-redact-surface) 25%,
-        var(--stations-redact-highlight) 37%,
-        var(--stations-redact-surface) 63%
-    ) !important;
-    background-size: 400% 100% !important;
-    background-repeat: no-repeat;
-    background-position: 100% 50%;
-    animation: stations-sidebar-text-redact 1.4s ease infinite !important;
+    background-color: var(--stations-redact-surface) !important;
+    background-image: none !important;
+    animation: none !important;
     align-self: center;
     width: min(100%, 12rem);
     height: 0.85em;
@@ -687,20 +669,13 @@
     color: transparent;
 }
 
-/* Sidebar icons: circular shimmer instead of glyphs. */
+/* Sidebar icons: solid redact circles instead of glyphs. */
 .stations-sidebar--loading .search-input-shell .rs-input__prefix--icon,
 .stations-sidebar--loading .sidebar-dropdown__chevron {
     color: transparent;
     border-radius: 50%;
     overflow: hidden;
-    background-image: linear-gradient(
-        90deg,
-        var(--stations-redact-surface) 25%,
-        var(--stations-redact-highlight) 37%,
-        var(--stations-redact-surface) 63%
-    );
-    background-size: 400% 100%;
-    animation: stations-sidebar-text-redact 1.4s ease infinite;
+    background-color: var(--stations-redact-surface);
 }
 
 .stations-sidebar--loading .but-ddm__header-icon {
@@ -709,14 +684,7 @@
     color: transparent;
     border-radius: 50%;
     overflow: hidden;
-    background-image: linear-gradient(
-        90deg,
-        var(--stations-redact-surface) 25%,
-        var(--stations-redact-highlight) 37%,
-        var(--stations-redact-surface) 63%
-    );
-    background-size: 400% 100%;
-    animation: stations-sidebar-text-redact 1.4s ease infinite;
+    background-color: var(--stations-redact-surface);
 }
 
 .stations-sidebar--loading .search-input-shell .rs-input__prefix--icon svg,
@@ -725,20 +693,13 @@
     visibility: hidden;
 }
 
-/* London Borough Filter toggle: shimmer track and knob instead of live colours. */
+/* London Borough Filter toggle: solid redact instead of live colours. */
 .stations-sidebar--loading .county-london-toggle__control .rs-tog-toggle__track,
 .stations-sidebar--loading .county-london-toggle__control .rs-tog-toggle__knob {
     box-shadow: none !important;
     backdrop-filter: none !important;
-    background-color: transparent !important;
-    background-image: linear-gradient(
-        90deg,
-        var(--stations-redact-surface) 25%,
-        var(--stations-redact-highlight) 37%,
-        var(--stations-redact-surface) 63%
-    );
-    background-size: 400% 100%;
-    animation: stations-sidebar-text-redact 1.4s ease infinite;
+    background-image: none !important;
+    background-color: var(--stations-redact-surface) !important;
 }
 
 /* Button text sits on coloured button surfaces, so derive the bar from the button's text token. */
@@ -746,40 +707,6 @@
 .stations-sidebar--loading .rs-button-bar__text {
     --stations-redact-surface: color-mix(in srgb, var(--button-text-active, var(--text-primary)) 32%, transparent);
     --stations-redact-highlight: color-mix(in srgb, var(--button-text-active, var(--text-primary)) 52%, transparent);
-}
-
-@keyframes stations-sidebar-text-redact {
-    0% {
-        background-position: 100% 50%;
-    }
-
-    100% {
-        background-position: 0% 50%;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .stations-sidebar--loading .sidebar-dropdown__title,
-    .stations-sidebar--loading .filter-label,
-    .stations-sidebar--loading .station-admin-controls-label,
-    .stations-sidebar--loading .station-admin-controls-note,
-    .stations-sidebar--loading .county-london-toggle__label,
-    .stations-sidebar--loading .rs-button__text,
-    .stations-sidebar--loading .rs-button-bar__text,
-    .stations-sidebar--loading .search-input-shell.rs-button.rs-input:not(.rs-input--has-value)::after,
-    .stations-sidebar--loading .search-input-shell.rs-input--has-value .rs-input__field,
-    .stations-sidebar--loading .search-input-shell .rs-input__prefix--icon,
-    .stations-sidebar--loading .sidebar-dropdown__chevron,
-    .stations-sidebar--loading .but-ddm__header-icon,
-    .stations-sidebar--loading .county-london-toggle__control .rs-tog-toggle__track,
-    .stations-sidebar--loading .county-london-toggle__control .rs-tog-toggle__knob {
-        animation: none;
-        background-image: linear-gradient(
-            90deg,
-            var(--stations-redact-surface),
-            var(--stations-redact-surface)
-        );
-    }
 }
 
 .stations-main-error {

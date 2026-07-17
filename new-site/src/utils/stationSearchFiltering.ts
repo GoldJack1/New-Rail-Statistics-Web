@@ -131,15 +131,29 @@ export const tableSortToSortOption = (sort: StationsTableSort): SortOption | nul
   return null
 }
 
-export const getStationFilterOptions = (stations: Station[]): StationFilterOptions => ({
-  tocs: sortAlphabetically([...new Set(stations.map((station) => station.toc).filter(isNonEmptyString))]),
-  countries: sortAlphabetically([...new Set(stations.map((station) => station.country).filter(isNonEmptyString))]),
-  counties: sortAlphabetically([...new Set(stations.map((station) => station.county).filter(isNonEmptyString))]),
-  allBoroughs: sortAlphabetically([
-    ...new Set(stations.map((station) => station.borough).filter(isNonEmptyString)),
-  ]),
-  fareZones: sortAlphabetically([...new Set(stations.map((station) => station.fareZone).filter(isNonEmptyString))]),
-})
+export const getStationFilterOptions = (stations: Station[]): StationFilterOptions => {
+  const tocs = new Set<string>()
+  const countries = new Set<string>()
+  const counties = new Set<string>()
+  const allBoroughs = new Set<string>()
+  const fareZones = new Set<string>()
+
+  for (const station of stations) {
+    if (isNonEmptyString(station.toc)) tocs.add(station.toc)
+    if (isNonEmptyString(station.country)) countries.add(station.country)
+    if (isNonEmptyString(station.county)) counties.add(station.county)
+    if (isNonEmptyString(station.borough)) allBoroughs.add(station.borough)
+    if (isNonEmptyString(station.fareZone)) fareZones.add(station.fareZone)
+  }
+
+  return {
+    tocs: sortAlphabetically([...tocs]),
+    countries: sortAlphabetically([...countries]),
+    counties: sortAlphabetically([...counties]),
+    allBoroughs: sortAlphabetically([...allBoroughs]),
+    fareZones: sortAlphabetically([...fareZones]),
+  }
+}
 
 /** Borough values that appear on stations in the given counties. */
 export const getBoroughsForCounties = (
@@ -214,6 +228,17 @@ export const filterStations = (
   searchMode: StationSearchMode = 'name'
 ): Station[] => {
   const normalizedSearchTerm = searchTerm.trim().toLowerCase()
+  const filtersIdle =
+    normalizedSearchTerm.length === 0 &&
+    !shouldApplyCategoryFilter(selections.tocs, options.tocs) &&
+    !shouldApplyCategoryFilter(selections.countries, options.countries) &&
+    !shouldApplyCategoryFilter(selections.counties, options.counties) &&
+    !shouldApplyCategoryFilter(selections.boroughs, options.allBoroughs) &&
+    !shouldApplyCategoryFilter(selections.fareZones, options.fareZones)
+
+  // Default “all selected” + empty search — skip O(n) scan on large lists.
+  if (filtersIdle) return stations
+
   const boroughOptions = getBoroughOptionsForCountySelection(
     stations,
     selections.counties,
@@ -253,8 +278,24 @@ export const filterStations = (
   })
 }
 
-export const sortStations = (stations: Station[], sortOption: SortOption): Station[] =>
-  [...stations].sort((a, b) => {
+export const sortStations = (stations: Station[], sortOption: SortOption): Station[] => {
+  if (stations.length <= 1) return stations
+
+  // CDN list rows are typically name-asc already — avoid a full copy+sort when possible.
+  if (sortOption === 'name-asc') {
+    let alreadySorted = true
+    for (let i = 1; i < stations.length; i += 1) {
+      const prev = stations[i - 1]?.stationName || ''
+      const next = stations[i]?.stationName || ''
+      if (prev.localeCompare(next) > 0) {
+        alreadySorted = false
+        break
+      }
+    }
+    if (alreadySorted) return stations
+  }
+
+  return [...stations].sort((a, b) => {
     switch (sortOption) {
       case 'name-asc':
         return (a.stationName || '').localeCompare(b.stationName || '')
@@ -272,3 +313,4 @@ export const sortStations = (stations: Station[], sortOption: SortOption): Stati
         return 0
     }
   })
+}

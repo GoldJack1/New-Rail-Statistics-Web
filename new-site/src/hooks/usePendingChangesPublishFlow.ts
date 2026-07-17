@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import type { Station, SandboxStationDoc } from '../types'
 import { useStationCollection } from '../contexts/StationCollectionContext'
-import { usePendingStationChanges } from '../contexts/PendingStationChangesContext'
+import { usePendingStationChanges } from '@/hooks/usePendingStationChanges'
 import {
   updateStationInFirebase,
   createStationInFirebase,

@@ -53,6 +53,7 @@ const inflightLoads = new Map<string, Promise<void>>()
 const inflightMergedBundleLoads = new Map<StationFetchDetailLevel, Promise<boolean>>()
 let storeRevision = 0
 let initialSyncPending = typeof window !== 'undefined'
+let notifyScheduled = false
 
 function createEmptyState(): CollectionLoadState {
   return {
@@ -128,8 +129,19 @@ function getState(collectionId: StationCollectionId): CollectionLoadState {
 }
 
 function notify(): void {
-  storeRevision += 1
-  listeners.forEach((listener) => listener())
+  // Coalesce rapid patchState bursts (progressive CDN loads) into one React update per frame.
+  if (notifyScheduled) return
+  notifyScheduled = true
+  const flush = () => {
+    notifyScheduled = false
+    storeRevision += 1
+    listeners.forEach((listener) => listener())
+  }
+  if (typeof queueMicrotask === 'function') {
+    queueMicrotask(flush)
+  } else {
+    Promise.resolve().then(flush)
+  }
 }
 
 export function getStationsStoreRevision(): number {

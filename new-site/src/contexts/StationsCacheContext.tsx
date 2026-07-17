@@ -2,6 +2,7 @@
 
 /* eslint-disable react-refresh/only-export-components */
 import React, { useCallback, useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { useStationCollection } from '@/contexts/StationCollectionContext'
 import {
   bootstrapStationsData,
@@ -19,7 +20,9 @@ import {
 
 export const StationsCacheProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { networkView } = useStationCollection()
+  const pathname = usePathname() ?? '/'
   const [isLiteDataMode, setIsLiteDataMode] = useState(false)
+  const isPublicStationsList = pathname === '/stations'
 
   useEffect(() => {
     const input = readDeviceCapabilityFromBrowser()
@@ -50,7 +53,7 @@ export const StationsCacheProvider: React.FC<{ children: React.ReactNode }> = ({
       void bootstrapStationsData({ networkView, detailLevel: 'lean', force: true })
         .then(() => loadAllNetworkStationsProgressive({ detailLevel: 'list', force: true }))
         .then(() => {
-          if (isLiteDataMode) return
+          if (isLiteDataMode || isPublicStationsList) return
           return loadAllNetworkStationsProgressive({ detailLevel: 'full', force: true })
         })
         .finally(() => {
@@ -59,10 +62,11 @@ export const StationsCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     }
     window.addEventListener('railstats-stations-refetch', onRefetch)
     return () => window.removeEventListener('railstats-stations-refetch', onRefetch)
-  }, [isLiteDataMode, networkView])
+  }, [isLiteDataMode, isPublicStationsList, networkView])
 
   useEffect(() => {
-    if (isLiteDataMode) return
+    // Public list only needs list-level rows; skip full detail preload (PSI + main-thread).
+    if (isLiteDataMode || isPublicStationsList) return
 
     const runFullLoad = () => {
       const hasListData = NETWORK_COLLECTION_IDS.every(
@@ -82,7 +86,7 @@ export const StationsCacheProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const timer = window.setTimeout(runFullLoad, 6_000)
     return () => window.clearTimeout(timer)
-  }, [isLiteDataMode, networkView])
+  }, [isLiteDataMode, isPublicStationsList, networkView])
 
   return <>{children}</>
 }

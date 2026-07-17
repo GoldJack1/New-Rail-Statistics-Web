@@ -16,7 +16,7 @@ import {
 import { isStationCollectionId } from '@/constants/stationCollections'
 import { useStationCollection } from '@/contexts/StationCollectionContext'
 import { useAuth } from '@/contexts/AuthContext'
-import { usePendingStationChanges } from '@/contexts/PendingStationChangesContext'
+import { usePendingStationChanges } from '@/hooks/usePendingStationChanges'
 import {
   getPendingFieldChangesForEntry,
   mergeAdditionalDocWithPendingUpdate,

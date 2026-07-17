@@ -17,7 +17,7 @@ import {
   buildSuperTramTimelineSteps,
 } from '@/utils/superTramTimeline'
 import { useStationCollection } from '@/contexts/StationCollectionContext'
-import { usePendingStationChanges } from '@/contexts/PendingStationChangesContext'
+import { usePendingStationChanges } from '@/hooks/usePendingStationChanges'
 import { useStationsMap } from '@/hooks/useStations'
 import {
   ensureCollectionLoaded,

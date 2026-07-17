@@ -98,7 +98,8 @@ const AutoAnimateCollapse: React.FC<AutoAnimateCollapseProps> = ({
           .join(' ')}
         aria-hidden={ariaHidden ?? !isOpen}
       >
-        {children}
+        {/* Unmount when fully closed to avoid style/layout work for hidden sidebar panels. */}
+        {isOpen || isContentVisible ? children : null}
       </div>
     </div>
   )

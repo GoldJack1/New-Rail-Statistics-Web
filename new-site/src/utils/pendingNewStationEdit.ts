@@ -1,4 +1,4 @@
-import type { PendingChangeEntry } from '../contexts/PendingStationChangesContext'
+import type { PendingChangeEntry } from '../contexts/pendingStationChangesTypes'
 import type { StationCollectionId } from '../constants/stationCollections'
 import { isNetworkCollection } from '../constants/stationCollections'
 import type { SandboxStationDoc, Station, YearlyPassengers } from '../types'

@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 
 import { useNextStationId } from '@/hooks/useNextStationId'
 import { useStationCollectionFieldSchema } from '@/hooks/useStationCollectionFieldSchema'
-import { usePendingStationChanges } from '@/contexts/PendingStationChangesContext'
+import { usePendingStationChanges } from '@/hooks/usePendingStationChanges'
 import { NewStationForm } from '@/components/models'
 import { PageTopHeader } from '@/components/misc'
 import ChooseNetworkForNewStationModal from '@/components/models/ChooseNetworkForNewStationModal/ChooseNetworkForNewStationModal'

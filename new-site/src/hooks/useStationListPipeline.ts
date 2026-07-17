@@ -1,6 +1,6 @@
-import { useMemo } from 'react'
+import { useDeferredValue, useMemo } from 'react'
 import type { NetworkViewFilter } from '@/constants/stationCollections'
-import type { PendingChangeEntry } from '@/contexts/PendingStationChangesContext'
+import type { PendingChangeEntry } from '@/contexts/pendingStationChangesTypes'
 import type { Station } from '@/types'
 import { mergePendingChangesForStationsList } from '@/utils/applyPendingChangesForDisplay'
 import {
@@ -61,7 +61,13 @@ export function useStationListPipeline({
     return mergePendingChangesForStationsList(baseStations, pendingChanges, networkView)
   }, [loadedStations, networkView, pendingChanges])
 
-  const uniqueValues = useMemo(() => getStationFilterOptions(stations || []), [stations])
+  // Keep filter-option scans / list transforms off the urgent path after large CDN loads.
+  const deferredStations = useDeferredValue(stations)
+
+  const uniqueValues = useMemo(
+    () => getStationFilterOptions(deferredStations || []),
+    [deferredStations]
+  )
   const defaultSelections = useMemo(
     () => getDefaultStationFilterSelections(uniqueValues),
     [uniqueValues]
@@ -71,13 +77,13 @@ export function useStationListPipeline({
   const filteredStations = useMemo(
     () =>
       filterStations(
-        stations || [],
+        deferredStations || [],
         debouncedSearchTerm,
         effectiveSelections,
         uniqueValues,
         searchMode
       ),
-    [stations, debouncedSearchTerm, effectiveSelections, uniqueValues, searchMode]
+    [deferredStations, debouncedSearchTerm, effectiveSelections, uniqueValues, searchMode]
   )
 
   const sortedStations = useMemo(() => {
