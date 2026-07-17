@@ -58,7 +58,7 @@ const Header: React.FC = () => {
   const navItems = [
     { to: '/' as const, label: 'Home', active: isHomeActive, show: true, showBeta: false },
     { to: '/migration' as const, label: 'Migration', active: isMigrationActive, show: true, showBeta: false },
-    { to: '/admin/stations' as const, label: 'Stations', active: isStationsActive && !isMapActive, show: Boolean(user), showBeta: false },
+    { to: '/admin/stations' as const, label: 'Stations', active: isStationsActive && !isMapActive, show: true, showBeta: false },
     { to: '/stations/map' as const, label: 'Map', active: isMapActive, show: true, showBeta: true },
     { to: '/admin/messages' as const, label: 'Messages', active: isMessagesActive, show: Boolean(user), showBeta: false },
   ].filter((item) => item.show)
