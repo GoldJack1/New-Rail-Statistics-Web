@@ -42,9 +42,9 @@ const UI_COLOUR_TOKENS: TokenItem[] = [
 const ALL_TOKENS = [...SURFACE_TOKENS, ...TEXT_TOKENS, ...ACCENT_TOKENS, ...UI_COLOUR_TOKENS]
 
 const LIGHT_TOKEN_FILLS: Record<string, string> = {
-  '--bg-primary': '#F5F5F5',
-  '--bg-secondary': '#E8E8E8',
-  '--bg-tertiary': '#D1D1D1',
+  '--bg-primary': '#FCFCFC',
+  '--bg-secondary': '#DBDBDB',
+  '--bg-tertiary': '#C2C2C2',
   '--text-primary': '#000000',
   '--text-secondary': '#404040',
   '--text-disabled': '#737373',
@@ -61,9 +61,9 @@ const LIGHT_TOKEN_FILLS: Record<string, string> = {
 }
 
 const DARK_TOKEN_FILLS: Record<string, string> = {
-  '--bg-primary': '#333333',
+  '--bg-primary': '#3D3D3D',
   '--bg-secondary': '#262626',
-  '--bg-tertiary': '#1A1A1A',
+  '--bg-tertiary': '#141414',
   '--text-primary': '#FFFFFF',
   '--text-secondary': '#BFBFBF',
   '--text-disabled': '#8C8C8C',
@@ -300,9 +300,9 @@ Dark theme
 const SITE_COLOURS_PROMPT = `Site colour tokens
 
 Light theme
-- Background primary: hsl(0 0% 96%) / #F5F5F5
-- Background secondary: hsl(0 0% 91%) / #E8E8E8
-- Background tertiary: hsl(0 0% 82%) / #D1D1D1
+- Background primary: hsl(0 0% 99%) / #FCFCFC
+- Background secondary: hsl(0 0% 86%) / #DBDBDB
+- Background tertiary: hsl(0 0% 76%) / #C2C2C2
 - Accent bright: #E50000
 - Accent strong: #CC0000
 - Accent base: #B20016
@@ -310,9 +310,9 @@ Light theme
 - Accent darkest: #7F0000
 
 Dark theme
-- Background primary: hsl(0 0% 20%) / #333333
+- Background primary: hsl(0 0% 24%) / #3D3D3D
 - Background secondary: hsl(0 0% 15%) / #262626
-- Background tertiary: hsl(0 0% 10%) / #1A1A1A
+- Background tertiary: hsl(0 0% 8%) / #141414
 - Accent bright: #E50000
 - Accent strong: #CC0000
 - Accent base: #B20016

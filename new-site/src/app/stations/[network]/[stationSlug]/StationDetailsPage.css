@@ -4,9 +4,13 @@
   width: 100vw;
   margin: 0 !important;
   padding-top: 0;
-  padding-bottom: var(--space-xl);
+  padding-bottom: 0;
   padding-left: 0 !important;
   padding-right: 0 !important;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 @media (max-width: 1023px) {
@@ -24,17 +28,28 @@
 .station-details-page {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   gap: 0;
   width: 100%;
-  padding-left: var(--space-2xl);
-  padding-right: var(--space-2xl);
+  padding-left: 0;
+  padding-right: 0;
+  padding-top: 0;
+  margin-top: 0;
+  min-height: 0;
 }
 
+/* Keep the page header band continuous with the left panel — no seam/gap. */
+.container--station-details > .rs-page-top-header {
+  margin-bottom: 0;
+}
+
+.station-details-header-actions,
 .station-details-header-actions-slot {
   display: flex;
   gap: var(--space-sm);
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  flex-wrap: wrap;
 }
 
 .station-details-card {
@@ -51,10 +66,12 @@
 
 .station-details-layout {
   display: flex;
+  flex: 1 1 auto;
   gap: var(--space-xl);
-  align-items: flex-start;
+  align-items: stretch;
   width: 100%;
   min-width: 0; /* allow flex child to shrink and fill correctly */
+  min-height: 0;
 }
 
 .station-details-sidebar {
@@ -62,8 +79,12 @@
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
-  padding-top: var(--space-xl);
+  gap: 0;
+  padding-top: 0;
+  margin-top: 0;
+  align-self: stretch;
+  min-height: 0;
+  min-width: 0;
 }
 
 .station-details-sidebar-actions {
@@ -186,49 +207,55 @@
 .station-details-tabs {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
+  gap: 0;
 }
 
-.station-details-tab {
+.station-details-tab.sidebar-dropdown {
+  border: 0;
+  border-radius: 0;
+  background-color: var(--bg-secondary);
+  overflow: visible;
+}
+
+.station-details-tab .sidebar-dropdown__header {
   width: 100%;
-  justify-content: flex-start;
-  font-size: var(--text-sm);
 }
 
-/* Unselected tabs should read as plain text rows (no button surface). */
-.station-details-tab.rs-button--pressed {
-  background: transparent !important;
-  box-shadow: none !important;
-  color: var(--text-secondary);
+.station-details-tab .sidebar-dropdown__chevron {
+  transform: none;
 }
 
-.station-details-tab.rs-button--pressed .rs-button__inner-shadow {
-  box-shadow: none !important;
+/* Selected section = tertiary surface, flush to the content on the right. */
+.station-details-tab--active {
+  background-color: var(--bg-tertiary);
 }
 
-/* On hover, unselected tabs preview the accent pressed button surface. */
+.station-details-tab--active .sidebar-dropdown__header-row {
+  border-bottom: 0;
+  background-color: var(--bg-tertiary);
+}
+
+.station-details-tab--active .sidebar-dropdown__header {
+  border-radius: 0;
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  box-shadow: none;
+}
+
+.station-details-tab--active .sidebar-dropdown__chevron {
+  transform: none;
+  color: inherit;
+}
+
 @media (hover: hover) and (pointer: fine) {
-  .station-details-tab.rs-button--pressed:not(:disabled):hover {
-    background-color: var(--button-bg-inactive) !important;
-    color: var(--button-text-inactive);
-    box-shadow: none !important;
-  }
-
-  .station-details-tab.rs-button--pressed:not(:disabled):hover .rs-button__inner-shadow {
-    box-shadow: var(--button-inner-shadow-pressed) !important;
+  .station-details-tab--idle .sidebar-dropdown__header:hover {
+    color: var(--text-primary);
+    background-color: color-mix(in srgb, var(--bg-primary) 80%, transparent);
+    border-radius: 0;
   }
 }
 
 @media (max-width: 768px) {
-  .station-details-page {
-    padding-left: var(--space-lg);
-    padding-right: var(--space-lg);
-  }
-
-  .station-details-header-actions-slot {
-    display: none;
-  }
-
   .station-details-layout {
     flex-direction: column;
     width: 100%;
@@ -239,45 +266,23 @@
   .station-details-sidebar {
     width: 100%;
     flex-direction: column;
-    gap: var(--space-sm);
+    gap: 0;
     min-width: 0;
-    padding-top: var(--space-lg);
-  }
-
-  .station-details-sidebar-actions {
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-    gap: var(--space-sm);
-  }
-
-  .station-details-sidebar-secondary-actions {
-    display: block;
+    padding-top: 0;
   }
 
   .station-details-tabs {
-    flex-direction: row;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    scroll-snap-type: x mandatory;
-    gap: var(--space-sm);
-    padding-bottom: var(--space-xs);
-    margin-bottom: var(--space-sm);
+    flex-direction: column;
+    gap: 0;
+    overflow: visible;
+    padding-bottom: 0;
+    margin-bottom: 0;
   }
 
   .station-details-tab {
-    flex: 0 0 auto;
-    white-space: nowrap;
-    scroll-snap-align: start;
-    width: auto;
-  }
-
-  /* Hide scrollbar while still scrollable */
-  .station-details-tabs::-webkit-scrollbar {
-    height: 0;
+    flex: none;
+    white-space: normal;
+    width: 100%;
   }
 
   .station-details-card {
@@ -307,5 +312,226 @@
     max-width: 100%;
   }
 
+}
+
+/* Detail page sidebar now follows the same panel system as the stations list page. */
+.station-details-page {
+  --stations-card-gap: var(--space-lg);
+  --stations-content-inset: var(--stations-card-gap);
+}
+
+@media (min-width: 1024px) {
+  .station-details-page {
+    --stations-content-inset: calc(var(--space-2xl) * 2 / 3);
+  }
+
+  /* Match PageTopHeader’s --space-2xl text inset. */
+  .container--station-details .rs-page-top-header__inner {
+    padding-left: var(--space-2xl);
+    padding-right: var(--space-2xl);
+  }
+
+  .station-details-layout {
+    display: grid;
+    grid-template-columns: 360px minmax(0, 1fr);
+    gap: 0;
+    align-items: stretch;
+    flex: 1 1 auto;
+    max-width: var(--container-3xl);
+    margin: 0 auto;
+    padding: 0 var(--stations-content-inset);
+    box-sizing: border-box;
+    min-height: 0;
+    width: 100%;
+  }
+
+  .station-details-sidebar {
+    width: auto;
+    min-width: 0;
+    margin-left: calc(var(--stations-content-inset) * -1);
+    align-self: stretch;
+    padding-top: 0;
+    margin-top: 0;
+    gap: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+  }
+
+  .station-details-sidebar-panel {
+    position: relative;
+    overflow: visible;
+    flex: 1 1 auto;
+    min-height: 100%;
+    height: 100%;
+    width: 100%;
+    /* Do not inherit stations-list `padding-top: 25px` if that CSS chunk is still loaded. */
+    padding-top: 0 !important;
+    padding-left: var(--stations-content-inset);
+    padding-right: 0;
+    padding-bottom: 0;
+    margin-top: 0;
+    box-sizing: border-box;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-top: 0;
+    border-right: 0;
+    border-bottom: 0;
+    border-radius: 0;
+  }
+
+  .station-details-sidebar-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -100vw;
+    width: 100vw;
+    background-color: var(--bg-secondary);
+    border-top: 0;
+    pointer-events: none;
+  }
+
+  .station-details-sidebar-panel .station-details-tabs,
+  .station-details-sidebar-panel .station-details-tabs > .station-details-tab:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  /* Panel already has content-inset; pad the rest so labels line up with the header title. */
+  .station-details-sidebar-panel .station-details-tab .sidebar-dropdown__header {
+    padding-block: var(--space-lg);
+    padding-left: calc(var(--space-2xl) - var(--stations-content-inset));
+    padding-right: var(--space-md);
+  }
+
+  /* Selected row must run flush to the panel’s right edge so it blends into main. */
+  .station-details-sidebar-panel .station-details-tab--active .sidebar-dropdown__header {
+    margin-right: 0;
+    width: 100%;
+  }
+
+  .station-details-main {
+    padding: var(--stations-content-inset) 0 var(--stations-content-inset) var(--stations-content-inset);
+    box-sizing: border-box;
+  }
+}
+
+.station-details-sidebar-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+  width: 100%;
+  padding-top: 0;
+  margin-top: 0;
+}
+
+.station-details-sidebar-panel .station-details-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.station-details-sidebar-panel .station-details-tab .sidebar-dropdown__header {
+  padding: var(--space-lg) var(--space-md);
+  box-sizing: border-box;
+  /* Match stations page SidebarDropdownSection header typography. */
+  font-family: var(--font-body);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  line-height: 1.2;
+  -webkit-font-variation-settings: 'CRSV' 1, 'MONO' 0, 'slnt' 0;
+  font-variation-settings: 'CRSV' 1, 'MONO' 0, 'slnt' 0;
+}
+
+.station-details-sidebar-panel .station-details-tab .sidebar-dropdown__header-row,
+.station-details-sidebar-panel .station-details-tab .sidebar-dropdown__header {
+  min-height: 64px;
+  height: auto;
+}
+
+.station-details-sidebar-panel .station-details-tab .sidebar-dropdown__chevron {
+  color: var(--text-primary);
+}
+
+@media (max-width: 1023px) {
+  .station-details-page {
+    --stations-content-inset: var(--stations-card-gap);
+    --stations-panel-text-inset: var(--stations-content-inset);
+    padding-left: var(--stations-content-inset);
+    padding-right: var(--stations-content-inset);
+  }
+
+  .container--station-details .rs-page-top-header__inner {
+    padding-left: var(--stations-content-inset);
+    padding-right: var(--stations-content-inset);
+  }
+
+  .station-details-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    width: 100%;
+    max-width: none;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  .station-details-sidebar {
+    order: 1;
+    width: calc(100% + (var(--stations-content-inset) * 2));
+    max-width: none;
+    margin-left: calc(var(--stations-content-inset) * -1);
+    margin-right: calc(var(--stations-content-inset) * -1);
+    min-width: 0;
+    padding-top: 0;
+    gap: 0;
+  }
+
+  .station-details-sidebar-panel {
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .station-details-sidebar-panel .station-details-tabs {
+    padding: 0;
+  }
+
+  .station-details-sidebar-panel .station-details-tab .sidebar-dropdown__header {
+    padding: var(--space-lg) var(--stations-panel-text-inset);
+  }
+
+  .station-details-main {
+    order: 2;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding: var(--stations-content-inset) 0;
+    box-sizing: border-box;
+    overflow-x: clip;
+  }
+}
+
+@media (max-width: 639px) {
+  .station-details-page {
+    --stations-card-gap: var(--space-md);
+    --stations-content-inset: var(--stations-card-gap);
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .station-details-sidebar {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .station-details-main {
+    padding-left: var(--stations-content-inset);
+    padding-right: var(--stations-content-inset);
+  }
 }
 

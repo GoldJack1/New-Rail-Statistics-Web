@@ -21,7 +21,7 @@
 /* Dark Mode */
 [data-theme="dark"] {
   /* Active Button Colors - Dark Mode */
-  --button-bg-active: hsl(0 0% 24%);
+  --button-bg-active: var(--bg-primary);
   --button-text-active: #ffffff;
   --button-inner-shadow-active: inset 0px 0px 4.5px rgba(255, 255, 255, 0.2);
   

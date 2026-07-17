@@ -67,9 +67,9 @@
   gap: 8px;
 }
 
-/* Site header uses primary chrome on pages with a page title band */
+/* Site header uses chrome on pages with a page title band */
 .app:has(.rs-page-top-header) .universal-header {
-  background: var(--bg-primary);
+  background: var(--bg-chrome);
   border-bottom-color: var(--border-color);
   /* Opaque fill — backdrop-filter samples scrolling tertiary content and causes a colour flash */
   backdrop-filter: none;
@@ -78,11 +78,11 @@
 }
 
 .app:has(.rs-page-top-header) .safari-toolbar-tint {
-  background-color: var(--bg-primary);
+  background-color: var(--bg-chrome);
 }
 
 .app:has(.rs-page-top-header) .universal-header--menu-open {
-  background: var(--bg-primary);
+  background: var(--bg-chrome);
 }
 
 @media (max-width: 1023px) {

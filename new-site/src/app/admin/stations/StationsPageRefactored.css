@@ -213,16 +213,16 @@
 }
 
 .stations-sidebar-panel .sidebar-dropdown__header-row {
-    height: 52px;
-    min-height: 52px;
+    height: auto;
+    min-height: 64px;
     flex-shrink: 0;
     background-color: var(--bg-secondary);
 }
 
 .stations-sidebar-panel .sidebar-dropdown__header {
-    height: 52px;
-    min-height: 52px;
-    padding: 0 var(--space-md);
+    height: auto;
+    min-height: 64px;
+    padding: var(--space-lg) var(--space-md);
     box-sizing: border-box;
     background-color: transparent;
     color: var(--text-primary);
@@ -803,7 +803,7 @@
     }
 
     .stations-sidebar-panel .sidebar-dropdown__header {
-        padding: 0 var(--stations-panel-text-inset);
+        padding: var(--space-lg) var(--stations-panel-text-inset);
     }
 
     .stations-sidebar-panel .sidebar-dropdown__panel-inner {

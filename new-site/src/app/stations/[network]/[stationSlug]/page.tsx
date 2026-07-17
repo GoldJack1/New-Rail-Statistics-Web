@@ -30,8 +30,9 @@ import {
 import StationDetailsView from '@/components/models/StationDetails/StationDetailsView'
 import { BUTWideButton } from '@/components/buttons'
 import { BUTCircleButton } from '@/components/buttons'
-import { BackIcon } from '@/components/icons'
+import { BackIcon, ChevronRightIcon } from '@/components/icons'
 import PageTopHeader from '@/components/misc/PageTopHeader/PageTopHeader'
+import '@/components/misc/SidebarDropdownSection/SidebarDropdownSection.css'
 import '@/components/models/StationModal/StationModal.css'
 import { PencilSimple } from '@phosphor-icons/react'
 import { paramAsString } from '@/utils/nextParams'
@@ -114,6 +115,24 @@ function StationDetailsPage() {
     () => visibleTabs.filter((tab) => tab !== 'location'),
     [visibleTabs]
   )
+
+  const sectionTabs = useMemo(() => {
+    const tabs: Array<{ id: StationDetailsTab; label: string }> = [{ id: 'details', label: 'Details' }]
+    if (showAdditionalTab) tabs.push({ id: 'additional', label: 'Additional details' })
+    if (fieldSchema.showServiceTab) tabs.push({ id: 'service', label: 'Service & Connections' })
+    tabs.push({ id: 'location', label: 'Location' })
+    if (fieldSchema.showUsageTab) tabs.push({ id: 'usage', label: 'Usage' })
+    if (fieldSchema.showStepFreeTab) tabs.push({ id: 'stepFree', label: fieldSchema.stepFreeTabLabel })
+    if (fieldSchema.showFacilitiesTab) tabs.push({ id: 'facilities', label: 'Facilities' })
+    return tabs
+  }, [
+    showAdditionalTab,
+    fieldSchema.showServiceTab,
+    fieldSchema.showUsageTab,
+    fieldSchema.showStepFreeTab,
+    fieldSchema.stepFreeTabLabel,
+    fieldSchema.showFacilitiesTab,
+  ])
 
   useEffect(() => {
     if (activeTab === 'additional' && !showAdditionalTab) setActiveTab('details')
@@ -234,120 +253,63 @@ function StationDetailsPage() {
       <PageTopHeader
         title={`Station details: ${(displayStation ?? station).stationName || 'Station'}`}
         subtitle={`${(displayStation ?? station).crsCode || 'No CRS'} · ID: ${station.id}${showPendingOverlay ? ' · Unpublished changes' : ''}`}
+        actionContent={
+          <div className="station-details-header-actions">
+            <BUTWideButton
+              type="button"
+              width="hug"
+              icon={<BackIcon />}
+              onClick={() => router.push(backPath)}
+            >
+              Back
+            </BUTWideButton>
+            {canEdit && (
+              <BUTCircleButton
+                type="button"
+                ariaLabel="Edit station"
+                onClick={() => {
+                  setStationDetailsNavigationState(navigationState)
+                  router.push(`/admin/stations/${buildStationPath(station, collectionId)}/edit`)
+                }}
+                icon={<PencilSimple size={16} aria-hidden />}
+              />
+            )}
+          </div>
+        }
       />
       <div className="station-details-page">
         <div className="station-details-layout">
           <aside className="station-details-sidebar">
-            <div className="station-details-sidebar-actions">
-              <BUTWideButton
-                type="button"
-                width="hug"
-                icon={<BackIcon />}
-                onClick={() => router.push(backPath)}
-              >
-                Back
-              </BUTWideButton>
-              {canEdit && (
-                <>
-                  <div className="station-details-sidebar-actions-spacer" aria-hidden="true" />
-                  <BUTCircleButton
-                    type="button"
-                    ariaLabel="Edit station"
-                    onClick={() => {
-                      setStationDetailsNavigationState(navigationState)
-                      router.push(`/admin/stations/${buildStationPath(station, collectionId)}/edit`)
-                    }}
-                    icon={<PencilSimple size={16} aria-hidden />}
-                  />
-                </>
-              )}
+            <div className="station-details-sidebar-panel">
+              <nav className="station-details-tabs" aria-label="Station sections">
+                {sectionTabs.map((tab) => {
+                  const isActive = activeTab === tab.id
+                  return (
+                    <div
+                      key={tab.id}
+                      className={[
+                        'sidebar-dropdown',
+                        'station-details-tab',
+                        'rs-button--color-primary',
+                        isActive ? 'station-details-tab--active' : 'station-details-tab--idle',
+                      ].join(' ')}
+                    >
+                      <div className="sidebar-dropdown__header-row">
+                        <button
+                          type="button"
+                          className="sidebar-dropdown__header"
+                          aria-current={isActive ? 'page' : undefined}
+                          onClick={() => setActiveTab(tab.id)}
+                        >
+                          <span className="sidebar-dropdown__title">{tab.label}</span>
+                          <ChevronRightIcon className="sidebar-dropdown__chevron" aria-hidden />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </nav>
             </div>
-            <div className="station-details-sidebar-secondary-actions">
-              <div id="station-details-sidebar-actions" />
-            </div>
-
-            <nav className="station-details-tabs" aria-label="Station sections">
-              <BUTWideButton
-                type="button"
-                width="hug"
-                colorVariant="accent"
-                className="station-details-tab"
-                state={activeTab === 'details' ? 'active' : 'pressed'}
-                onClick={() => setActiveTab('details')}
-              >
-                Details
-              </BUTWideButton>
-              {showAdditionalTab && (
-                <BUTWideButton
-                  type="button"
-                  width="hug"
-                  colorVariant="accent"
-                  className="station-details-tab"
-                  state={activeTab === 'additional' ? 'active' : 'pressed'}
-                  onClick={() => setActiveTab('additional')}
-                >
-                  Additional details
-                </BUTWideButton>
-              )}
-              {fieldSchema.showServiceTab && (
-                <BUTWideButton
-                  type="button"
-                  width="hug"
-                  colorVariant="accent"
-                  className="station-details-tab"
-                  state={activeTab === 'service' ? 'active' : 'pressed'}
-                  onClick={() => setActiveTab('service')}
-                >
-                  Service & Connections
-                </BUTWideButton>
-              )}
-              <BUTWideButton
-                type="button"
-                width="hug"
-                colorVariant="accent"
-                className="station-details-tab"
-                state={activeTab === 'location' ? 'active' : 'pressed'}
-                onClick={() => setActiveTab('location')}
-              >
-                Location
-              </BUTWideButton>
-              {fieldSchema.showUsageTab && (
-                <BUTWideButton
-                  type="button"
-                  width="hug"
-                  colorVariant="accent"
-                  className="station-details-tab"
-                  state={activeTab === 'usage' ? 'active' : 'pressed'}
-                  onClick={() => setActiveTab('usage')}
-                >
-                  Usage
-                </BUTWideButton>
-              )}
-              {fieldSchema.showStepFreeTab && (
-                <BUTWideButton
-                  type="button"
-                  width="hug"
-                  colorVariant="accent"
-                  className="station-details-tab"
-                  state={activeTab === 'stepFree' ? 'active' : 'pressed'}
-                  onClick={() => setActiveTab('stepFree')}
-                >
-                  {fieldSchema.stepFreeTabLabel}
-                </BUTWideButton>
-              )}
-              {fieldSchema.showFacilitiesTab && (
-                <BUTWideButton
-                  type="button"
-                  width="hug"
-                  colorVariant="accent"
-                  className="station-details-tab"
-                  state={activeTab === 'facilities' ? 'active' : 'pressed'}
-                  onClick={() => setActiveTab('facilities')}
-                >
-                  Facilities
-                </BUTWideButton>
-              )}
-            </nav>
           </aside>
 
           <main className="station-details-main">
