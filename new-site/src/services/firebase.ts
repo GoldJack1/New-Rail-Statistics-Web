@@ -105,7 +105,12 @@ let appCheckInflight: Promise<void> | null = null
  * App Check is imported dynamically so the reCAPTCHA provider is not in the critical parse path.
  */
 export const ensureFirebaseAppCheck = async (): Promise<void> => {
-  if (appCheckReady || !app) return
+  if (appCheckReady) return
+  if (!app) {
+    // Callers that only need Firestore (public detail) may reach here before Auth bootstrap.
+    await initializeFirebase()
+  }
+  if (!app) return
   if (appCheckInflight) return appCheckInflight
 
   appCheckInflight = (async () => {
@@ -117,11 +122,16 @@ export const ensureFirebaseAppCheck = async (): Promise<void> => {
 
     if (canEnableAppCheck && app) {
       const { initializeAppCheck, ReCaptchaV3Provider } = await import('firebase/app-check')
-      initializeAppCheck(app, {
-        provider: new ReCaptchaV3Provider(appCheckSiteKey),
-        isTokenAutoRefreshEnabled: true,
-      })
-      console.log('🔥 Firebase App Check enabled (reCAPTCHA v3)')
+      try {
+        initializeAppCheck(app, {
+          provider: new ReCaptchaV3Provider(appCheckSiteKey),
+          isTokenAutoRefreshEnabled: true,
+        })
+        console.log('🔥 Firebase App Check enabled (reCAPTCHA v3)')
+      } catch (error) {
+        // Already initialized via auth bootstrap on the same app instance.
+        console.warn('🔥 App Check already initialized:', (error as Error).message)
+      }
     } else if (!isDev && appCheckExplicitlyDisabled) {
       console.warn(
         '🔥 NEXT_PUBLIC_FIREBASE_APP_CHECK_DISABLED=true — App Check is off in this build. ' +
@@ -500,6 +510,8 @@ export const fetchStationCollectionSampleDocs = async (
     const { db: newDb } = await initializeFirebase()
     db = newDb
   }
+  // Detail schema sampling needs App Check even when Auth is deferred on public routes.
+  await ensureFirebaseAppCheck()
   if (!db) return []
   try {
     const stationsRef = collection(db, collectionId)
@@ -524,6 +536,8 @@ export const fetchStationDocumentById = async (
     const { db: newDb } = await initializeFirebase()
     db = newDb
   }
+  // Station detail sections (usage/facilities/etc.) live in Firestore — App Check must be ready.
+  await ensureFirebaseAppCheck()
   if (!db) return null
   try {
     const collectionName = collectionOverride ?? getStationCollectionName()

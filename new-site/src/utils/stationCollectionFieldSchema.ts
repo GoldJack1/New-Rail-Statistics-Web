@@ -287,6 +287,51 @@ export function inferStationCollectionFieldSchema(
   }
 }
 
+/** OR show-* flags / union facility keys so a station doc can restore sections the catalog hides. */
+export function mergeStationCollectionFieldSchemas(
+  a: StationCollectionFieldSchema,
+  b: StationCollectionFieldSchema
+): StationCollectionFieldSchema {
+  return {
+    isLightRail: a.isLightRail || b.isLightRail,
+    defaultStnarea: a.defaultStnarea || b.defaultStnarea,
+    showBorough: a.showBorough || b.showBorough,
+    showFareZone: a.showFareZone || b.showFareZone,
+    showOperatorCode: a.showOperatorCode || b.showOperatorCode,
+    showStaffingLevel: a.showStaffingLevel || b.showStaffingLevel,
+    showNlc: a.showNlc || b.showNlc,
+    showGauge: a.showGauge || b.showGauge,
+    showMinConnectionTime: a.showMinConnectionTime || b.showMinConnectionTime,
+    showUrl: a.showUrl || b.showUrl,
+    urlFieldKey: a.showUrl ? a.urlFieldKey : b.urlFieldKey,
+    urlFieldLabel: a.showUrl ? a.urlFieldLabel : b.urlFieldLabel,
+    showProvince: a.showProvince || b.showProvince,
+    showPostEirCode: a.showPostEirCode || b.showPostEirCode,
+    showUsageTab: a.showUsageTab || b.showUsageTab,
+    showStepFreeSection: a.showStepFreeSection || b.showStepFreeSection,
+    showStepFreeTab: a.showStepFreeTab || b.showStepFreeTab,
+    showStepFreeNote: a.showStepFreeNote || b.showStepFreeNote,
+    stepFreeTabLabel: a.showStepFreeTab ? a.stepFreeTabLabel : b.stepFreeTabLabel,
+    showLiftSection: a.showLiftSection || b.showLiftSection,
+    showToiletsSection: a.showToiletsSection || b.showToiletsSection,
+    showFacilitiesTab: a.showFacilitiesTab || b.showFacilitiesTab,
+    facilityKeys: [...new Set([...a.facilityKeys, ...b.facilityKeys])].sort(),
+    showServiceTab: a.showServiceTab || b.showServiceTab,
+    showConnectionBus: a.showConnectionBus || b.showConnectionBus,
+    showConnectionTaxi: a.showConnectionTaxi || b.showConnectionTaxi,
+    showConnectionUnderground: a.showConnectionUnderground || b.showConnectionUnderground,
+    showConnectionTrain: a.showConnectionTrain || b.showConnectionTrain,
+    showLinesServed: a.showLinesServed || b.showLinesServed,
+    showPlatforms: a.showPlatforms || b.showPlatforms,
+    showDateOpened: a.showDateOpened || b.showDateOpened,
+    showRequestStop: a.showRequestStop || b.showRequestStop,
+    showLimitedService: a.showLimitedService || b.showLimitedService,
+    showStationStatusSection: a.showStationStatusSection || b.showStationStatusSection,
+    requireCrsCode: a.requireCrsCode && b.requireCrsCode,
+    requireTiploc: a.requireTiploc && b.requireTiploc,
+  }
+}
+
 export function stationDetailsShowsAdditionalTab(fieldSchema: StationCollectionFieldSchema): boolean {
   return (
     fieldSchema.showOperatorCode ||

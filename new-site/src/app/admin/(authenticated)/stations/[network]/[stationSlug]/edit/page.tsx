@@ -24,6 +24,7 @@ import {
   EMPTY_STATION_COLLECTION_FIELD_SCHEMA,
   getVisibleStationDetailsTabs,
   inferStationCollectionFieldSchema,
+  mergeStationCollectionFieldSchemas,
   stationDetailsShowsAdditionalTab,
   type StationDetailsTab,
 } from '@/utils/stationCollectionFieldSchema'
@@ -102,10 +103,18 @@ function AdminStationEditPage() {
         : EMPTY_STATION_COLLECTION_FIELD_SCHEMA,
     [schemaCollectionId]
   )
-  const { fieldSchema: fetchedFieldSchema, loading: schemaLoading } =
+  const { fieldSchema: sampledFieldSchema, loading: schemaLoading } =
     useStationCollectionFieldSchema(schemaCollectionId)
-  // Paint immediately with catalog defaults; refine when Firestore sample arrives.
-  const fieldSchema = schemaLoading ? catalogFieldSchema : fetchedFieldSchema
+  // Collection sample + this station's Firestore doc together restore every section tab.
+  const fieldSchema = useMemo(() => {
+    const base = schemaLoading ? catalogFieldSchema : sampledFieldSchema
+    if (!additionalDoc || !schemaCollectionId) return base
+    const fromStationDoc = inferStationCollectionFieldSchema(
+      [additionalDoc as Record<string, unknown>],
+      schemaCollectionId
+    )
+    return mergeStationCollectionFieldSchemas(base, fromStationDoc)
+  }, [schemaLoading, catalogFieldSchema, sampledFieldSchema, additionalDoc, schemaCollectionId])
   const showAdditionalTab = stationDetailsShowsAdditionalTab(fieldSchema)
   const visibleTabs = useMemo(() => getVisibleStationDetailsTabs(fieldSchema), [fieldSchema])
 

@@ -4,6 +4,7 @@ import { useRouter, useParams } from 'next/navigation'
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { useStationDetailsRoute } from '@/hooks/useStationDetailsRoute'
+import { useStationCollectionFieldSchema } from '@/hooks/useStationCollectionFieldSchema'
 import type { SandboxStationDoc } from '@/types'
 import {
   buildStationPath,
@@ -22,6 +23,7 @@ import {
   EMPTY_STATION_COLLECTION_FIELD_SCHEMA,
   getVisibleStationDetailsTabs,
   inferStationCollectionFieldSchema,
+  mergeStationCollectionFieldSchemas,
   stationDetailsShowsAdditionalTab,
   type StationDetailsTab,
 } from '@/utils/stationCollectionFieldSchema'
@@ -85,14 +87,26 @@ function StationDetailsPage() {
     }
     return routeCollectionId && isStationCollectionId(routeCollectionId) ? routeCollectionId : null
   }, [station, routeCollectionId, collectionId])
-  // Catalog defaults only — no Firestore schema sampling on public detail.
-  const fieldSchema = useMemo(
+  const catalogFieldSchema = useMemo(
     () =>
       schemaCollectionId
         ? inferStationCollectionFieldSchema([], schemaCollectionId)
         : EMPTY_STATION_COLLECTION_FIELD_SCHEMA,
     [schemaCollectionId]
   )
+  // Collection sample restores which tabs exist for the network; the station's own doc
+  // restores sections that catalog defaults hide (Usage, Facilities, Service, etc.).
+  const { fieldSchema: sampledFieldSchema, loading: schemaLoading } =
+    useStationCollectionFieldSchema(schemaCollectionId)
+  const fieldSchema = useMemo(() => {
+    const base = schemaLoading ? catalogFieldSchema : sampledFieldSchema
+    if (!additionalDoc || !schemaCollectionId) return base
+    const fromStationDoc = inferStationCollectionFieldSchema(
+      [additionalDoc as Record<string, unknown>],
+      schemaCollectionId
+    )
+    return mergeStationCollectionFieldSchemas(base, fromStationDoc)
+  }, [schemaLoading, catalogFieldSchema, sampledFieldSchema, additionalDoc, schemaCollectionId])
   const showAdditionalTab = stationDetailsShowsAdditionalTab(fieldSchema)
   const visibleTabs = useMemo(() => getVisibleStationDetailsTabs(fieldSchema), [fieldSchema])
   // Measuring the location tab mounts Leaflet/ORM tiles — skip it for height measurement.
@@ -122,10 +136,13 @@ function StationDetailsPage() {
   }, [station])
 
   useEffect(() => {
-    // Defer Firestore additional-doc fetch until the Additional tab is opened.
-    if (!station || activeTab !== 'additional' || !showAdditionalTab) return
+    // Full station document (usage, facilities, connections, location, etc.). Firebase is
+    // imported dynamically so it stays off the initial parse, but it loads for every station
+    // so all tabs have their data.
+    if (!station) return
     let cancelled = false
     setAdditionalLoading(true)
+    setAdditionalDoc(null)
     void import('@/services/firebase')
       .then(({ fetchStationDocumentById }) =>
         fetchStationDocumentById(
@@ -143,14 +160,7 @@ function StationDetailsPage() {
     return () => {
       cancelled = true
     }
-  }, [
-    station?.id,
-    station?.sourceCollectionId,
-    collectionId,
-    routeCollectionId,
-    activeTab,
-    showAdditionalTab,
-  ])
+  }, [station?.id, station?.sourceCollectionId, collectionId, routeCollectionId])
 
   useLayoutEffect(() => {
     const measureHeights = () => {

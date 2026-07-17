@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { isPublicStationsBrowsePath } from '@/utils/publicStationsPaths'
+import { isAuthCriticalPath, isColdVisitorDeferPath } from '@/utils/coldVisitorPerf'
 
 function isLabAutomationBrowser(): boolean {
   if (typeof navigator === 'undefined') return false
@@ -12,11 +12,10 @@ function isLabAutomationBrowser(): boolean {
 }
 
 /**
- * Logs SPA-style `page_view` events when the route changes (parity with implicit
- * Firebase Analytics behaviour on the old React Router app).
+ * Logs SPA-style `page_view` events when the route changes.
  *
- * Public stations list + detail never auto-load gtag — only after a real user gesture —
- * so mobile PSI/Lighthouse runs do not pull analytics onto LCP.
+ * Public pages never auto-load gtag — only after a real user gesture — so PSI/Lighthouse
+ * cold loads stay free of analytics. Admin/login may schedule after idle.
  */
 export default function FirebaseAnalytics() {
   const pathname = usePathname()
@@ -24,7 +23,6 @@ export default function FirebaseAnalytics() {
   const lastLogged = useRef<string | null>(null)
 
   useEffect(() => {
-    // Lab tools set webdriver / Lighthouse UA; skip gtag entirely for those runs.
     if (isLabAutomationBrowser()) return
 
     const query = searchParams.toString()
@@ -51,62 +49,36 @@ export default function FirebaseAnalytics() {
       }
     }
 
-    const isMarketingHome = pathname === '/' || pathname === '/home'
-    const isPublicStationsBrowse = isPublicStationsBrowsePath(pathname)
-    const isHeavyAppRoute =
-      pathname.startsWith('/admin') ||
-      (pathname.startsWith('/stations') && !isPublicStationsBrowse) ||
-      pathname.startsWith('/departures')
-    const deferUntilScroll = isMarketingHome
-    const deferUntilInteraction = isPublicStationsBrowse
-    const scheduleLog = () => {
+    const scheduleLog = (idleTimeoutMs: number, fallbackMs: number) => {
       if (typeof window.requestIdleCallback === 'function') {
         idleHandle = window.requestIdleCallback(() => void logPageView(), {
-          timeout: isHeavyAppRoute ? 12_000 : 5_000,
+          timeout: idleTimeoutMs,
         })
       } else {
-        timeoutHandle = setTimeout(() => void logPageView(), isHeavyAppRoute ? 6_000 : 2_000)
+        timeoutHandle = setTimeout(() => void logPageView(), fallbackMs)
       }
     }
 
-    let onFirstScroll: (() => void) | undefined
     let onFirstInteraction: (() => void) | undefined
 
-    if (deferUntilInteraction) {
-      // Interaction-only: no timer fallback (mobile PSI runs long enough to hit short timers).
+    if (isColdVisitorDeferPath(pathname)) {
       onFirstInteraction = () => {
         if (onFirstInteraction) {
           window.removeEventListener('pointerdown', onFirstInteraction, { capture: true })
           window.removeEventListener('keydown', onFirstInteraction, { capture: true })
         }
-        if (!cancelled) scheduleLog()
+        if (!cancelled) scheduleLog(5_000, 2_000)
       }
       window.addEventListener('pointerdown', onFirstInteraction, { once: true, capture: true })
       window.addEventListener('keydown', onFirstInteraction, { once: true, capture: true })
-    } else if (deferUntilScroll) {
-      onFirstScroll = () => {
-        if (onFirstScroll) {
-          window.removeEventListener('scroll', onFirstScroll, { capture: true })
-        }
-        if (!cancelled) scheduleLog()
-      }
-      window.addEventListener('scroll', onFirstScroll, { passive: true, capture: true })
-      // Longer than a typical mobile lab run so home PSI also avoids early gtag.
-      timeoutHandle = setTimeout(() => {
-        if (onFirstScroll) {
-          window.removeEventListener('scroll', onFirstScroll, { capture: true })
-        }
-        if (!cancelled) scheduleLog()
-      }, 60_000)
+    } else if (isAuthCriticalPath(pathname)) {
+      scheduleLog(12_000, 6_000)
     } else {
-      scheduleLog()
+      scheduleLog(5_000, 2_000)
     }
 
     return () => {
       cancelled = true
-      if (onFirstScroll) {
-        window.removeEventListener('scroll', onFirstScroll, { capture: true })
-      }
       if (onFirstInteraction) {
         window.removeEventListener('pointerdown', onFirstInteraction, { capture: true })
         window.removeEventListener('keydown', onFirstInteraction, { capture: true })

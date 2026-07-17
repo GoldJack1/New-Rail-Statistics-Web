@@ -3,22 +3,21 @@
 import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { usePathname } from 'next/navigation'
-
-import { isPublicStationsBrowsePath } from '@/utils/publicStationsPaths'
+import { isColdVisitorDeferPath } from '@/utils/coldVisitorPerf'
 
 const Footer = dynamic(() => import('./Footer/Footer'), { ssr: false })
 
 /**
- * On public stations list/detail, keep the footer chunk off the LCP critical path until
- * the main thread is idle (or a short fallback). Other routes mount immediately.
+ * On public pages, keep the footer chunk off the LCP critical path until idle.
+ * Admin/login mount immediately.
  */
 export default function DeferredSiteFooter() {
   const pathname = usePathname() ?? '/'
-  const deferForStations = isPublicStationsBrowsePath(pathname)
-  const [ready, setReady] = useState(!deferForStations)
+  const deferFooter = isColdVisitorDeferPath(pathname)
+  const [ready, setReady] = useState(!deferFooter)
 
   useEffect(() => {
-    if (!deferForStations) {
+    if (!deferFooter) {
       setReady(true)
       return
     }
@@ -37,7 +36,7 @@ export default function DeferredSiteFooter() {
       if (idleHandle !== undefined) window.cancelIdleCallback(idleHandle)
       if (timeoutHandle !== undefined) clearTimeout(timeoutHandle)
     }
-  }, [deferForStations])
+  }, [deferFooter])
 
   if (!ready) return null
   return <Footer />
