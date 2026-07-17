@@ -16,6 +16,7 @@ const nextConfig: NextConfig = {
   experimental: {
     // Inline route CSS in HTML to remove render-blocking stylesheet chains on first paint.
     inlineCss: true,
+    optimizePackageImports: ["@phosphor-icons/react"],
   },
   turbopack: {
     resolveAlias: {

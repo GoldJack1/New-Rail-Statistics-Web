@@ -2,6 +2,7 @@
 
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
+import dynamic from 'next/dynamic'
 import type { SandboxStationDoc, Station } from '@/types'
 import {
   readServerScheduledJobId,
@@ -14,10 +15,14 @@ import {
   pendingEntryMatchesScheduledPayload,
   type ScheduledJobStationPayload
 } from '@/utils/scheduledJobPendingMatch'
-import ScheduledServerJobFirestoreSync, { type ServerScheduledJobDetail } from '@/contexts/ScheduledServerJobFirestoreSync'
-import { requestStationCdnExportAfterPublish } from '@/services/stationsCdnService'
+import type { ServerScheduledJobDetail } from '@/contexts/ScheduledServerJobFirestoreSync'
 import type { StationCollectionId } from '@/constants/stationCollections'
 import { migratePendingEntryTarget } from '@/utils/pendingChangesByCollection'
+
+const ScheduledServerJobFirestoreSync = dynamic(
+  () => import('@/contexts/ScheduledServerJobFirestoreSync'),
+  { ssr: false }
+)
 
 const PENDING_CHANGES_STORAGE_KEY = 'railstatistics-pending-station-changes-v1'
 
@@ -256,9 +261,11 @@ export const PendingStationChangesProvider: React.FC<{ children: React.ReactNode
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('railstats-stations-refetch'))
       }
-      void requestStationCdnExportAfterPublish().catch((exportError) => {
-        console.warn('Station CDN export after scheduled publish failed:', exportError)
-      })
+      void import('@/services/stationsCdnService')
+        .then(({ requestStationCdnExportAfterPublish }) => requestStationCdnExportAfterPublish())
+        .catch((exportError) => {
+          console.warn('Station CDN export after scheduled publish failed:', exportError)
+        })
     },
     [clearTrackedScheduledServerJob]
   )
@@ -278,21 +285,34 @@ export const PendingStationChangesProvider: React.FC<{ children: React.ReactNode
         serverScheduledJobDetail
       }}
     >
-      <ScheduledServerJobFirestoreSync
-        jobId={trackedScheduledJobId}
-        onDetail={handleServerJobDetail}
-        onCompleted={handleServerJobCompleted}
-        onJobDocMissing={clearTrackedScheduledServerJob}
-      />
+      {trackedScheduledJobId ? (
+        <ScheduledServerJobFirestoreSync
+          jobId={trackedScheduledJobId}
+          onDetail={handleServerJobDetail}
+          onCompleted={handleServerJobCompleted}
+          onJobDocMissing={clearTrackedScheduledServerJob}
+        />
+      ) : null}
       {children}
     </PendingStationChangesContext.Provider>
   )
 }
 
+const EMPTY_PENDING_CHANGES: PendingStationChangesContextValue = {
+  pendingChanges: {},
+  upsertPendingChange: () => {},
+  addNewPendingStation: () => {},
+  clearPendingChange: () => {},
+  clearAllPendingChanges: () => {},
+  clearPendingChangesForIds: () => {},
+  trackedScheduledJobId: null,
+  registerScheduledServerJob: () => {},
+  clearTrackedScheduledServerJob: () => {},
+  serverScheduledJobDetail: null,
+}
+
 export const usePendingStationChanges = (): PendingStationChangesContextValue => {
   const ctx = useContext(PendingStationChangesContext)
-  if (!ctx) {
-    throw new Error('usePendingStationChanges must be used within PendingStationChangesProvider')
-  }
-  return ctx
+  // Public `/stations` list has no provider — return a no-op stub so Firestore stays out of the bundle.
+  return ctx ?? EMPTY_PENDING_CHANGES
 }

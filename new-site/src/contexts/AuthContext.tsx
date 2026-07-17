@@ -43,8 +43,13 @@ function isMarketingHomePath(pathname: string): boolean {
   return pathname === '/' || pathname === '/home'
 }
 
+/** Exact public stations list — not detail/map under `/stations/...`. */
+function isPublicStationsListPath(pathname: string): boolean {
+  return pathname === '/stations'
+}
+
 function isColdVisitorAuthDeferPath(pathname: string): boolean {
-  return isMarketingHomePath(pathname)
+  return isMarketingHomePath(pathname) || isPublicStationsListPath(pathname)
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -59,10 +64,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let timeoutHandle: ReturnType<typeof setTimeout> | undefined
     let onFirstInteraction: (() => void) | undefined
 
+    // Public `/stations` list is CDN browse — defer Auth/App Check. Detail/map stay critical.
     const authIsRouteCritical =
       pathname === '/log-in' ||
       pathname.startsWith('/admin') ||
-      pathname.startsWith('/stations')
+      (pathname.startsWith('/stations') && !isPublicStationsListPath(pathname))
 
     const init = async (options?: { deferAppCheck?: boolean }) => {
       const firebase = await import('@/services/firebase')
@@ -126,8 +132,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Fresh / login flows still load App Check before interacting with Auth.
       void init({ deferAppCheck: readAuthSessionHint() && pathname !== '/log-in' })
     } else if (isColdVisitorAuthDeferPath(pathname) && !readAuthSessionHint()) {
-      // Cold marketing visits: skip Firebase Auth (and its iframe.js) until the user navigates away
-      // or signs in on another route. PSI / first-time visitors won't download the auth iframe.
+      // Cold marketing / public stations list: skip Firebase Auth until navigation or sign-in.
+      // PSI / first-time visitors won't download reCAPTCHA or the auth iframe.
       setLoading(false)
     } else if (isColdVisitorAuthDeferPath(pathname)) {
       scheduleDeferredInit(12_000)

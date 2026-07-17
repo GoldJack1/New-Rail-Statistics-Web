@@ -2,7 +2,8 @@
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import React, { useState, useMemo, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
-import { ChevronLeftIcon, ChevronRightIcon, MagnifyingGlass, WarningCircle } from '@/components/icons'
+import dynamic from 'next/dynamic'
+import { CaretLeft as ChevronLeftIcon, CaretRight as ChevronRightIcon, MagnifyingGlass, WarningCircle } from '@phosphor-icons/react'
 
 import { useStations } from '@/hooks/useStations'
 import { useStationListPipeline } from '@/hooks/useStationListPipeline'
@@ -23,11 +24,7 @@ import BUTDDMListActionDual from '@/components/buttons/ddm/BUTDDMListActionDual'
 import StationCard from '@/components/cards/StationCard/StationCard'
 import LightRailStopCard from '@/components/cards/LightRailStopCard/LightRailStopCard'
 import StationsCardGridSkeleton from '@/components/cards/StationsCardGridSkeleton/StationsCardGridSkeleton'
-import StationsTableView from '@/components/cards/StationsTableView/StationsTableView'
-import StationsTableColumnsModal from '@/components/cards/StationsTableView/StationsTableColumnsModal'
 import { isLightRailStop } from '@/utils/stationCardForNetwork'
-import StationAdminControls from '@/components/cards/StationAdminControls/StationAdminControls'
-import StationAdminViewControls from '@/components/cards/StationAdminControls/StationAdminViewControls'
 import NetworkStationTabGroup from '@/components/cards/NetworkStationTabGroup/NetworkStationTabGroup'
 import { formatStationLocationDisplay, isGreaterLondonCounty } from '@/utils/formatStationLocation'
 import { NETWORK_COLLECTION_IDS, DEFAULT_NETWORK_VIEW } from '@/constants/stationCollections'
@@ -76,6 +73,23 @@ import {
 import './StationsPageRefactored.css'
 import TXTINPBUTIconWideButtonSearch from '@/components/textInputButtons/special/TXTINPBUTIconWideButtonSearch'
 
+const StationsTableView = dynamic(
+  () => import('@/components/cards/StationsTableView/StationsTableView'),
+  { ssr: false }
+)
+const StationsTableColumnsModal = dynamic(
+  () => import('@/components/cards/StationsTableView/StationsTableColumnsModal'),
+  { ssr: false }
+)
+const StationAdminControls = dynamic(
+  () => import('@/components/cards/StationAdminControls/StationAdminControls'),
+  { ssr: false }
+)
+const StationAdminViewControls = dynamic(
+  () => import('@/components/cards/StationAdminControls/StationAdminViewControls'),
+  { ssr: false }
+)
+
 const WHISTLESTOP_KIRKLEES_TOC = 'Whistlestop Valley/Kirklees Light Railway'
 
 /** Minimum time the loading skeleton stays visible so fast cache hits do not flash. */
@@ -87,6 +101,8 @@ const formatTocFilterDdmLabel = (toc: string) =>
   toc === WHISTLESTOP_KIRKLEES_TOC ? 'Whistlestop Valley/Kirklees Light Rlwy' : toc
 
 interface StationsPageProps {
+  /** Public list defers auth/table/admin chunks; admin keeps full editing surface. */
+  surface?: 'public' | 'admin'
   initialMode?: 'view' | 'edit'
   initialDisplayMode?: StationAdminDisplayMode
   initialNetworkView?: NetworkViewFilter
@@ -103,6 +119,7 @@ const SORT_DDM_OPTIONS: Array<{ label: string; value: SortOption }> = [
 ]
 
 const StationsPageClient: React.FC<StationsPageProps> = ({
+  surface = 'admin',
   initialMode = 'view',
   initialDisplayMode = 'cards',
   initialNetworkView = DEFAULT_NETWORK_VIEW,
@@ -173,11 +190,14 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
     }
     return countPendingChangesForCollection(pendingChanges, collectionId)
   }, [pendingChanges, collectionId, networkView])
-  const isAdminPanelVisible = initialMode === 'edit' || isAdminMode
+  const isAdminPanelVisible =
+    surface === 'admin' ? initialMode === 'edit' || isAdminMode : isAdminMode
   const tableHeaderSchemaCollectionId = useMemo(() => {
+    // Skip Firestore sample fetch in cards mode (and on public until table is used).
+    if (effectiveDisplayMode !== 'table') return null
     if (networkView === 'all') return null
     return networkView
-  }, [networkView])
+  }, [effectiveDisplayMode, networkView])
   const { fieldSchema: tableHeaderFieldSchema, loading: tableHeaderSchemaLoading } =
     useStationCollectionFieldSchema(tableHeaderSchemaCollectionId)
   const tableHeaderFieldSchemaForModal = useMemo(() => {
@@ -841,14 +861,16 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
         </main>
       </div>
 
-      <StationsTableColumnsModal
-        open={isTableColumnsModalOpen}
-        slots={tableColumnSlots}
-        networkView={networkView}
-        fieldSchema={tableHeaderFieldSchemaForModal}
-        onApply={setTableColumnSlots}
-        onClose={() => setIsTableColumnsModalOpen(false)}
-      />
+      {isTableColumnsModalOpen ? (
+        <StationsTableColumnsModal
+          open={isTableColumnsModalOpen}
+          slots={tableColumnSlots}
+          networkView={networkView}
+          fieldSchema={tableHeaderFieldSchemaForModal}
+          onApply={setTableColumnSlots}
+          onClose={() => setIsTableColumnsModalOpen(false)}
+        />
+      ) : null}
     </div>
   )
 }

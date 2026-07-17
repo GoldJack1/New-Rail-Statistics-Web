@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import StationsPageClient from '../admin/stations/StationsPageClient'
+import StationsPageClient from '../../admin/stations/StationsPageClient'
 import {
   readStationNetworkViewFromCookie,
   STATION_NETWORK_VIEW_COOKIE,
@@ -27,6 +27,7 @@ export default async function StationsPage() {
 
   return (
     <StationsPageClient
+      surface="public"
       initialDisplayMode={initialDisplayMode}
       initialNetworkView={initialNetworkView}
       initialSidebarSections={initialSidebarSections}

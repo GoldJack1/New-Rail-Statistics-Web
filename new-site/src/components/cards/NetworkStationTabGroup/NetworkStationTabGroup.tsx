@@ -35,7 +35,9 @@ const NetworkStationTabGroup: React.FC<NetworkStationTabGroupProps> = ({
             key={tab.value}
             type="button"
             width="hug"
+            role="tab"
             pressed={isSelected}
+            ariaSelected={isSelected}
             onClick={() => onChange(tab.value)}
           >
             <span className="network-station-tab-group__label">

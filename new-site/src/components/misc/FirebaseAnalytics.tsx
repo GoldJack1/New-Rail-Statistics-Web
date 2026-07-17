@@ -38,11 +38,13 @@ export default function FirebaseAnalytics() {
     }
 
     const isMarketingHome = pathname === '/' || pathname === '/home'
+    const isPublicStationsList = pathname === '/stations'
     const isHeavyAppRoute =
       pathname.startsWith('/admin') ||
-      pathname.startsWith('/stations') ||
+      (pathname.startsWith('/stations') && !isPublicStationsList) ||
       pathname.startsWith('/departures')
     const deferUntilScroll = isMarketingHome
+    const deferUntilInteraction = isPublicStationsList
     const scheduleLog = () => {
       if (typeof window.requestIdleCallback === 'function') {
         idleHandle = window.requestIdleCallback(() => void logPageView(), {
@@ -54,8 +56,27 @@ export default function FirebaseAnalytics() {
     }
 
     let onFirstScroll: (() => void) | undefined
+    let onFirstInteraction: (() => void) | undefined
 
-    if (deferUntilScroll) {
+    if (deferUntilInteraction) {
+      // Keep gtag off the public stations list until the user engages (PSI cold load).
+      onFirstInteraction = () => {
+        if (onFirstInteraction) {
+          window.removeEventListener('pointerdown', onFirstInteraction, { capture: true })
+          window.removeEventListener('keydown', onFirstInteraction, { capture: true })
+        }
+        if (!cancelled) scheduleLog()
+      }
+      window.addEventListener('pointerdown', onFirstInteraction, { once: true, capture: true })
+      window.addEventListener('keydown', onFirstInteraction, { once: true, capture: true })
+      timeoutHandle = setTimeout(() => {
+        if (onFirstInteraction) {
+          window.removeEventListener('pointerdown', onFirstInteraction, { capture: true })
+          window.removeEventListener('keydown', onFirstInteraction, { capture: true })
+        }
+        if (!cancelled) scheduleLog()
+      }, 30_000)
+    } else if (deferUntilScroll) {
       onFirstScroll = () => {
         if (onFirstScroll) {
           window.removeEventListener('scroll', onFirstScroll, { capture: true })
@@ -77,6 +98,10 @@ export default function FirebaseAnalytics() {
       cancelled = true
       if (onFirstScroll) {
         window.removeEventListener('scroll', onFirstScroll, { capture: true })
+      }
+      if (onFirstInteraction) {
+        window.removeEventListener('pointerdown', onFirstInteraction, { capture: true })
+        window.removeEventListener('keydown', onFirstInteraction, { capture: true })
       }
       if (idleHandle !== undefined) window.cancelIdleCallback(idleHandle)
       if (timeoutHandle !== undefined) clearTimeout(timeoutHandle)

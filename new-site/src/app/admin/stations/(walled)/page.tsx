@@ -26,6 +26,7 @@ export default async function AdminStationsPage() {
 
   return (
     <StationsPageClient
+      surface="admin"
       initialDisplayMode={initialDisplayMode}
       initialNetworkView={initialNetworkView}
       initialSidebarSections={initialSidebarSections}

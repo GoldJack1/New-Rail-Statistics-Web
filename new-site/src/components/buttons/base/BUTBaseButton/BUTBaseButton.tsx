@@ -27,6 +27,10 @@ export interface ButtonProps {
   onClick?: (event: React.MouseEvent<HTMLButtonElement | HTMLAnchorElement>) => void
   className?: string
   ariaLabel?: string
+  /** Optional ARIA role (e.g. `tab` when used inside a `tablist`). */
+  role?: React.AriaRole
+  /** Maps to `aria-selected` for tab-style controls. */
+  ariaSelected?: boolean
   title?: string
   href?: string
   target?: React.HTMLAttributeAnchorTarget
@@ -68,6 +72,8 @@ const BUTBaseButton: React.FC<ButtonProps> = ({
   onClick,
   className = '',
   ariaLabel,
+  role,
+  ariaSelected,
   title,
   form,
   instantAction = false,
@@ -133,7 +139,9 @@ const BUTBaseButton: React.FC<ButtonProps> = ({
           className={buttonClasses}
           type="button"
           disabled
+          role={role}
           aria-label={ariaLabel}
+          aria-selected={ariaSelected}
           title={title}
         >
           {icon && <span className="rs-button__icon">{icon}</span>}
@@ -183,7 +191,9 @@ const BUTBaseButton: React.FC<ButtonProps> = ({
       form={form}
       onClick={handleClick}
       disabled={disabled}
+      role={role}
       aria-label={ariaLabel}
+      aria-selected={ariaSelected}
       title={title}
     >
       {icon && <span className="rs-button__icon">{icon}</span>}
