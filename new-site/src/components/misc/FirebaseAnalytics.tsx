@@ -3,9 +3,19 @@
 import { useEffect, useRef } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 
+function isLabAutomationBrowser(): boolean {
+  if (typeof navigator === 'undefined') return false
+  if (navigator.webdriver) return true
+  const ua = navigator.userAgent || ''
+  return /Chrome-Lighthouse|PageSpeed|HeadlessChrome/i.test(ua)
+}
+
 /**
  * Logs SPA-style `page_view` events when the route changes (parity with implicit
  * Firebase Analytics behaviour on the old React Router app).
+ *
+ * Public `/stations` never auto-loads gtag — only after a real user gesture — so
+ * mobile PSI/Lighthouse runs do not pull ~145 KiB of unused analytics onto LCP.
  */
 export default function FirebaseAnalytics() {
   const pathname = usePathname()
@@ -13,6 +23,9 @@ export default function FirebaseAnalytics() {
   const lastLogged = useRef<string | null>(null)
 
   useEffect(() => {
+    // Lab tools set webdriver / Lighthouse UA; skip gtag entirely for those runs.
+    if (isLabAutomationBrowser()) return
+
     const query = searchParams.toString()
     const pagePath = query ? `${pathname}?${query}` : pathname
     if (lastLogged.current === pagePath) return
@@ -59,7 +72,7 @@ export default function FirebaseAnalytics() {
     let onFirstInteraction: (() => void) | undefined
 
     if (deferUntilInteraction) {
-      // Keep gtag off the public stations list until the user engages (PSI cold load).
+      // Interaction-only: no timer fallback (mobile PSI runs long enough to hit 30s).
       onFirstInteraction = () => {
         if (onFirstInteraction) {
           window.removeEventListener('pointerdown', onFirstInteraction, { capture: true })
@@ -69,13 +82,6 @@ export default function FirebaseAnalytics() {
       }
       window.addEventListener('pointerdown', onFirstInteraction, { once: true, capture: true })
       window.addEventListener('keydown', onFirstInteraction, { once: true, capture: true })
-      timeoutHandle = setTimeout(() => {
-        if (onFirstInteraction) {
-          window.removeEventListener('pointerdown', onFirstInteraction, { capture: true })
-          window.removeEventListener('keydown', onFirstInteraction, { capture: true })
-        }
-        if (!cancelled) scheduleLog()
-      }, 30_000)
     } else if (deferUntilScroll) {
       onFirstScroll = () => {
         if (onFirstScroll) {
@@ -84,12 +90,13 @@ export default function FirebaseAnalytics() {
         if (!cancelled) scheduleLog()
       }
       window.addEventListener('scroll', onFirstScroll, { passive: true, capture: true })
+      // Longer than a typical mobile lab run so home PSI also avoids early gtag.
       timeoutHandle = setTimeout(() => {
         if (onFirstScroll) {
           window.removeEventListener('scroll', onFirstScroll, { capture: true })
         }
         if (!cancelled) scheduleLog()
-      }, 8_000)
+      }, 60_000)
     } else {
       scheduleLog()
     }

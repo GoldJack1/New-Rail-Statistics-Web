@@ -14,13 +14,10 @@ import {
   BUTRightRoundedCircleButton,
   BUTSquareButton,
   BUTTextNumberSquareButton,
-  TOGToggleVisited,
   BUTWideButton,
 } from '@/components/buttons'
 import PageTopHeader from '@/components/misc/PageTopHeader/PageTopHeader'
 import SidebarDropdownSection from '@/components/misc/SidebarDropdownSection/SidebarDropdownSection'
-import BUTDDMList from '@/components/buttons/ddm/BUTDDMList'
-import BUTDDMListActionDual from '@/components/buttons/ddm/BUTDDMListActionDual'
 import StationCard from '@/components/cards/StationCard/StationCard'
 import LightRailStopCard from '@/components/cards/LightRailStopCard/LightRailStopCard'
 import StationsCardGridSkeleton from '@/components/cards/StationsCardGridSkeleton/StationsCardGridSkeleton'
@@ -86,6 +83,15 @@ const StationAdminControls = dynamic(
 )
 const StationAdminViewControls = dynamic(
   () => import('@/components/cards/StationAdminControls/StationAdminViewControls'),
+  { ssr: false }
+)
+const BUTDDMList = dynamic(() => import('@/components/buttons/ddm/BUTDDMList'), { ssr: false })
+const BUTDDMListActionDual = dynamic(
+  () => import('@/components/buttons/ddm/BUTDDMListActionDual'),
+  { ssr: false }
+)
+const TOGToggleVisited = dynamic(
+  () => import('@/components/buttons/toggle/TOGToggleVisited'),
   { ssr: false }
 )
 
@@ -269,6 +275,14 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
   const TABLE_ITEMS_PER_PAGE = 100
   // Enough ghost rows to fill the viewport without rendering a full 100-row page.
   const TABLE_SKELETON_ROW_COUNT = 25
+  // Fewer skeleton cards on narrow viewports — less style/layout work on mobile LCP.
+  const cardSkeletonCount = !viewportMeasured
+    ? 8
+    : isMobileStationsLayout
+      ? 6
+      : viewportWidth < 1024
+        ? 12
+        : CARD_ITEMS_PER_PAGE
   const stationsPageGridRef = useRef<HTMLDivElement>(null)
   const [cardColumnCount, setCardColumnCount] = useState(1)
 
@@ -768,7 +782,7 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
                 skeletonRowCount={TABLE_SKELETON_ROW_COUNT}
               />
             ) : (
-              <StationsCardGridSkeleton count={CARD_ITEMS_PER_PAGE} />
+              <StationsCardGridSkeleton count={cardSkeletonCount} />
             )
           ) : effectiveDisplayMode === 'table' ? (
             <StationsTableView
