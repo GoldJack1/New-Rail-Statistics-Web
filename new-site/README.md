@@ -30,10 +30,10 @@ Firebase rules/indexes: `firestore.rules`, `storage.rules`, `firestore.indexes.j
 
 ## Route map
 
-Public: `/`, `/stations/map`, `/stations/:network/:slug`, `/migration`, `/departures`, `/units`, `/privacy`, `/eula`
+Public: `/`, `/stations`, `/stations/map`, `/stations/:network/:slug`, `/migration`, `/departures`, `/units`, `/privacy`, `/eula`
 
-Protected (`/admin/*`): stations CRUD, map editing, design system, messages, API status
+Protected (`/admin/*`): stations admin list, stations CRUD, map editing, design system, messages, API status
 
-Legacy URLs redirect via `next.config.ts` (e.g. `/stations` → `/admin/stations`).
+Legacy URLs redirect via `next.config.ts` (e.g. `/stations/new` → `/admin/stations/new`).
 
 PWA: `public/sw.js` registers in production. SEO: `/sitemap.xml`, `/robots.txt`, OpenGraph metadata.

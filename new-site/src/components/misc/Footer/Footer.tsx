@@ -22,7 +22,10 @@ const Footer: React.FC = () => {
   const router = useRouter()
   const adminModeActive = useStationAdminMode()
   const syncAdminSearchParam =
-    pathname === '/stations/map' || pathname === '/admin/stations' || pathname === '/admin/map'
+    pathname === '/stations' ||
+    pathname === '/stations/map' ||
+    pathname === '/admin/stations' ||
+    pathname === '/admin/map'
 
   useEffect(() => {
     if (user && isStationAdminSearchParam(search)) {

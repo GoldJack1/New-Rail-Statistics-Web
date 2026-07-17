@@ -45,7 +45,7 @@ function getStationDetailsReturnPath(state: unknown): string {
     const returnTo = (state as { returnTo?: unknown }).returnTo
     if (typeof returnTo === 'string' && returnTo.startsWith('/')) return returnTo
   }
-  return '/admin/stations'
+  return '/stations'
 }
 
 function StationDetailsPage() {
