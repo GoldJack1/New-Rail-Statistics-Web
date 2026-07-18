@@ -296,7 +296,7 @@
 }
 
 .svc-stops-table tbody tr:hover {
-  background: color-mix(in srgb, var(--bg-tertiary) 55%, transparent);
+  background: var(--bg-hover);
 }
 
 .svc-stop--jump {

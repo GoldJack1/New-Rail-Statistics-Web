@@ -25,10 +25,23 @@
     --font-aronetiv: var(--ff-aronetiv), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-aronetiv-normal: var(--ff-aronetiv-normal), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
-    /* Light Theme Colors — cool neutrals, wider P/S/T steps for clearer layer contrast */
-    --bg-primary: hsl(210 14% 99%);
-    --bg-secondary: hsl(210 14% 90%);
-    --bg-tertiary: hsl(210 14% 80%);
+    /* Light Theme Colors — true neutral (no hue cast) */
+    --bg-primary: hsl(0 0% 99%);
+    --bg-secondary: hsl(0 0% 94%);
+    --bg-tertiary: hsl(0 0% 88%);
+    --bg-quaternary: hsl(0 0% 85%);
+    --bg-quinary: hsl(0 0% 78%);
+    /* Table surfaces — dedicated row/stripe ladder (not the page 5-step) */
+    --bg-table-a: hsl(0 0% 95%);
+    --bg-table-b: hsl(0 0% 91%);
+    /* Semantic surface hover — deepest step at 50% opacity (washes over the underlying surface) */
+    --bg-hover: color-mix(in srgb, var(--bg-quinary) 50%, transparent);
+    /* Previous cool blue-gray ladder (kept for reference / rollback — not wired to UI) */
+    --bg-primary-previous: hsl(210 14% 99%);
+    --bg-secondary-previous: hsl(210 14% 90%);
+    --bg-tertiary-previous: hsl(210 14% 80%);
+    --bg-quaternary-previous: hsl(210 14% 72%);
+    --bg-quinary-previous: hsl(210 14% 61%);
     /* Site nav / footer chrome — light matches primary */
     --bg-chrome: var(--bg-primary);
     --text-primary: #000000;
@@ -106,11 +119,22 @@ html[data-theme='dark'] {
     color-scheme: dark;
 }
 
-/* Dark Theme Colors — cool neutrals, wider P/S/T steps for clearer layer contrast */
+/* Dark Theme Colors — true neutral, paired ladder to light */
 [data-theme="dark"] {
-    --bg-primary: hsl(210 14% 20%);
-    --bg-secondary: hsl(210 14% 12%);
-    --bg-tertiary: hsl(210 14% 4%);
+    --bg-primary: hsl(0 0% 22%);
+    --bg-secondary: hsl(0 0% 15%);
+    --bg-tertiary: hsl(0 0% 10%);
+    --bg-quaternary: hsl(0 0% 5%);
+    --bg-quinary: hsl(0 0% 1%);
+    /* Table surfaces — dedicated row/stripe ladder (not the page 5-step) */
+    --bg-table-a: hsl(0 0% 18%);
+    --bg-table-b: hsl(0 0% 13%);
+    /* Previous cool blue-gray ladder (kept for reference / rollback — not wired to UI) */
+    --bg-primary-previous: hsl(210 14% 20%);
+    --bg-secondary-previous: hsl(210 14% 12%);
+    --bg-tertiary-previous: hsl(210 14% 8%);
+    --bg-quaternary-previous: hsl(210 14% 4%);
+    --bg-quinary-previous: hsl(210 14% 2%);
     /* Site nav / footer match primary button surface */
     --bg-chrome: var(--bg-primary);
     --text-primary: #ffffff;

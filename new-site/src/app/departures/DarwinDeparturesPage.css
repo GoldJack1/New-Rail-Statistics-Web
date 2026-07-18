@@ -243,7 +243,7 @@
   cursor: pointer;
 }
 .dep-history-date-chip:hover {
-  background: color-mix(in srgb, var(--bg-tertiary) 70%, transparent);
+  background: var(--bg-hover);
 }
 .dep-history-date-chip.is-active {
   border-color: color-mix(in srgb, var(--accent-base) 45%, var(--border-color));

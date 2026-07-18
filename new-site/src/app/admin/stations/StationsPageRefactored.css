@@ -228,15 +228,15 @@
     color: var(--text-primary);
 }
 
-/* Match station-details tab hover — solid primary on fine pointer only. */
+/* Match station-details tab hover — sitewide --bg-hover wash on fine pointer only. */
 @media (hover: hover) and (pointer: fine) {
     .stations-sidebar-panel .sidebar-dropdown__header-row:has(.sidebar-dropdown__header:hover) {
-        background-color: var(--bg-primary);
+        box-shadow: inset 0 0 0 9999px var(--bg-hover);
     }
 
     .stations-sidebar-panel .sidebar-dropdown__header:hover {
         color: var(--text-primary);
-        background-color: var(--bg-primary);
+        background-color: transparent;
         border-radius: 0;
     }
 }

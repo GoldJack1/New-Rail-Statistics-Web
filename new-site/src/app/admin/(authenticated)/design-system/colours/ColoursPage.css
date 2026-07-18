@@ -170,6 +170,39 @@
   min-width: 0;
 }
 
+.ds-colours__neutral-card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.ds-colours__neutral-badge {
+  flex-shrink: 0;
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-sm);
+  background: var(--accent-base);
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.ds-colours__neutral-badge--previous {
+  background: var(--text-secondary);
+}
+
+.ds-colours__neutral-card--live {
+  outline: 2px solid color-mix(in srgb, var(--accent-base) 55%, transparent);
+  outline-offset: 1px;
+}
+
+.ds-colours__neutral-card--previous {
+  outline: 1px dashed color-mix(in srgb, var(--text-secondary) 45%, transparent);
+  outline-offset: 1px;
+}
+
 .ds-colours__neutral-card-head h3 {
   margin: 0;
   font-size: var(--text-base);
@@ -185,14 +218,81 @@
 .ds-colours__neutral-stage {
   border-radius: var(--radius-md);
   overflow: hidden;
-  background: var(--preview-tertiary);
+  background: var(--preview-quinary);
   border: 1px solid color-mix(in srgb, var(--preview-text) 12%, transparent);
+}
+
+.ds-colours__neutral-ladder {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.ds-colours__neutral-ladder-step {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.ds-colours__neutral-ladder-swatch {
+  display: block;
+  height: 2.25rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--preview-text) 14%, transparent);
+}
+
+.ds-colours__neutral-ladder-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.ds-colours__neutral-ladder-hex {
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  word-break: break-all;
+}
+
+.ds-colours__neutral-layer {
+  position: relative;
+  border-radius: var(--radius-sm);
+}
+
+.ds-colours__neutral-layer--quinary {
+  background: var(--preview-quinary);
+  padding: 0.55rem;
+}
+
+.ds-colours__neutral-layer--quaternary {
+  background: var(--preview-quaternary);
+  padding: 0.55rem;
+}
+
+.ds-colours__neutral-layer--tertiary {
+  background: var(--preview-tertiary);
+  padding: 0.45rem;
+}
+
+.ds-colours__neutral-layer-tag {
+  display: inline-block;
+  margin-bottom: 0.35rem;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--preview-text-secondary);
 }
 
 .ds-colours__neutral-panel {
   display: flex;
   flex-direction: column;
-  min-height: 148px;
+  min-height: 132px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--preview-text) 10%, transparent);
 }
 
 .ds-colours__neutral-chrome {
@@ -244,7 +344,7 @@
 
 .ds-colours__neutral-swatches {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0.35rem;
 }
 
@@ -367,5 +467,10 @@
 
   .ds-colours__token-compare-layout {
     grid-template-columns: 1fr;
+  }
+
+  .ds-colours__neutral-ladder {
+    grid-template-columns: repeat(5, minmax(3.5rem, 1fr));
+    overflow-x: auto;
   }
 }

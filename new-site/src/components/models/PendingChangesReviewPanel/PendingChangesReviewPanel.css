@@ -429,7 +429,7 @@
 }
 
 .pending-review-table tbody tr:hover {
-  background: color-mix(in srgb, var(--accent-color) 6%, var(--bg-secondary));
+  background: var(--bg-hover);
 }
 
 .pending-review-table__check {

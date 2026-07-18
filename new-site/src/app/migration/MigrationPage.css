@@ -561,7 +561,7 @@
 }
 
 .mapping-preview-table tbody tr:hover {
-  background: var(--accent-light);
+  background: var(--bg-hover);
 }
 
 .mapping-actions {
@@ -1411,7 +1411,7 @@
   }
 
   .mapping-preview-table tbody tr:hover td:first-child {
-    background: var(--accent-light);
+    background: var(--bg-hover);
   }
 
   [data-theme="dark"] .mapping-preview-table thead th:first-child {
@@ -1510,7 +1510,7 @@
 
   .preview-table tbody tr:hover td:first-child,
   .migration-complete-data-table tbody tr:hover td:first-child {
-    background: var(--bg-secondary);
+    background: var(--bg-hover);
   }
 
   .rejected-table thead th:first-child {
@@ -1523,7 +1523,7 @@
   }
 
   .rejected-table tbody tr:hover td:first-child {
-    background: var(--bg-secondary);
+    background: var(--bg-hover);
   }
 
   .new-stations-table thead th:first-child {
@@ -2525,7 +2525,7 @@
 }
 
 .preview-table tr:hover {
-  background: var(--bg-secondary);
+  background: var(--bg-hover);
 }
 
 .preview-table tr:last-child td {
@@ -4886,7 +4886,7 @@
   }
 
   .migration-complete-data-table tbody tr:hover td:first-child {
-    background: var(--bg-secondary);
+    background: var(--bg-hover);
   }
 
   [data-theme="dark"] .migration-complete-data-table thead th:first-child {
