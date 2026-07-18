@@ -933,7 +933,10 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
           <StationSectionTitle title="Station Usage" icon={getStationDetailsSectionIcon('usage')} pageHeading />
           {yearlyPassengerChartPoints.length >= 2 ? (
             <StationDetailsSubsection title="Graph view">
-              <StationUsageAreaChart data={yearlyPassengerChartPoints} />
+              <StationUsageAreaChart
+                data={yearlyPassengerChartPoints}
+                stationName={station.stationName}
+              />
             </StationDetailsSubsection>
           ) : null}
           <StationDetailsSubsection title="Data view">

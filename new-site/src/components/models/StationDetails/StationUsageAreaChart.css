@@ -7,9 +7,9 @@
 .station-usage-area-chart__header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: var(--space-md, 0.75rem);
-  margin-bottom: var(--space-sm, 0.5rem);
+  margin-bottom: var(--space-md, 0.75rem);
   min-height: 2rem;
 }
 
@@ -25,7 +25,7 @@
   flex-wrap: wrap;
   align-items: stretch;
   gap: var(--space-sm, 0.5rem);
-  margin-left: auto;
+  margin-left: 0;
   max-width: 100%;
 }
 
@@ -120,12 +120,222 @@
   flex-shrink: 0;
 }
 
+.station-usage-area-chart__footer-end {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-md, 0.75rem);
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 .station-usage-area-chart__scroll-hint {
   margin: 0;
   font-size: var(--text-xs, 0.75rem);
   color: var(--text-secondary);
   text-align: right;
   line-height: 1.35;
+}
+
+.station-usage-area-chart__export-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl, 1.25rem);
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.station-usage-area-chart__export-dialog {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 32rem;
+  height: min(36rem, 90vh);
+  max-height: min(36rem, 90vh);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg, 0.75rem);
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-xl, 0 16px 40px rgba(0, 0, 0, 0.28));
+}
+
+.station-usage-area-chart__export-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-lg, 1rem);
+  flex-shrink: 0;
+  padding: var(--space-xl, 1.25rem) var(--space-2xl, 1.5rem);
+  background: var(--bg-secondary);
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.08);
+}
+
+.station-usage-area-chart__export-header-text {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.station-usage-area-chart__export-close {
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 0.125rem;
+}
+
+.station-usage-area-chart__export-title {
+  margin: 0 0 var(--space-xs, 0.25rem);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.station-usage-area-chart__export-step {
+  margin: 0;
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.station-usage-area-chart__export-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-lg, 1rem) var(--space-2xl, 1.5rem);
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.station-usage-area-chart__export-main {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-md, 0.75rem);
+  width: 100%;
+  min-width: 0;
+}
+
+.station-usage-area-chart__export-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-sm, 0.5rem) var(--space-md, 0.75rem);
+  width: 100%;
+}
+
+.station-usage-area-chart__export-row--overlay,
+.station-usage-area-chart__export-row--chart {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-sm, 0.5rem);
+}
+
+.station-usage-area-chart__export-label-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.station-usage-area-chart__export-row--overlay .station-usage-area-chart__export-label {
+  flex: none;
+  padding-top: 0;
+}
+
+.station-usage-area-chart__export-label-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  line-height: 1.35;
+  color: var(--text-secondary);
+}
+
+.station-usage-area-chart__export-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm, 0.5rem);
+  width: 100%;
+  min-width: 0;
+}
+
+.station-usage-area-chart__export-label {
+  flex: 0 0 5.5rem;
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.station-usage-area-chart__export-dialog .station-usage-area-chart__tabs {
+  margin-left: 0;
+}
+
+.station-usage-area-chart__export-note,
+.station-usage-area-chart__export-error {
+  margin: 0;
+  font-size: var(--text-xs, 0.75rem);
+  line-height: 1.4;
+}
+
+.station-usage-area-chart__export-note {
+  color: var(--text-secondary);
+}
+
+.station-usage-area-chart__export-error {
+  color: var(--accent-base, #b20016);
+}
+
+.station-usage-area-chart__export-agree {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  width: 100%;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-xs, 0.75rem);
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.station-usage-area-chart__export-agree input[type='checkbox'] {
+  appearance: auto;
+  -webkit-appearance: auto;
+  -moz-appearance: auto;
+  min-width: unset;
+  min-height: unset;
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+  margin: 0.1rem 0 0;
+  accent-color: var(--accent-color, var(--text-primary));
+  cursor: pointer;
+}
+
+.station-usage-area-chart__export-agreements {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md, 0.75rem);
+  min-width: 0;
+}
+
+.station-usage-area-chart__export-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-sm, 0.5rem);
+  flex-shrink: 0;
+  padding: var(--space-lg, 1rem) var(--space-2xl, 1.5rem);
+  background: var(--bg-secondary);
 }
 
 .station-usage-area-chart--expanded .station-usage-area-chart__scroll {
@@ -176,7 +386,7 @@
 }
 
 .station-usage-area-chart:not(.station-usage-area-chart--expanded) .station-usage-area-chart__scroll-hint {
-  opacity: 0.55;
+  display: none;
 }
 
 @media (max-width: 1023px) {
@@ -206,9 +416,17 @@
     align-items: flex-start;
   }
 
-  .station-usage-area-chart__scroll-hint {
+  .station-usage-area-chart__footer-end {
     width: 100%;
+    justify-content: space-between;
+  }
+
+  .station-usage-area-chart__scroll-hint {
     text-align: left;
+  }
+
+  .station-usage-area-chart__export-label {
+    flex-basis: 100%;
   }
 
   .station-usage-area-chart__plot-inner {
