@@ -1,9 +1,14 @@
 /**
- * Infer which new-station form fields exist for a network by scanning Firestore documents.
+ * Infer which station detail / form fields exist for a network.
+ * Catalog defaults come from stationDetailLayoutProfiles; sampling merges data-driven sections.
  */
 
 import type { StationCollectionId } from '../constants/stationCollections'
-import { isNetworkCollection, NETWORK_STNAREA_DEFAULTS } from '../constants/stationCollections'
+import { isNetworkCollection } from '../constants/stationCollections'
+import {
+  getStationDetailLayoutProfile,
+  type StationDetailLayoutProfile,
+} from '../constants/stationDetailLayoutProfiles'
 import type { StationUrlFieldKey } from './stationUrlField'
 import { getStationUrlFieldKey, getStationUrlFieldLabel } from './stationUrlField'
 import { LIGHT_RAIL_DOC_FIELDS } from './lightRailStationFields'
@@ -16,6 +21,7 @@ export type StationDetailsTab =
   | 'stepFree'
   | 'service'
   | 'facilities'
+  | 'admin'
 
 export const STEP_FREE_SECTION_LABEL = 'Step Free Status'
 
@@ -34,7 +40,10 @@ export type StationCollectionFieldSchema = {
   urlFieldLabel: string
   showProvince: boolean
   showPostEirCode: boolean
+  postEirCodeInLocation: boolean
   showUsageTab: boolean
+  foldAdditionalIntoDetails: boolean
+  stepFreeInDetails: boolean
   showStepFreeSection: boolean
   showStepFreeTab: boolean
   showStepFreeNote: boolean
@@ -44,6 +53,8 @@ export type StationCollectionFieldSchema = {
   showFacilitiesTab: boolean
   facilityKeys: string[]
   showServiceTab: boolean
+  showAdminTab: boolean
+  showAdminUrlSlug: boolean
   showConnectionBus: boolean
   showConnectionTaxi: boolean
   showConnectionUnderground: boolean
@@ -54,6 +65,7 @@ export type StationCollectionFieldSchema = {
   showRequestStop: boolean
   showLimitedService: boolean
   showStationStatusSection: boolean
+  showTiploc: boolean
   requireCrsCode: boolean
   requireTiploc: boolean
 }
@@ -117,7 +129,10 @@ export const EMPTY_STATION_COLLECTION_FIELD_SCHEMA: StationCollectionFieldSchema
   urlFieldLabel: 'URL slug',
   showProvince: false,
   showPostEirCode: false,
+  postEirCodeInLocation: false,
   showUsageTab: false,
+  foldAdditionalIntoDetails: false,
+  stepFreeInDetails: true,
   showStepFreeSection: false,
   showStepFreeTab: false,
   showStepFreeNote: false,
@@ -127,6 +142,8 @@ export const EMPTY_STATION_COLLECTION_FIELD_SCHEMA: StationCollectionFieldSchema
   showFacilitiesTab: false,
   facilityKeys: [],
   showServiceTab: false,
+  showAdminTab: true,
+  showAdminUrlSlug: true,
   showConnectionBus: false,
   showConnectionTaxi: false,
   showConnectionUnderground: false,
@@ -137,52 +154,84 @@ export const EMPTY_STATION_COLLECTION_FIELD_SCHEMA: StationCollectionFieldSchema
   showRequestStop: false,
   showLimitedService: false,
   showStationStatusSection: false,
+  showTiploc: true,
   requireCrsCode: true,
   requireTiploc: true,
+}
+
+function schemaFromLayoutProfile(profile: StationDetailLayoutProfile): StationCollectionFieldSchema {
+  return {
+    isLightRail: profile.isLightRail,
+    defaultStnarea: profile.defaultStnarea,
+    showBorough: profile.showBorough,
+    showFareZone: profile.showFareZone,
+    showOperatorCode: profile.showOperatorCode,
+    showStaffingLevel: profile.showStaffingLevel,
+    showNlc: profile.showNlc,
+    showGauge: profile.showGauge,
+    showMinConnectionTime: profile.showMinConnectionTime,
+    showUrl: profile.showUrl,
+    urlFieldKey: profile.urlFieldKey,
+    urlFieldLabel: profile.urlFieldLabel,
+    showProvince: profile.showProvince,
+    showPostEirCode: profile.showPostEirCode,
+    postEirCodeInLocation: profile.postEirCodeInLocation,
+    showUsageTab: profile.showUsageTab,
+    foldAdditionalIntoDetails: profile.foldAdditionalIntoDetails,
+    stepFreeInDetails: profile.stepFreeInDetails,
+    showStepFreeSection: profile.showStepFreeSection,
+    showStepFreeTab: profile.showStepFreeTab,
+    showStepFreeNote: profile.showStepFreeNote,
+    stepFreeTabLabel: profile.stepFreeTabLabel,
+    showLiftSection: profile.showLiftSection,
+    showToiletsSection: profile.showToiletsSection,
+    showFacilitiesTab: profile.showFacilitiesTab,
+    facilityKeys: [],
+    showServiceTab: profile.showServiceTab,
+    showAdminTab: profile.showAdminTab,
+    showAdminUrlSlug: profile.showAdminUrlSlug,
+    showConnectionBus: profile.showConnectionBus,
+    showConnectionTaxi: profile.showConnectionTaxi,
+    showConnectionUnderground: profile.showConnectionUnderground,
+    showConnectionTrain: profile.showConnectionTrain,
+    showLinesServed: profile.showLinesServed,
+    showPlatforms: profile.showPlatforms,
+    showDateOpened: profile.showDateOpened,
+    showRequestStop: profile.showRequestStop,
+    showLimitedService: profile.showLimitedService,
+    showStationStatusSection: profile.showStationStatusSection,
+    showTiploc: profile.showTiploc,
+    requireCrsCode: profile.requireCrsCode,
+    requireTiploc: profile.requireTiploc,
+  }
+}
+
+function getLayoutProfileForCollection(
+  collectionId?: StationCollectionId
+): StationDetailLayoutProfile | null {
+  if (!collectionId || !isNetworkCollection(collectionId)) return null
+  return getStationDetailLayoutProfile(collectionId)
 }
 
 export function inferStationCollectionFieldSchema(
   docs: Record<string, unknown>[],
   collectionId?: StationCollectionId
 ): StationCollectionFieldSchema {
-  const networkId = collectionId && isNetworkCollection(collectionId) ? collectionId : undefined
-  const defaultStnarea = networkId ? NETWORK_STNAREA_DEFAULTS[networkId] : ''
+  const profile = getLayoutProfileForCollection(collectionId)
+  const catalogSchema = profile
+    ? schemaFromLayoutProfile(profile)
+    : {
+        ...EMPTY_STATION_COLLECTION_FIELD_SCHEMA,
+        urlFieldKey: collectionId ? getStationUrlFieldKey(collectionId) : 'urlSlug',
+        urlFieldLabel: collectionId ? getStationUrlFieldLabel(collectionId) : 'URL slug',
+      }
 
   if (docs.length === 0) {
-    const isHeritage = collectionId === 'stations_gbheritage'
-    const isLightRail = collectionId === 'lightrail_GBSHEFFSUPERTRAM'
-    const urlFieldKey = collectionId ? getStationUrlFieldKey(collectionId) : 'urlSlug'
-    return {
-      ...EMPTY_STATION_COLLECTION_FIELD_SCHEMA,
-      isLightRail,
-      defaultStnarea,
-      showUrl: isHeritage,
-      urlFieldKey,
-      urlFieldLabel: collectionId ? getStationUrlFieldLabel(collectionId) : 'URL slug',
-      requireCrsCode: !isHeritage && !isLightRail,
-      requireTiploc: !isHeritage && !isLightRail,
-      showBorough: isHeritage || isLightRail,
-      showFareZone: isLightRail,
-      showLinesServed: isLightRail,
-      showPlatforms: isLightRail,
-      showStepFreeSection: isHeritage || isLightRail,
-      showStepFreeTab: isLightRail,
-      stepFreeTabLabel: 'Step-free & Lift access',
-      showLiftSection: isLightRail,
-      showDateOpened: isLightRail,
-      showLimitedService: isLightRail,
-      showStaffingLevel: isHeritage || isLightRail,
-      showConnectionBus: isLightRail,
-      showConnectionTrain: isLightRail,
-      showNlc: isHeritage,
-      showGauge: isHeritage,
-      showRequestStop: isHeritage,
-      showServiceTab: isHeritage || isLightRail,
-    }
+    return catalogSchema
   }
 
-  const isLightRail = collectionId === 'lightrail_GBSHEFFSUPERTRAM'
-  if (isLightRail) {
+  if (catalogSchema.isLightRail) {
+    const defaultStnarea = catalogSchema.defaultStnarea
     return {
       ...EMPTY_STATION_COLLECTION_FIELD_SCHEMA,
       isLightRail: true,
@@ -192,8 +241,10 @@ export function inferStationCollectionFieldSchema(
       showLinesServed: hasPopulatedTopLevel(docs, [LIGHT_RAIL_DOC_FIELDS.linesServed]),
       showPlatforms: hasPopulatedTopLevel(docs, [LIGHT_RAIL_DOC_FIELDS.platforms]),
       showStepFreeSection: hasPopulatedTopLevel(docs, [LIGHT_RAIL_DOC_FIELDS.isStepFree]),
-      showStepFreeTab:
-        hasPopulatedTopLevel(docs, [LIGHT_RAIL_DOC_FIELDS.isStepFree, LIGHT_RAIL_DOC_FIELDS.hasLift]),
+      showStepFreeTab: hasPopulatedTopLevel(docs, [
+        LIGHT_RAIL_DOC_FIELDS.isStepFree,
+        LIGHT_RAIL_DOC_FIELDS.hasLift,
+      ]),
       showLiftSection: hasPopulatedTopLevel(docs, [LIGHT_RAIL_DOC_FIELDS.hasLift]),
       showDateOpened: hasPopulatedTopLevel(docs, [LIGHT_RAIL_DOC_FIELDS.dateOpened]),
       showLimitedService: hasPopulatedTopLevel(docs, [LIGHT_RAIL_DOC_FIELDS.isLimitedService]),
@@ -201,35 +252,59 @@ export function inferStationCollectionFieldSchema(
       showConnectionBus: hasPopulatedTopLevel(docs, [LIGHT_RAIL_DOC_FIELDS.bus]),
       showConnectionTrain: hasPopulatedTopLevel(docs, [LIGHT_RAIL_DOC_FIELDS.train]),
       showServiceTab: true,
+      showAdminTab: true,
+      foldAdditionalIntoDetails: catalogSchema.foldAdditionalIntoDetails,
+      stepFreeInDetails: catalogSchema.stepFreeInDetails,
+      postEirCodeInLocation: catalogSchema.postEirCodeInLocation,
+      showAdminUrlSlug: catalogSchema.showAdminUrlSlug,
+      showTiploc: false,
       requireCrsCode: false,
       requireTiploc: false,
-      stepFreeTabLabel: 'Step-free & Lift access',
+      stepFreeTabLabel: catalogSchema.stepFreeTabLabel,
+      urlFieldKey: catalogSchema.urlFieldKey,
+      urlFieldLabel: catalogSchema.urlFieldLabel,
     }
   }
 
-  const isHeritage = collectionId === 'stations_gbheritage'
-  const urlFieldKey: StationUrlFieldKey = isHeritage ? 'url' : 'urlSlug'
+  const force = profile
+  const urlFieldKey: StationUrlFieldKey = catalogSchema.urlFieldKey
+  // When the catalog URL field is the routing slug (Admin), do not promote urlSlug into Details.
   const showUrl =
-    hasPopulatedTopLevel(docs, ['url', 'urlSlug', 'url_slug']) || isHeritage
+    Boolean(force?.forceShowUrl) ||
+    (urlFieldKey === 'url'
+      ? hasPopulatedTopLevel(docs, ['url', 'urlSlug', 'url_slug'])
+      : hasPopulatedTopLevel(docs, ['url']))
   const facilityKeys = collectFacilityKeys(docs)
   const showToiletsSection = [...collectPopulatedNestedKeys(docs, 'toilets')].length > 0
   const showStepFreeSection =
-    isHeritage || [...collectPopulatedNestedKeys(docs, 'stepFree')].length > 0
-  const showStepFreeNote = !isHeritage && hasPopulatedNested(docs, 'stepFree', 'stepFreeNote')
-  const showLiftSection = !isHeritage && [...collectPopulatedNestedKeys(docs, 'lift')].length > 0
+    Boolean(force?.forceShowStepFreeSection) ||
+    [...collectPopulatedNestedKeys(docs, 'stepFree')].length > 0
+  const showStepFreeNote =
+    !force?.suppressStepFreeNote && hasPopulatedNested(docs, 'stepFree', 'stepFreeNote')
+  const showLiftSection =
+    !force?.suppressLiftSection && [...collectPopulatedNestedKeys(docs, 'lift')].length > 0
+  // GBNR (stepFreeInDetails false): Step Free Status lives on the Step-free tab, so open that tab
+  // whenever step-free or lift data exists. Heritage keeps step-free under Details.
+  const showStepFreeTab = catalogSchema.stepFreeInDetails
+    ? showLiftSection
+    : showStepFreeSection || showLiftSection
   const showConnectionBus = hasPopulatedNested(docs, 'connections', 'connectionBus')
   const showConnectionTaxi = hasPopulatedNested(docs, 'connections', 'connectionTaxi')
   const showConnectionUnderground = hasPopulatedNested(docs, 'connections', 'connectionUnderground')
-  const showRequestStop = hasPopulatedNested(docs, 'is', 'isrequeststop')
+  const showRequestStop =
+    Boolean(force?.forceShowRequestStop) || hasPopulatedNested(docs, 'is', 'isrequeststop')
   const showLimitedService = hasPopulatedNested(docs, 'is', 'Islimitedservice')
   const showStationStatusSection =
-    isHeritage ||
+    Boolean(force?.forceShowStationStatusSection) ||
     hasPopulatedNested(docs, 'stationstatus', 'status') ||
     hasPopulatedNested(docs, 'stationstatus', 'operationalperiod')
   const showStaffingLevel =
-    isHeritage || hasPopulatedTopLevel(docs, ['staffingLevel', 'staffing_level'])
-  const showNlc = isHeritage || hasPopulatedTopLevel(docs, ['nlc', 'NLC'])
-  const showGauge = isHeritage || hasPopulatedTopLevel(docs, ['guage', 'Guage'])
+    Boolean(force?.forceShowStaffingLevel) ||
+    hasPopulatedTopLevel(docs, ['staffingLevel', 'staffing_level'])
+  const showNlc =
+    Boolean(force?.forceShowNlc) || hasPopulatedTopLevel(docs, ['nlc', 'NLC'])
+  const showGauge =
+    Boolean(force?.forceShowGauge) || hasPopulatedTopLevel(docs, ['guage', 'Guage'])
   const showFacilitiesTab = facilityKeys.length > 0 || showToiletsSection
 
   const showUsageTab = docs.some((d) => {
@@ -240,7 +315,7 @@ export function inferStationCollectionFieldSchema(
 
   return {
     isLightRail: false,
-    defaultStnarea,
+    defaultStnarea: catalogSchema.defaultStnarea,
     showBorough:
       hasPopulatedTopLevel(docs, BOROUGH_KEYS) ||
       hasPopulatedTopLevel(docs, ['londonBorough', 'london_borough']),
@@ -252,14 +327,17 @@ export function inferStationCollectionFieldSchema(
     showMinConnectionTime: hasPopulatedTopLevel(docs, ['min-connection-time', 'minConnectionTime']),
     showUrl,
     urlFieldKey,
-    urlFieldLabel: collectionId ? getStationUrlFieldLabel(collectionId) : 'URL slug',
+    urlFieldLabel: catalogSchema.urlFieldLabel,
     showProvince: hasPopulatedTopLevel(docs, ['province']),
     showPostEirCode: hasPopulatedTopLevel(docs, ['post-eir_code']),
+    postEirCodeInLocation: catalogSchema.postEirCodeInLocation,
     showUsageTab,
+    foldAdditionalIntoDetails: catalogSchema.foldAdditionalIntoDetails,
+    stepFreeInDetails: catalogSchema.stepFreeInDetails,
     showStepFreeSection,
-    showStepFreeTab: showLiftSection,
+    showStepFreeTab,
     showStepFreeNote,
-    stepFreeTabLabel: 'Step-free & Lift access',
+    stepFreeTabLabel: catalogSchema.stepFreeTabLabel,
     showLiftSection,
     showToiletsSection,
     showFacilitiesTab,
@@ -272,6 +350,8 @@ export function inferStationCollectionFieldSchema(
       showLimitedService ||
       showStationStatusSection ||
       showStaffingLevel,
+    showAdminTab: true,
+    showAdminUrlSlug: catalogSchema.showAdminUrlSlug,
     showConnectionBus,
     showConnectionTaxi,
     showConnectionUnderground,
@@ -282,8 +362,9 @@ export function inferStationCollectionFieldSchema(
     showRequestStop,
     showLimitedService,
     showStationStatusSection,
-    requireCrsCode: collectionId !== 'stations_gbheritage',
-    requireTiploc: collectionId !== 'stations_gbheritage',
+    showTiploc: catalogSchema.showTiploc,
+    requireCrsCode: catalogSchema.requireCrsCode,
+    requireTiploc: catalogSchema.requireTiploc,
   }
 }
 
@@ -307,7 +388,10 @@ export function mergeStationCollectionFieldSchemas(
     urlFieldLabel: a.showUrl ? a.urlFieldLabel : b.urlFieldLabel,
     showProvince: a.showProvince || b.showProvince,
     showPostEirCode: a.showPostEirCode || b.showPostEirCode,
+    postEirCodeInLocation: a.postEirCodeInLocation || b.postEirCodeInLocation,
     showUsageTab: a.showUsageTab || b.showUsageTab,
+    foldAdditionalIntoDetails: a.foldAdditionalIntoDetails || b.foldAdditionalIntoDetails,
+    stepFreeInDetails: a.stepFreeInDetails && b.stepFreeInDetails,
     showStepFreeSection: a.showStepFreeSection || b.showStepFreeSection,
     showStepFreeTab: a.showStepFreeTab || b.showStepFreeTab,
     showStepFreeNote: a.showStepFreeNote || b.showStepFreeNote,
@@ -317,6 +401,8 @@ export function mergeStationCollectionFieldSchemas(
     showFacilitiesTab: a.showFacilitiesTab || b.showFacilitiesTab,
     facilityKeys: [...new Set([...a.facilityKeys, ...b.facilityKeys])].sort(),
     showServiceTab: a.showServiceTab || b.showServiceTab,
+    showAdminTab: a.showAdminTab || b.showAdminTab,
+    showAdminUrlSlug: a.showAdminUrlSlug || b.showAdminUrlSlug,
     showConnectionBus: a.showConnectionBus || b.showConnectionBus,
     showConnectionTaxi: a.showConnectionTaxi || b.showConnectionTaxi,
     showConnectionUnderground: a.showConnectionUnderground || b.showConnectionUnderground,
@@ -327,17 +413,21 @@ export function mergeStationCollectionFieldSchemas(
     showRequestStop: a.showRequestStop || b.showRequestStop,
     showLimitedService: a.showLimitedService || b.showLimitedService,
     showStationStatusSection: a.showStationStatusSection || b.showStationStatusSection,
+    showTiploc: a.showTiploc || b.showTiploc,
     requireCrsCode: a.requireCrsCode && b.requireCrsCode,
     requireTiploc: a.requireTiploc && b.requireTiploc,
   }
 }
 
 export function stationDetailsShowsAdditionalTab(fieldSchema: StationCollectionFieldSchema): boolean {
+  if (fieldSchema.foldAdditionalIntoDetails) return false
+  const showPostInAdditional =
+    fieldSchema.showPostEirCode && !fieldSchema.postEirCodeInLocation
   return (
     fieldSchema.showOperatorCode ||
     fieldSchema.showMinConnectionTime ||
     fieldSchema.showProvince ||
-    fieldSchema.showPostEirCode
+    showPostInAdditional
   )
 }
 
@@ -349,5 +439,6 @@ export function getVisibleStationDetailsTabs(fieldSchema: StationCollectionField
   if (fieldSchema.showUsageTab) tabs.push('usage')
   if (fieldSchema.showStepFreeTab) tabs.push('stepFree')
   if (fieldSchema.showFacilitiesTab) tabs.push('facilities')
+  if (fieldSchema.showAdminTab) tabs.push('admin')
   return tabs
 }

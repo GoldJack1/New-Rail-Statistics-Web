@@ -1,14 +1,22 @@
 import type { StationCollectionId } from '../constants/stationCollections'
+import { isNetworkCollection } from '../constants/stationCollections'
+import { getStationDetailLayoutProfile } from '../constants/stationDetailLayoutProfiles'
 import type { SandboxStationDoc } from '../types'
 
 export type StationUrlFieldKey = 'url' | 'urlSlug'
 
 export function getStationUrlFieldKey(collectionId: StationCollectionId): StationUrlFieldKey {
-  return collectionId === 'stations_gbheritage' ? 'url' : 'urlSlug'
+  if (isNetworkCollection(collectionId)) {
+    return getStationDetailLayoutProfile(collectionId).urlFieldKey
+  }
+  return 'urlSlug'
 }
 
 export function getStationUrlFieldLabel(collectionId: StationCollectionId): string {
-  return collectionId === 'stations_gbheritage' ? 'URL' : 'URL slug'
+  if (isNetworkCollection(collectionId)) {
+    return getStationDetailLayoutProfile(collectionId).urlFieldLabel
+  }
+  return 'URL slug'
 }
 
 export function readStationUrl(doc: Partial<SandboxStationDoc> | null | undefined): string {

@@ -124,6 +124,7 @@ function StationDetailsPage() {
     if (fieldSchema.showUsageTab) tabs.push({ id: 'usage', label: 'Usage' })
     if (fieldSchema.showStepFreeTab) tabs.push({ id: 'stepFree', label: fieldSchema.stepFreeTabLabel })
     if (fieldSchema.showFacilitiesTab) tabs.push({ id: 'facilities', label: 'Facilities' })
+    if (fieldSchema.showAdminTab) tabs.push({ id: 'admin', label: 'Admin' })
     return tabs
   }, [
     showAdditionalTab,
@@ -132,6 +133,7 @@ function StationDetailsPage() {
     fieldSchema.showStepFreeTab,
     fieldSchema.stepFreeTabLabel,
     fieldSchema.showFacilitiesTab,
+    fieldSchema.showAdminTab,
   ])
 
   useEffect(() => {
@@ -140,6 +142,7 @@ function StationDetailsPage() {
     if (activeTab === 'usage' && !fieldSchema.showUsageTab) setActiveTab('details')
     if (activeTab === 'stepFree' && !fieldSchema.showStepFreeTab) setActiveTab('details')
     if (activeTab === 'facilities' && !fieldSchema.showFacilitiesTab) setActiveTab('details')
+    if (activeTab === 'admin' && !fieldSchema.showAdminTab) setActiveTab('details')
   }, [
     activeTab,
     showAdditionalTab,
@@ -147,6 +150,7 @@ function StationDetailsPage() {
     fieldSchema.showUsageTab,
     fieldSchema.showStepFreeTab,
     fieldSchema.showFacilitiesTab,
+    fieldSchema.showAdminTab,
   ])
 
   useEffect(() => {

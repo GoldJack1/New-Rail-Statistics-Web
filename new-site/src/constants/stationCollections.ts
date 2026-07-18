@@ -67,7 +67,36 @@ export const NETWORK_URL_SLUGS: Record<NetworkCollectionId, string> = {
   lightrail_GBSHEFFSUPERTRAM: 'south-yorkshire-supertram',
 }
 
+/**
+ * Short codes for `/stations/{shortCode}-{stationId}` redirects
+ * (e.g. `/stations/gbnr-1566` → GB National Rail station 1566).
+ * Aliases may map to the same collection.
+ */
+export const NETWORK_SHORT_URL_CODES: Record<NetworkCollectionId, readonly string[]> = {
+  stations_gbnr: ['gbnr'],
+  stations_nitranslink: ['nitranslink'],
+  stations_roiirerail: ['roiirerail', 'irishrail'],
+  stations_gbheritage: ['gbheritage'],
+  lightrail_GBSHEFFSUPERTRAM: ['gbsheffsupertram', 'supertram'],
+}
+
 export const SANDBOX_URL_SLUG = 'sandbox' as const
+
+const SHORT_CODE_TO_NETWORK: Record<string, NetworkCollectionId> = (() => {
+  const map: Record<string, NetworkCollectionId> = {}
+  for (const id of NETWORK_COLLECTION_IDS) {
+    for (const code of NETWORK_SHORT_URL_CODES[id]) {
+      map[code.toLowerCase()] = id
+    }
+  }
+  return map
+})()
+
+/** Resolve a short URL code (e.g. `gbnr`) to a network collection id. */
+export function getCollectionIdFromShortUrlCode(code: string): NetworkCollectionId | null {
+  const normalized = code.trim().toLowerCase()
+  return SHORT_CODE_TO_NETWORK[normalized] ?? null
+}
 
 /** Reverse lookup from `stnarea` code to network collection. */
 export const STNAREA_TO_NETWORK_COLLECTION: Record<string, NetworkCollectionId> = {

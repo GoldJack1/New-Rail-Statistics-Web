@@ -161,11 +161,15 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
   const showStepFree = fieldSchema.showStepFreeTab && (showAll || activeTab === 'stepFree')
   const showService = fieldSchema.showServiceTab && (showAll || activeTab === 'service')
   const showFacilities = fieldSchema.showFacilitiesTab && (showAll || activeTab === 'facilities')
+  const showAdmin = fieldSchema.showAdminTab && (showAll || activeTab === 'admin')
 
   const stationUrlValue = readStationUrl(
     additionalDoc ?? ({ url: station.stationUrl, urlSlug: station.urlSlug } as Partial<SandboxStationDoc>)
   )
   const stationUrlHref = resolveStationUrlHref(stationUrlValue)
+  const routingUrlSlug = String(
+    additionalDoc?.urlSlug ?? station.urlSlug ?? ''
+  ).trim()
   const lightRailDoc = fieldSchema.isLightRail ? (additionalDoc as Record<string, unknown> | null) : null
 
   return (
@@ -178,17 +182,17 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
         <div className="modal-section">
           <h3 className="modal-section-title">Details</h3>
           <div className="modal-details-grid modal-facilities-grid">
-            <StationDetailField label="Station ID" value={formatOptionalText(station.id)} pendingFieldChanges={pendingFieldChanges} />
             {!fieldSchema.isLightRail && (
               <>
                 <StationDetailField label="CRS Code" value={formatOptionalText(station.crsCode)} pendingFieldChanges={pendingFieldChanges} />
-                <StationDetailField label="Tiploc" value={formatOptionalText(station.tiploc)} pendingFieldChanges={pendingFieldChanges} />
+                {fieldSchema.showTiploc && (
+                  <StationDetailField label="Tiploc" value={formatOptionalText(station.tiploc)} pendingFieldChanges={pendingFieldChanges} />
+                )}
                 <StationDetailField label="TOC" value={formatOptionalText(station.toc)} pendingFieldChanges={pendingFieldChanges} />
               </>
             )}
             <StationDetailField label="Country" value={formatOptionalText(station.country)} pendingFieldChanges={pendingFieldChanges} />
             <StationDetailField label="County" value={formatOptionalText(station.county)} pendingFieldChanges={pendingFieldChanges} />
-            <StationDetailField label="Station area" value={formatOptionalText(station.stnarea)} pendingFieldChanges={pendingFieldChanges} />
             {fieldSchema.showBorough && (
               <StationDetailField
                 label="Borough"
@@ -233,6 +237,34 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
                 pendingFieldChanges={pendingFieldChanges}
               />
             )}
+            {fieldSchema.foldAdditionalIntoDetails && fieldSchema.showOperatorCode && (
+              <StationDetailField
+                label="Operator code"
+                value={formatValue(additionalDoc?.operatorCode)}
+                pendingFieldChanges={pendingFieldChanges}
+              />
+            )}
+            {fieldSchema.foldAdditionalIntoDetails && fieldSchema.showMinConnectionTime && (
+              <StationDetailField
+                label="Min connection time"
+                value={formatValue(additionalDoc?.['min-connection-time'])}
+                pendingFieldChanges={pendingFieldChanges}
+              />
+            )}
+            {fieldSchema.foldAdditionalIntoDetails && fieldSchema.showProvince && (
+              <StationDetailField
+                label="Province"
+                value={formatValue(additionalDoc?.province)}
+                pendingFieldChanges={pendingFieldChanges}
+              />
+            )}
+            {fieldSchema.foldAdditionalIntoDetails && fieldSchema.showPostEirCode && !fieldSchema.postEirCodeInLocation && (
+              <StationDetailField
+                label="Post / Eircode"
+                value={formatValue(additionalDoc?.['post-eir_code'])}
+                pendingFieldChanges={pendingFieldChanges}
+              />
+            )}
           </div>
           {fieldSchema.showUrl && stationUrlHref && (
             <Button
@@ -248,7 +280,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
           )}
         </div>
 
-        {fieldSchema.showStepFreeSection && (
+        {fieldSchema.showStepFreeSection && fieldSchema.stepFreeInDetails && (
           <div className="modal-section">
             <h3 className="modal-section-title">{STEP_FREE_SECTION_LABEL}</h3>
             <div className="modal-details-grid">
@@ -288,6 +320,13 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
               value={(geoLng ?? station.longitude).toFixed(6)}
               pendingFieldChanges={pendingFieldChanges}
             />
+            {fieldSchema.showPostEirCode && fieldSchema.postEirCodeInLocation && (
+              <StationDetailField
+                label="Post / Eircode"
+                value={formatValue(additionalDoc?.['post-eir_code'])}
+                pendingFieldChanges={pendingFieldChanges}
+              />
+            )}
           </div>
           {(googleMapsUrl || (geoLat != null && geoLng != null)) && (() => {
             const lat = geoLat ?? station.latitude
@@ -354,7 +393,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
                 pendingFieldChanges={pendingFieldChanges}
               />
             )}
-            {fieldSchema.showPostEirCode && (
+            {fieldSchema.showPostEirCode && !fieldSchema.postEirCodeInLocation && (
               <StationDetailField
                 label="Post / Eircode"
                 value={formatValue(additionalDoc['post-eir_code'])}
@@ -388,7 +427,32 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
         </div>
       )}
 
-      {showStepFree && fieldSchema.showLiftSection && (
+      {showStepFree && (
+        <>
+          {fieldSchema.showStepFreeSection && !fieldSchema.stepFreeInDetails && (
+            <div className="modal-section">
+              <h3 className="modal-section-title">{STEP_FREE_SECTION_LABEL}</h3>
+              <div className="modal-details-grid">
+                <StationDetailField
+                  label="Step Free Status"
+                  value={
+                    fieldSchema.isLightRail
+                      ? formatValue(readLightRailDocString(lightRailDoc, LIGHT_RAIL_DOC_FIELDS.isStepFree))
+                      : formatValue(additionalDoc?.stepFree?.stepFreeCode)
+                  }
+                  pendingFieldChanges={pendingFieldChanges}
+                />
+                {fieldSchema.showStepFreeNote && (
+                  <StationDetailField
+                    label="Note"
+                    value={formatValue(additionalDoc?.stepFree?.stepFreeNote)}
+                    pendingFieldChanges={pendingFieldChanges}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+          {fieldSchema.showLiftSection && (
         <div className="modal-section">
           <h3 className="modal-section-title">{fieldSchema.isLightRail ? 'Lift' : 'Lift'}</h3>
           <div className="modal-details-grid">
@@ -419,6 +483,8 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
             )}
           </div>
         </div>
+          )}
+        </>
       )}
 
       {showService && fieldSchema.isLightRail && (
@@ -577,6 +643,31 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
                 pendingFieldChanges={pendingFieldChanges}
               />
             ))}
+          </div>
+        </div>
+      )}
+
+      {showAdmin && (
+        <div className="modal-section">
+          <h3 className="modal-section-title">Admin</h3>
+          <div className="modal-details-grid modal-facilities-grid">
+            <StationDetailField
+              label="ID"
+              value={formatOptionalText(station.id)}
+              pendingFieldChanges={pendingFieldChanges}
+            />
+            <StationDetailField
+              label="STNAREA"
+              value={formatOptionalText(station.stnarea)}
+              pendingFieldChanges={pendingFieldChanges}
+            />
+            {fieldSchema.showAdminUrlSlug && (
+              <StationDetailField
+                label="URL slug"
+                value={formatOptionalText(routingUrlSlug)}
+                pendingFieldChanges={pendingFieldChanges}
+              />
+            )}
           </div>
         </div>
       )}

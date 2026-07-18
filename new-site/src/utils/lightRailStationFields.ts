@@ -1,4 +1,6 @@
 import type { StationCollectionId } from '../constants/stationCollections'
+import { isNetworkCollection } from '../constants/stationCollections'
+import { getStationDetailLayoutProfile } from '../constants/stationDetailLayoutProfiles'
 
 export const LIGHTRAIL_COLLECTION_ID = 'lightrail_GBSHEFFSUPERTRAM' as const satisfies StationCollectionId
 
@@ -40,7 +42,8 @@ export const LIGHT_RAIL_SANDBOX_ONLY_FIELD_KEYS: LightRailDocFieldKey[] =
   )
 
 export function isLightRailCollection(collectionId: string | null | undefined): boolean {
-  return collectionId === LIGHTRAIL_COLLECTION_ID
+  if (!collectionId || !isNetworkCollection(collectionId)) return false
+  return getStationDetailLayoutProfile(collectionId).isLightRail
 }
 
 export function readLightRailDocField(

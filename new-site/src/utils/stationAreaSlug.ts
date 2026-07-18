@@ -5,6 +5,7 @@
 
 import {
   DEFAULT_NETWORK_COLLECTION_ID,
+  getCollectionIdFromShortUrlCode,
   isStationCollectionId,
   NETWORK_URL_SLUGS,
   SANDBOX_URL_SLUG,
@@ -105,21 +106,67 @@ export function findStationByRoute(
 }
 
 /**
- * Parse a legacy single-segment path to get station ID.
- * Accepts:
- * - Old category format: rail-greatbritainnationalrail-0002 → 0002
- * - Legacy id-only: 0002 → 0002
+ * Parse a short-code station path segment: `{shortCode}-{stationId}`
+ * e.g. gbnr-1566 → GB National Rail + id 1566
+ *
+ * Long-category and id-only legacy formats are no longer supported.
  */
-export function parseLegacyStationPath(pathSegment: string): string {
-  if (!pathSegment || pathSegment === 'new') return pathSegment
-  const parts = pathSegment.split('-')
-  if (parts.length >= 3) {
-    return parts[parts.length - 1]
-  }
-  return pathSegment
+export function parseShortNetworkStationPath(
+  pathSegment: string
+): { collectionId: NetworkCollectionId; stationId: string } | null {
+  if (!pathSegment || pathSegment === 'new') return null
+  const normalized = pathSegment.trim().toLowerCase()
+  // Never treat a full network URL slug as a short-id path.
+  if (getCollectionIdFromNetworkUrlSlug(normalized)) return null
+
+  const dash = normalized.indexOf('-')
+  if (dash <= 0 || dash === normalized.length - 1) return null
+
+  const shortCode = normalized.slice(0, dash)
+  const stationId = pathSegment.trim().slice(dash + 1)
+  if (!stationId) return null
+
+  const collectionId = getCollectionIdFromShortUrlCode(shortCode)
+  if (!collectionId) return null
+
+  return { collectionId, stationId }
 }
 
-/** @deprecated Use parseLegacyStationPath */
+/**
+ * Match a station id within a network, allowing zero-padded variants
+ * (e.g. URL `1566` matches stored id `1566` or `01566`).
+ */
+export function stationIdsMatch(a: string, b: string): boolean {
+  if (a === b) return true
+  const aTrim = a.replace(/^0+/, '') || '0'
+  const bTrim = b.replace(/^0+/, '') || '0'
+  return aTrim === bTrim
+}
+
+export function findStationByShortNetworkPath(
+  stations: Station[],
+  pathSegment: string,
+  fallbackCollectionId?: StationCollectionId
+): Station | null {
+  const parsed = parseShortNetworkStationPath(pathSegment)
+  if (!parsed) return null
+
+  return (
+    stations.find((station) => {
+      const stationCollection = getStationNetworkCollectionId(station, fallbackCollectionId)
+      if (stationCollection !== parsed.collectionId) return false
+      return stationIdsMatch(String(station.id), parsed.stationId)
+    }) ?? null
+  )
+}
+
+/** @deprecated Use parseShortNetworkStationPath — long-category / id-only legacy URLs are removed. */
+export function parseLegacyStationPath(pathSegment: string): string {
+  const parsed = parseShortNetworkStationPath(pathSegment)
+  return parsed ? parsed.stationId : pathSegment
+}
+
+/** @deprecated Use parseShortNetworkStationPath */
 export function parseStationPath(pathSegment: string): string {
   return parseLegacyStationPath(pathSegment)
 }

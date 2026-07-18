@@ -7,12 +7,12 @@ import { useStations } from '@/hooks/useStations'
 import { useStationCollection } from '@/contexts/StationCollectionContext'
 import {
   buildStationPath,
+  findStationByShortNetworkPath,
   getCollectionIdFromNetworkUrlSlug,
-  parseLegacyStationPath,
 } from '@/utils/stationAreaSlug'
 import { paramAsString } from '@/utils/nextParams'
 
-/** Redirects legacy `/stations/:legacyId/edit` to `/admin/stations/:network/:stationSlug/edit`. */
+/** Redirects `/stations/gbnr-1566/edit` to `/admin/stations/:network/:stationSlug/edit`. */
 export default function LegacyStationEditRedirectPage() {
   const router = useRouter()
   const network = paramAsString(useParams().network)
@@ -20,15 +20,15 @@ export default function LegacyStationEditRedirectPage() {
   const { collectionId } = useStationCollection()
 
   const isKnownNetworkSlug = Boolean(getCollectionIdFromNetworkUrlSlug(network))
+  const station = isKnownNetworkSlug
+    ? null
+    : findStationByShortNetworkPath(stations, network, collectionId)
 
   useEffect(() => {
-    if (isKnownNetworkSlug || loading || error) return
-    const stationId = parseLegacyStationPath(network)
-    const station = stations.find((s) => s.id === stationId) ?? null
-    if (!station) return
+    if (isKnownNetworkSlug || loading || error || !station) return
     const path = buildStationPath(station, collectionId)
     router.replace(`/admin/stations/${path}/edit`)
-  }, [collectionId, error, isKnownNetworkSlug, loading, network, router, stations])
+  }, [collectionId, error, isKnownNetworkSlug, loading, router, station])
 
   if (loading) {
     return (
@@ -52,25 +52,16 @@ export default function LegacyStationEditRedirectPage() {
     )
   }
 
-  if (isKnownNetworkSlug) {
+  if (isKnownNetworkSlug || !station) {
     return (
       <div className="container">
         <div className="error-state">
           <h3>Station not found</h3>
-          <p>Use the admin stations list to edit a station.</p>
-        </div>
-      </div>
-    )
-  }
-
-  const stationId = parseLegacyStationPath(network)
-  const station = stations.find((s) => s.id === stationId) ?? null
-  if (!station) {
-    return (
-      <div className="container">
-        <div className="error-state">
-          <h3>Station not found</h3>
-          <p>We couldn’t find that station in the current data source.</p>
+          <p>
+            {isKnownNetworkSlug
+              ? 'Use the admin stations list to edit a station.'
+              : 'We couldn’t find that station. Use a short-code URL like /stations/gbnr-1566/edit.'}
+          </p>
         </div>
       </div>
     )
