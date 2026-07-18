@@ -29,6 +29,50 @@
   color: var(--text-secondary);
 }
 
+.edit-field--kb-readonly {
+  opacity: 0.72;
+}
+
+.edit-kb-readonly-value {
+  display: block;
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  background: var(--bg-tertiary, var(--bg-secondary));
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  line-height: 1.4;
+  min-height: 2.5rem;
+  box-sizing: border-box;
+}
+
+.edit-kb-readonly-alert {
+  margin: 0 0 var(--space-lg);
+  padding: var(--space-md) var(--space-lg);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary, var(--bg-secondary));
+  opacity: 0.85;
+}
+
+.edit-kb-readonly-alert__title {
+  margin: 0 0 var(--space-xs);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.edit-kb-readonly-alert__body {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  white-space: pre-line;
+  line-height: 1.45;
+}
+
 .edit-input,
 .edit-textarea {
   width: 100%;

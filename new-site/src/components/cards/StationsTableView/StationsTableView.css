@@ -69,9 +69,10 @@ html[data-theme='dark'] .stations-table-wrap {
 .stations-table td {
   padding: var(--space-sm) var(--space-md);
   border-bottom: 1px solid var(--stations-table-cell-border, var(--border-color));
-  vertical-align: top;
+  vertical-align: middle;
   text-align: left;
   white-space: nowrap;
+  line-height: 1.25;
 }
 
 .stations-table th {

@@ -137,6 +137,11 @@ interface StationDetailsEditFormProps {
   fieldSchema?: StationCollectionFieldSchema
   /** Existing staged edits for this station (prefills form + shows banner). */
   pendingEntry?: PendingChangeEntry
+  /** KB NLC shown grayed out when Knowledgebase is the source (GBNR). */
+  knowledgebaseNlc?: string | null
+  knowledgebaseStationOperator?: string | null
+  knowledgebaseStationAlert?: string | null
+  knowledgebaseStatus?: 'idle' | 'loading' | 'ready' | 'error'
 }
 
 const StationDetailsEditForm: React.FC<StationDetailsEditFormProps> = ({
@@ -148,6 +153,10 @@ const StationDetailsEditForm: React.FC<StationDetailsEditFormProps> = ({
   onUnsavedChangesChange,
   fieldSchema: fieldSchemaProp,
   pendingEntry,
+  knowledgebaseNlc = null,
+  knowledgebaseStationOperator = null,
+  knowledgebaseStationAlert = null,
+  knowledgebaseStatus = 'idle',
 }) => {
   const { fieldSchema } = useStationFieldSchema(station, fieldSchemaProp)
   const showAdditionalFields = stationDetailsShowsAdditionalTab(fieldSchema)
@@ -608,6 +617,12 @@ const StationDetailsEditForm: React.FC<StationDetailsEditFormProps> = ({
         <>
           {showDetails && (
         <>
+        {fieldSchema.showKnowledgebaseTab && knowledgebaseStationAlert?.trim() ? (
+          <div className="edit-kb-readonly-alert" role="status">
+            <p className="edit-kb-readonly-alert__title">Station alert (Knowledgebase)</p>
+            <p className="edit-kb-readonly-alert__body">{knowledgebaseStationAlert.trim()}</p>
+          </div>
+        ) : null}
         <div className="modal-section">
           <h3 className="modal-section-title">Details</h3>
 
@@ -670,6 +685,26 @@ const StationDetailsEditForm: React.FC<StationDetailsEditFormProps> = ({
                 colorVariant="secondary"
               />
             </div>
+              </>
+            )}
+            {fieldSchema.showKnowledgebaseTab && (
+              <>
+                <div className="edit-field edit-field--kb-readonly">
+                  <span className="edit-label">NLC (Knowledgebase)</span>
+                  <span className="edit-kb-readonly-value">
+                    {knowledgebaseStatus === 'loading' || knowledgebaseStatus === 'idle'
+                      ? '…'
+                      : knowledgebaseNlc?.trim() || '---'}
+                  </span>
+                </div>
+                <div className="edit-field edit-field--kb-readonly">
+                  <span className="edit-label">TOC CODE (Knowledgebase)</span>
+                  <span className="edit-kb-readonly-value">
+                    {knowledgebaseStatus === 'loading' || knowledgebaseStatus === 'idle'
+                      ? '…'
+                      : knowledgebaseStationOperator?.trim() || '---'}
+                  </span>
+                </div>
               </>
             )}
             <div className="edit-field">

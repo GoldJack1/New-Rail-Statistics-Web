@@ -5,6 +5,7 @@ import { MagnifyingGlass } from '@phosphor-icons/react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import '../../../components/maps/leafletDarkTiles.css'
+import { MapZoomControls } from '../../../components/maps/MapZoomControls'
 import { useTheme, readThemeFromDocument } from '../../../hooks/useTheme'
 import { addThemeTileLayersToMap, swapThemeTileLayers, type MapTileLayerRefs } from '../../../utils/mapTileLayers'
 import { useOsmBackendProxy } from '../../../utils/osmBackendProxy'
@@ -68,6 +69,7 @@ export function LocationMapPicker({
   const mapInstanceRef = useRef<L.Map | null>(null)
   const markerRef = useRef<L.Marker | null>(null)
   const tileLayersRef = useRef<MapTileLayerRefs | null>(null)
+  const [mapInstance, setMapInstance] = useState<L.Map | null>(null)
   const { theme } = useTheme()
   const themeKey = theme === 'dark' ? 'dark' : 'light'
   const [searchQuery, setSearchQuery] = useState('')
@@ -104,9 +106,10 @@ export function LocationMapPicker({
   // Initialize map once (theme-based tiles + optional circle marker)
   useEffect(() => {
     if (!mapRef.current) return
-    const map = L.map(mapRef.current).setView(center, DEFAULT_ZOOM)
+    const map = L.map(mapRef.current, { zoomControl: false }).setView(center, DEFAULT_ZOOM)
     tileLayersRef.current = addThemeTileLayersToMap(map, readThemeFromDocument())
     mapInstanceRef.current = map
+    setMapInstance(map)
     if (hasValidCoords) {
       const marker = L.marker([latitude, longitude], { draggable: true, icon: CIRCLE_ICON })
       marker.on('dragend', () => {
@@ -117,6 +120,7 @@ export function LocationMapPicker({
       markerRef.current = marker
     }
     return () => {
+      setMapInstance(null)
       map.remove()
       mapInstanceRef.current = null
       markerRef.current = null
@@ -233,6 +237,7 @@ export function LocationMapPicker({
         style={{ height: `${height}px` }}
         aria-label="Map to set station location"
       />
+      <MapZoomControls map={mapInstance} />
     </div>
   )
 }

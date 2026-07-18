@@ -29,9 +29,12 @@ describe('inferStationCollectionFieldSchema from layout profiles', () => {
     const schema = inferStationCollectionFieldSchema([], 'stations_gbnr')
     expect(schema.requireCrsCode).toBe(true)
     expect(schema.requireTiploc).toBe(true)
+    // Optional detail rows stay visible from first paint (avoids sample-load flicker).
+    expect(schema.showBorough).toBe(true)
+    expect(schema.showFareZone).toBe(true)
     expect(schema.showUrl).toBe(false)
-    expect(schema.showServiceTab).toBe(false)
     expect(schema.isLightRail).toBe(false)
+    expect(getVisibleStationDetailsTabs(schema)).not.toContain('knowledgebase')
   })
 
   it('matches SuperTram catalog empty-doc defaults', () => {
@@ -82,5 +85,63 @@ describe('inferStationCollectionFieldSchema from layout profiles', () => {
     expect(schema.showPostEirCode).toBe(true)
     expect(schema.postEirCodeInLocation).toBe(true)
     expect(stationDetailsShowsAdditionalTab(schema)).toBe(false)
+  })
+
+  it('hides Knowledgebase-covered Firebase fields for GBNR even when docs have data', () => {
+    const schema = inferStationCollectionFieldSchema(
+      [
+        {
+          nlc: '848700',
+          staffingLevel: 'fullTime',
+          toilets: { toiletsAccessible: true, toiletsBabyChanging: true },
+          stepFree: { stepFreeCode: 'A', stepFreeNote: 'Category A' },
+          lift: { liftAvailable: true },
+          connections: {
+            connectionBus: true,
+            connectionTaxi: true,
+            connectionUnderground: false,
+          },
+          'min-connection-time': 5,
+          is: { isrequeststop: true, Islimitedservice: true },
+          stationstatus: { status: 'open' },
+          facilities: {
+            WiFi: true,
+            CCTV: true,
+            customOnlyInFirebase: true,
+          },
+        },
+      ],
+      'stations_gbnr'
+    )
+    expect(schema.showNlc).toBe(false)
+    expect(schema.showStaffingLevel).toBe(false)
+    expect(schema.showToiletsSection).toBe(false)
+    expect(schema.showStepFreeSection).toBe(false)
+    expect(schema.showStepFreeNote).toBe(false)
+    expect(schema.showConnectionBus).toBe(false)
+    expect(schema.showConnectionTaxi).toBe(false)
+    expect(schema.showConnectionUnderground).toBe(false)
+    expect(schema.facilityKeys).toEqual([])
+    expect(schema.showFacilitiesTab).toBe(false)
+    // Lift / service / step-free also suppressed for GBNR (KB covers them)
+    expect(schema.showLiftSection).toBe(false)
+    expect(schema.showStepFreeTab).toBe(false)
+    expect(schema.showMinConnectionTime).toBe(false)
+    expect(schema.showRequestStop).toBe(false)
+    expect(schema.showLimitedService).toBe(false)
+    expect(schema.showStationStatusSection).toBe(false)
+    expect(schema.showServiceTab).toBe(false)
+    expect(schema.showOperatorCode).toBe(false)
+    expect(schema.showKnowledgebaseTab).toBe(true)
+  })
+
+  it('still shows staffing/NLC/step-free for heritage when docs have data', () => {
+    const schema = inferStationCollectionFieldSchema(
+      [{ nlc: '1234', staffingLevel: 'partTime', stepFree: { stepFreeCode: 'B' } }],
+      'stations_gbheritage'
+    )
+    expect(schema.showNlc).toBe(true)
+    expect(schema.showStaffingLevel).toBe(true)
+    expect(schema.showStepFreeSection).toBe(true)
   })
 })

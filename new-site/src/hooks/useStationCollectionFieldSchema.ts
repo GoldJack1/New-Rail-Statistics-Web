@@ -12,12 +12,22 @@ import {
 import { useStationCollection } from '../contexts/StationCollectionContext'
 import { getStationNetworkCollectionId } from '../utils/stationAreaSlug'
 
+/** Session cache so navigating between stations does not re-flicker optional fields. */
+const fieldSchemaCache = new Map<StationCollectionId, StationCollectionFieldSchema>()
+
+function catalogSchemaFor(collectionId: StationCollectionId): StationCollectionFieldSchema {
+  return inferStationCollectionFieldSchema([], collectionId)
+}
+
 export function useStationCollectionFieldSchema(collectionId: StationCollectionId | null): {
   fieldSchema: StationCollectionFieldSchema
   loading: boolean
 } {
-  const [fieldSchema, setFieldSchema] = useState<StationCollectionFieldSchema>(EMPTY_STATION_COLLECTION_FIELD_SCHEMA)
-  const [loading, setLoading] = useState(Boolean(collectionId))
+  const [fieldSchema, setFieldSchema] = useState<StationCollectionFieldSchema>(() => {
+    if (!collectionId) return EMPTY_STATION_COLLECTION_FIELD_SCHEMA
+    return fieldSchemaCache.get(collectionId) ?? catalogSchemaFor(collectionId)
+  })
+  const [loading, setLoading] = useState(() => Boolean(collectionId) && !fieldSchemaCache.has(collectionId))
 
   useEffect(() => {
     if (!collectionId) {
@@ -26,48 +36,38 @@ export function useStationCollectionFieldSchema(collectionId: StationCollectionI
       return
     }
 
-    let cancelled = false
+    const cached = fieldSchemaCache.get(collectionId)
+    if (cached) {
+      setFieldSchema(cached)
+      setLoading(false)
+      return
+    }
+
+    // Paint catalog immediately (correct defaultStnarea / network floors) while the sample loads.
+    setFieldSchema(catalogSchemaFor(collectionId))
     setLoading(true)
 
-    const runFetch = () => {
-      void import('../services/firebase')
-        .then(({ fetchStationCollectionSampleDocs }) => fetchStationCollectionSampleDocs(collectionId))
-        .then((docs) => {
-          if (!cancelled) {
-            setFieldSchema(inferStationCollectionFieldSchema(docs, collectionId))
-          }
-        })
-        .catch(() => {
-          if (!cancelled) {
-            setFieldSchema(inferStationCollectionFieldSchema([], collectionId))
-          }
-        })
-        .finally(() => {
-          if (!cancelled) setLoading(false)
-        })
-    }
-
-    let idleId: number | null = null
-    let timeoutId: ReturnType<typeof globalThis.setTimeout> | null = null
-
-    const scheduleDeferredFetch = () => {
-      if (typeof window.requestIdleCallback === 'function') {
-        idleId = window.requestIdleCallback(runFetch, { timeout: 1500 })
-        return
-      }
-      timeoutId = globalThis.setTimeout(runFetch, 0)
-    }
-
-    scheduleDeferredFetch()
+    let cancelled = false
+    void import('../services/firebase')
+      .then(({ fetchStationCollectionSampleDocs }) => fetchStationCollectionSampleDocs(collectionId))
+      .then((docs) => {
+        if (cancelled) return
+        const next = inferStationCollectionFieldSchema(docs, collectionId)
+        fieldSchemaCache.set(collectionId, next)
+        setFieldSchema(next)
+      })
+      .catch(() => {
+        if (cancelled) return
+        const fallback = catalogSchemaFor(collectionId)
+        fieldSchemaCache.set(collectionId, fallback)
+        setFieldSchema(fallback)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
 
     return () => {
       cancelled = true
-      if (idleId != null && typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
-        window.cancelIdleCallback(idleId)
-      }
-      if (timeoutId != null) {
-        globalThis.clearTimeout(timeoutId)
-      }
     }
   }, [collectionId])
 

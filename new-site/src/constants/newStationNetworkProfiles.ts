@@ -43,18 +43,18 @@ function buildNewStationProfile(
 export const NEW_STATION_NETWORK_PROFILES: Record<NetworkCollectionId, NewStationNetworkProfile> = {
   stations_gbnr: buildNewStationProfile(
     'stations_gbnr',
-    `${NETWORK_LABELS.stations_gbnr} — borough, fare zones, and full facilities fields.`,
+    `${NETWORK_LABELS.stations_gbnr} — borough, fare zones; facilities/accessibility via Knowledgebase.`,
     {
       showBorough: true,
       showFareZone: true,
       showNlc: false,
       showGauge: false,
       showStaffingLevel: false,
-      showMinConnectionTime: true,
-      showOperatorCode: true,
-      showStepFreeTab: true,
-      showFacilitiesTab: true,
-      showRequestStop: true,
+      showMinConnectionTime: false,
+      showOperatorCode: false,
+      showStepFreeTab: false,
+      showFacilitiesTab: false,
+      showRequestStop: false,
     }
   ),
   stations_nitranslink: buildNewStationProfile(

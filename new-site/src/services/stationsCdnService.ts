@@ -136,7 +136,10 @@ export function getCachedStationsCdnManifest(): StationsCdnManifest | null {
   return cachedManifest ?? readSessionManifest()
 }
 
-async function decodeStationBundle(response: Response, encoding?: 'gzip' | 'identity'): Promise<Station[]> {
+async function decodeJsonArrayBundle(
+  response: Response,
+  encoding?: 'gzip' | 'identity'
+): Promise<unknown[]> {
   const contentEncoding = response.headers.get('content-encoding')?.toLowerCase() ?? ''
   const contentType = response.headers.get('content-type')?.toLowerCase() ?? ''
 
@@ -147,28 +150,35 @@ async function decodeStationBundle(response: Response, encoding?: 'gzip' | 'iden
     typeof DecompressionStream !== 'undefined'
   ) {
     const stream = response.body?.pipeThrough(new DecompressionStream('gzip'))
-    if (!stream) throw new Error('Failed to decompress gzip station bundle')
+    if (!stream) throw new Error('Failed to decompress gzip CDN bundle')
     const decompressed = await new Response(stream).text()
     const parsed = JSON.parse(decompressed) as unknown
-    if (!Array.isArray(parsed)) throw new Error('Station bundle is not an array')
-    return parsed as Station[]
+    if (!Array.isArray(parsed)) throw new Error('CDN bundle is not an array')
+    return parsed
   }
 
   const parsed = (await response.json()) as unknown
-  if (!Array.isArray(parsed)) throw new Error('Station bundle is not an array')
-  return parsed as Station[]
+  if (!Array.isArray(parsed)) throw new Error('CDN bundle is not an array')
+  return parsed
+}
+
+export async function fetchJsonArrayBundleFromCdn(
+  bundlePath: string,
+  encoding?: 'gzip' | 'identity'
+): Promise<unknown[]> {
+  const url = buildStationCdnBundleUrl(bundlePath)
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`Failed to fetch CDN bundle (${response.status})`)
+  }
+  return decodeJsonArrayBundle(response, encoding)
 }
 
 export async function fetchStationBundleFromCdn(
   bundlePath: string,
   encoding?: 'gzip' | 'identity'
 ): Promise<Station[]> {
-  const url = buildStationCdnBundleUrl(bundlePath)
-  const response = await fetch(url)
-  if (!response.ok) {
-    throw new Error(`Failed to fetch station bundle (${response.status})`)
-  }
-  return decodeStationBundle(response, encoding)
+  return (await fetchJsonArrayBundleFromCdn(bundlePath, encoding)) as Station[]
 }
 
 function toCdnBundleLevel(detailLevel: StationFetchDetailLevel): StationCdnBundleLevel {
@@ -245,6 +255,11 @@ export function invalidateStationsCdnManifestCache(): void {
       // ignore
     }
   }
+  void import('@/services/tocOperators')
+    .then((mod) => mod.invalidateTocOperatorsCache())
+    .catch(() => {
+      // TOC module may be unavailable in some bundles.
+    })
 }
 
 /** Fire-and-forget CDN re-export after the owner publishes pending station changes. */

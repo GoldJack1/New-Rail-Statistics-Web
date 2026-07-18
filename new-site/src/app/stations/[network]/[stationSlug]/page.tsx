@@ -5,6 +5,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 're
 
 import { useStationDetailsRoute } from '@/hooks/useStationDetailsRoute'
 import { useStationCollectionFieldSchema } from '@/hooks/useStationCollectionFieldSchema'
+import { useKnowledgebaseStation } from '@/hooks/useKnowledgebaseStation'
 import type { SandboxStationDoc } from '@/types'
 import {
   buildStationPath,
@@ -32,11 +33,27 @@ import { BUTWideButton } from '@/components/buttons'
 import { BUTCircleButton } from '@/components/buttons'
 import { BackIcon, ChevronRightIcon } from '@/components/icons'
 import PageTopHeader from '@/components/misc/PageTopHeader/PageTopHeader'
+import { LightRailLineChips } from '@/components/chips/LightRailLineChips'
 import '@/components/misc/SidebarDropdownSection/SidebarDropdownSection.css'
 import '@/components/models/StationModal/StationModal.css'
 import { PencilSimple } from '@phosphor-icons/react'
 import { paramAsString } from '@/utils/nextParams'
 import { setStationDetailsNavigationState, readStationDetailsNavigationState } from '@/utils/clientNavigationState'
+import { formatStationDetailsHeaderSubtitle } from '@/utils/formatStationDetailsHeader'
+import { isLightRailStop } from '@/utils/stationCardForNetwork'
+import {
+  isKnowledgebaseTabId,
+  KNOWLEDGEBASE_OVERVIEW_KEY,
+  parseKnowledgebaseTabId,
+  toKnowledgebaseTabId,
+} from '@/utils/knowledgebaseStationSections'
+import { getStationDetailsSectionIcon } from '@/utils/stationDetailFieldIcons'
+import '@/components/models/StationDetails/StationKnowledgebasePanel.css'
+import {
+  readKnowledgebaseSourceCompareEnabled,
+  writeKnowledgebaseSourceCompareEnabled,
+  SOURCE_COMPARE_CHANGED_EVENT,
+} from '@/utils/knowledgebaseSourceCompareStorage'
 import './StationDetailsPage.css'
 
 function getStationDetailsReturnPath(state: unknown): string {
@@ -62,8 +79,20 @@ function StationDetailsPage() {
   const [additionalLoading, setAdditionalLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<StationDetailsTab>('details')
   const [maxTabContentHeight, setMaxTabContentHeight] = useState(0)
+  const [sourceCompareEnabled, setSourceCompareEnabled] = useState(false)
   const visibleBodyRef = useRef<HTMLDivElement | null>(null)
   const tabMeasureRefs = useRef<Partial<Record<StationDetailsTab, HTMLDivElement | null>>>({})
+
+  useEffect(() => {
+    const sync = () => setSourceCompareEnabled(readKnowledgebaseSourceCompareEnabled())
+    sync()
+    window.addEventListener(SOURCE_COMPARE_CHANGED_EVENT, sync)
+    window.addEventListener('storage', sync)
+    return () => {
+      window.removeEventListener(SOURCE_COMPARE_CHANGED_EVENT, sync)
+      window.removeEventListener('storage', sync)
+    }
+  }, [])
 
   const { pendingChanges } = usePendingStationChanges()
   const pendingEntry = station ? pendingChanges[station.id] : undefined
@@ -97,33 +126,66 @@ function StationDetailsPage() {
   )
   // Collection sample restores which tabs exist for the network; the station's own doc
   // restores sections that catalog defaults hide (Usage, Facilities, Service, etc.).
-  const { fieldSchema: sampledFieldSchema, loading: schemaLoading } =
-    useStationCollectionFieldSchema(schemaCollectionId)
+  const { fieldSchema: sampledFieldSchema } = useStationCollectionFieldSchema(schemaCollectionId)
   const fieldSchema = useMemo(() => {
-    const base = schemaLoading ? catalogFieldSchema : sampledFieldSchema
+    // Hook already paints catalog (or cache) immediately — never swap back to a thinner schema
+    // while the collection sample loads (that was flashing empty optional rows).
+    const base =
+      sampledFieldSchema.defaultStnarea !== '' ? sampledFieldSchema : catalogFieldSchema
     if (!additionalDoc || !schemaCollectionId) return base
     const fromStationDoc = inferStationCollectionFieldSchema(
       [additionalDoc as Record<string, unknown>],
       schemaCollectionId
     )
     return mergeStationCollectionFieldSchemas(base, fromStationDoc)
-  }, [schemaLoading, catalogFieldSchema, sampledFieldSchema, additionalDoc, schemaCollectionId])
+  }, [catalogFieldSchema, sampledFieldSchema, additionalDoc, schemaCollectionId])
   const showAdditionalTab = stationDetailsShowsAdditionalTab(fieldSchema)
   const visibleTabs = useMemo(() => getVisibleStationDetailsTabs(fieldSchema), [fieldSchema])
+
+  const knowledgebase = useKnowledgebaseStation(
+    station?.crsCode,
+    fieldSchema.showKnowledgebaseTab
+  )
+
   // Measuring the location tab mounts Leaflet/ORM tiles — skip it for height measurement.
+  // Knowledgebase section tabs are skipped (content height varies / already prefetched).
   const measureTabs = useMemo(
-    () => visibleTabs.filter((tab) => tab !== 'location'),
+    () => visibleTabs.filter((tab) => tab !== 'location' && !isKnowledgebaseTabId(tab)),
     [visibleTabs]
   )
 
   const sectionTabs = useMemo(() => {
-    const tabs: Array<{ id: StationDetailsTab; label: string }> = [{ id: 'details', label: 'Details' }]
+    const tabs: Array<{
+      id: StationDetailsTab
+      label: string
+      knowledgebase?: boolean
+      sectionKey?: string
+    }> = [{ id: 'details', label: 'Details' }]
     if (showAdditionalTab) tabs.push({ id: 'additional', label: 'Additional details' })
     if (fieldSchema.showServiceTab) tabs.push({ id: 'service', label: 'Service & Connections' })
     tabs.push({ id: 'location', label: 'Location' })
     if (fieldSchema.showUsageTab) tabs.push({ id: 'usage', label: 'Usage' })
     if (fieldSchema.showStepFreeTab) tabs.push({ id: 'stepFree', label: fieldSchema.stepFreeTabLabel })
     if (fieldSchema.showFacilitiesTab) tabs.push({ id: 'facilities', label: 'Facilities' })
+    if (fieldSchema.showKnowledgebaseTab && knowledgebase.status === 'ready') {
+      for (const section of knowledgebase.sections) {
+        if (section.key === KNOWLEDGEBASE_OVERVIEW_KEY) continue
+        tabs.push({
+          id: toKnowledgebaseTabId(section.key),
+          label: section.label,
+          knowledgebase: true,
+          sectionKey: section.key,
+        })
+      }
+    } else if (fieldSchema.showKnowledgebaseTab) {
+      // Placeholder while KB loads so the sidebar shows KB is coming.
+      tabs.push({
+        id: toKnowledgebaseTabId('__loading__'),
+        label: knowledgebase.status === 'error' ? 'KB (error)' : 'KB (loading…)',
+        knowledgebase: true,
+        sectionKey: '__loading__',
+      })
+    }
     if (fieldSchema.showAdminTab) tabs.push({ id: 'admin', label: 'Admin' })
     return tabs
   }, [
@@ -133,8 +195,27 @@ function StationDetailsPage() {
     fieldSchema.showStepFreeTab,
     fieldSchema.stepFreeTabLabel,
     fieldSchema.showFacilitiesTab,
+    fieldSchema.showKnowledgebaseTab,
     fieldSchema.showAdminTab,
+    knowledgebase,
   ])
+
+  const activeKnowledgebaseSection = useMemo(() => {
+    if (!isKnowledgebaseTabId(activeTab) || knowledgebase.status !== 'ready') return null
+    const key = parseKnowledgebaseTabId(activeTab)
+    if (!key || key === KNOWLEDGEBASE_OVERVIEW_KEY) return null
+    return knowledgebase.sections.find((section) => section.key === key) ?? null
+  }, [activeTab, knowledgebase])
+
+  const knowledgebaseStationOperator =
+    knowledgebase.status === 'ready' ? knowledgebase.stationOperator : null
+  const knowledgebaseNlc = knowledgebase.status === 'ready' ? knowledgebase.nlc : null
+  const knowledgebasePostalAddress =
+    knowledgebase.status === 'ready' ? knowledgebase.postalAddress : null
+  const knowledgebaseStationAlert =
+    knowledgebase.status === 'ready' ? knowledgebase.stationAlert : null
+  const knowledgebaseLastUpdatedLabel =
+    knowledgebase.status === 'ready' ? knowledgebase.lastUpdatedLabel : null
 
   useEffect(() => {
     if (activeTab === 'additional' && !showAdditionalTab) setActiveTab('details')
@@ -142,6 +223,22 @@ function StationDetailsPage() {
     if (activeTab === 'usage' && !fieldSchema.showUsageTab) setActiveTab('details')
     if (activeTab === 'stepFree' && !fieldSchema.showStepFreeTab) setActiveTab('details')
     if (activeTab === 'facilities' && !fieldSchema.showFacilitiesTab) setActiveTab('details')
+    if (isKnowledgebaseTabId(activeTab) && !fieldSchema.showKnowledgebaseTab) setActiveTab('details')
+    if (
+      isKnowledgebaseTabId(activeTab) &&
+      parseKnowledgebaseTabId(activeTab) === KNOWLEDGEBASE_OVERVIEW_KEY
+    ) {
+      setActiveTab(fieldSchema.showAdminTab ? 'admin' : 'details')
+    }
+    if (
+      isKnowledgebaseTabId(activeTab) &&
+      knowledgebase.status === 'ready' &&
+      !activeKnowledgebaseSection &&
+      parseKnowledgebaseTabId(activeTab) !== '__loading__' &&
+      parseKnowledgebaseTabId(activeTab) !== KNOWLEDGEBASE_OVERVIEW_KEY
+    ) {
+      setActiveTab('details')
+    }
     if (activeTab === 'admin' && !fieldSchema.showAdminTab) setActiveTab('details')
   }, [
     activeTab,
@@ -150,7 +247,10 @@ function StationDetailsPage() {
     fieldSchema.showUsageTab,
     fieldSchema.showStepFreeTab,
     fieldSchema.showFacilitiesTab,
+    fieldSchema.showKnowledgebaseTab,
     fieldSchema.showAdminTab,
+    knowledgebase.status,
+    activeKnowledgebaseSection,
   ])
 
   useEffect(() => {
@@ -255,8 +355,18 @@ function StationDetailsPage() {
   return (
     <div className="container container--station-details">
       <PageTopHeader
-        title={`Station details: ${(displayStation ?? station).stationName || 'Station'}`}
-        subtitle={`${(displayStation ?? station).crsCode || 'No CRS'} · ID: ${station.id}${showPendingOverlay ? ' · Unpublished changes' : ''}`}
+        title={(displayStation ?? station).stationName || 'Station'}
+        titleAddon={
+          isLightRailStop(displayStation ?? station) ? (
+            <LightRailLineChips
+              linesServed={(displayStation ?? station).linesServed}
+              className="station-details-header-line-chips"
+            />
+          ) : undefined
+        }
+        subtitle={formatStationDetailsHeaderSubtitle(displayStation ?? station, {
+          pendingSuffix: showPendingOverlay ? 'Unpublished changes' : null,
+        })}
         actionContent={
           <div className="station-details-header-actions">
             <BUTWideButton
@@ -281,13 +391,26 @@ function StationDetailsPage() {
           </div>
         }
       />
-      <div className="station-details-page">
+      <div
+        className={[
+          'station-details-page',
+          fieldSchema.showKnowledgebaseTab && sourceCompareEnabled
+            ? 'station-details--source-compare'
+            : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
         <div className="station-details-layout">
           <aside className="station-details-sidebar">
             <div className="station-details-sidebar-panel">
               <nav className="station-details-tabs" aria-label="Station sections">
                 {sectionTabs.map((tab) => {
                   const isActive = activeTab === tab.id
+                  const TabIcon = getStationDetailsSectionIcon(tab.id, {
+                    knowledgebaseSectionKey: tab.sectionKey,
+                    label: tab.label,
+                  })
                   return (
                     <div
                       key={tab.id}
@@ -296,7 +419,13 @@ function StationDetailsPage() {
                         'station-details-tab',
                         'rs-button--color-primary',
                         isActive ? 'station-details-tab--active' : 'station-details-tab--idle',
-                      ].join(' ')}
+                        tab.knowledgebase ? 'station-details-tab--knowledgebase' : '',
+                        fieldSchema.showKnowledgebaseTab && !tab.knowledgebase
+                          ? 'station-details-tab--firebase'
+                          : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
                     >
                       <div className="sidebar-dropdown__header-row">
                         <button
@@ -305,7 +434,17 @@ function StationDetailsPage() {
                           aria-current={isActive ? 'page' : undefined}
                           onClick={() => setActiveTab(tab.id)}
                         >
-                          <span className="sidebar-dropdown__title">{tab.label}</span>
+                          <span className="sidebar-dropdown__title">
+                            {TabIcon ? (
+                              <TabIcon
+                                className="station-details-tab__icon"
+                                size={16}
+                                weight="regular"
+                                aria-hidden
+                              />
+                            ) : null}
+                            {tab.label}
+                          </span>
                           <ChevronRightIcon className="sidebar-dropdown__chevron" aria-hidden />
                         </button>
                       </div>
@@ -331,6 +470,31 @@ function StationDetailsPage() {
                   fieldSchema={fieldSchema}
                   pendingFieldChanges={showPendingOverlay ? pendingFieldChanges : undefined}
                   isPendingNew={pendingEntry?.isNew === true}
+                  knowledgebaseSection={activeKnowledgebaseSection}
+                  knowledgebaseSections={
+                    knowledgebase.status === 'ready' ? knowledgebase.sections : []
+                  }
+                  knowledgebaseStatus={knowledgebase.status}
+                  knowledgebaseError={
+                    knowledgebase.status === 'error' ? knowledgebase.message : undefined
+                  }
+                  knowledgebaseCrs={
+                    knowledgebase.status === 'ready' ? knowledgebase.crs : station.crsCode
+                  }
+                  knowledgebaseFetchedAt={
+                    knowledgebase.status === 'ready' ? knowledgebase.fetchedAt : undefined
+                  }
+                  knowledgebaseLastUpdatedLabel={knowledgebaseLastUpdatedLabel}
+                  knowledgebaseShowSourceHintForAdmin={canEdit}
+                  knowledgebaseStationOperator={knowledgebaseStationOperator}
+                  knowledgebaseNlc={knowledgebaseNlc}
+                  knowledgebasePostalAddress={knowledgebasePostalAddress}
+                  knowledgebaseStationAlert={knowledgebaseStationAlert}
+                  sourceCompareEnabled={sourceCompareEnabled}
+                  onSourceCompareChange={(enabled) => {
+                    writeKnowledgebaseSourceCompareEnabled(enabled)
+                    setSourceCompareEnabled(enabled)
+                  }}
                 />
                 <div className="station-details-measure-layer" aria-hidden="true">
                   {measureTabs.map((tab) => (
@@ -349,6 +513,8 @@ function StationDetailsPage() {
                         fieldSchema={fieldSchema}
                         pendingFieldChanges={showPendingOverlay ? pendingFieldChanges : undefined}
                         isPendingNew={pendingEntry?.isNew === true}
+                        knowledgebaseStatus={knowledgebase.status}
+                        knowledgebasePostalAddress={knowledgebasePostalAddress}
                       />
                     </div>
                   ))}

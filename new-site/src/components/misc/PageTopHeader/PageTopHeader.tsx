@@ -22,6 +22,8 @@ interface PageTopHeaderProps {
   title: string
   subtitle?: React.ReactNode
   titleAddon?: React.ReactNode
+  /** Content rendered below the subtitle (e.g. TOC chips). */
+  subtitleAddon?: React.ReactNode
   className?: string
   innerClassName?: string
   actionButton?: PageTopHeaderActionButton
@@ -32,6 +34,7 @@ const PageTopHeader: React.FC<PageTopHeaderProps> = ({
   title,
   subtitle,
   titleAddon,
+  subtitleAddon,
   className = '',
   innerClassName = '',
   actionButton,
@@ -54,6 +57,9 @@ const PageTopHeader: React.FC<PageTopHeaderProps> = ({
             {titleAddon}
           </h1>
           {subtitle ? <p className="rs-page-top-header__subtitle">{subtitle}</p> : null}
+          {subtitleAddon ? (
+            <div className="rs-page-top-header__subtitle-addon">{subtitleAddon}</div>
+          ) : null}
           {actionButton ? (
             shouldUseIconButton ? (
               <BUTLeftIconWideButton

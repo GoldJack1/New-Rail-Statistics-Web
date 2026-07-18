@@ -52,6 +52,32 @@
   flex-wrap: wrap;
 }
 
+.station-details-header-line-chips {
+  align-self: center;
+}
+
+.station-details-header-line-chips .light-rail-lines-chip {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+}
+
+.station-toc-detail__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+  margin-top: 0.125rem;
+}
+
+.station-toc-detail-chip.rs-button {
+  pointer-events: none;
+  cursor: default;
+}
+
+.station-toc-detail-chip.rs-button .rs-button__text {
+  color: inherit;
+}
+
 .station-details-card {
   width: 100%;
   max-width: none; /* allow content to use full main area width */
@@ -184,6 +210,51 @@
   min-width: 0;
 }
 
+/* Address + Coordinates side-by-side above the map */
+.location-place-row {
+  display: grid;
+  gap: var(--space-xl, 1.5rem);
+  margin-bottom: var(--space-xl, 1.5rem);
+  align-items: start;
+}
+
+.location-place-row--with-address {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+}
+
+.location-place-row--coords-only {
+  grid-template-columns: 1fr;
+}
+
+.location-place-row .station-details-subsection {
+  margin-bottom: 0;
+}
+
+.location-place-row__address .kb-address-block {
+  margin: 0;
+}
+
+.location-place-row__address .kb-address-lines {
+  font-size: var(--text-base, 1rem);
+  line-height: 1.5;
+  color: var(--text-primary, #111);
+}
+
+.location-place-row__coords .location-coords-grid {
+  grid-template-columns: 1fr;
+  gap: var(--space-md, 0.75rem);
+}
+
+@media (max-width: 720px) {
+  .location-place-row--with-address {
+    grid-template-columns: 1fr;
+  }
+
+  .location-place-row__coords .location-coords-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .station-details-main .location-map-preview,
 .station-details-main .location-map-preview-osm,
 .station-details-main .location-map-picker-map {
@@ -305,6 +376,10 @@
     width: 100%;
     max-width: 100%;
     min-width: 0;
+  }
+
+  .station-details-main .modal-map-links {
+    flex-direction: column;
   }
 
   .station-details-main .modal-map-link {
@@ -534,4 +609,120 @@
     padding-right: var(--stations-content-inset);
   }
 }
+
+/* Hierarchy polish: clearer section rhythm and field grid */
+.station-details-main .modal-section {
+  margin-bottom: var(--space-2xl, 2rem);
+}
+
+.station-details-main .modal-section-title {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.station-details-main .modal-details-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-lg) var(--space-xl);
+}
+
+.station-details-main .modal-detail-value {
+  line-height: 1.45;
+  white-space: pre-line;
+}
+
+.station-details-source-compare-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.station-details-source-compare-toggle__label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.35;
+}
+
+/* Section titles with Phosphor icons */
+.station-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.station-section-title__icon {
+  flex: 0 0 auto;
+  color: var(--text-secondary, #666);
+}
+
+.station-section-title__text {
+  min-width: 0;
+}
+
+.station-details-tab .sidebar-dropdown__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.station-details-tab__icon {
+  flex: 0 0 auto;
+  opacity: 0.85;
+}
+
+/* Details code chips + subsections */
+.station-details-code-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm, 0.5rem);
+  margin: 0 0 var(--space-xl, 1.5rem);
+}
+
+.station-details-code-chip {
+  pointer-events: none;
+  cursor: default;
+}
+
+.station-details-subsection {
+  margin-bottom: var(--space-xl, 1.5rem);
+}
+
+.station-details-subsection:last-child {
+  margin-bottom: 0;
+}
+
+.station-details-subsection__title {
+  margin: 0 0 var(--space-md, 0.75rem);
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #666);
+  padding-bottom: var(--space-xs, 0.35rem);
+  border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+}
+
+.station-details-main .station-details-subsection .modal-details-grid {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.modal-detail-label-row,
+.kb-detail-label-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.modal-detail-field-icon {
+  flex: 0 0 auto;
+  color: var(--text-secondary, #666);
+  opacity: 0.9;
+}
+
 

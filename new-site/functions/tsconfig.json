@@ -15,5 +15,5 @@
     }
   },
   "compileOnSave": true,
-  "include": ["src", "../src/server/exportStationSnapshots.ts", "../src/services/stationFirestoreMapper.ts", "../src/constants/stationCollections.ts", "../src/utils/yearlyPassengers.ts", "../src/utils/stationsTableColumnCatalog.ts", "../src/utils/lightRailStationFields.ts", "../src/utils/mapLeanStation.ts", "../src/types/stationsCdn.ts", "../src/types/index.ts"]
+  "include": ["src", "../src/server/exportStationSnapshots.ts", "../src/services/stationFirestoreMapper.ts", "../src/constants/stationCollections.ts", "../src/utils/yearlyPassengers.ts", "../src/utils/stationsTableColumnCatalog.ts", "../src/utils/lightRailStationFields.ts", "../src/utils/mapLeanStation.ts", "../src/utils/tocOperatorMap.ts", "../src/types/stationsCdn.ts", "../src/types/index.ts"]
 }

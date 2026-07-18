@@ -1,0 +1,98 @@
+/** Pure TOC operator mapping/helpers (safe for Cloud Functions export — no client Firebase). */
+
+export const TOC_OPERATORS_COLLECTION = 'toc_operators'
+
+export interface TocOperator {
+  id: string
+  name: string
+  colorHex: string
+  operatorRegion: string | null
+  operatorType: string | null
+}
+
+export const TOC_OPERATOR_FALLBACK_COLORS = { bg: '#64748b', text: '#ffffff' }
+
+function readString(data: Record<string, unknown>, ...keys: string[]): string | null {
+  for (const key of keys) {
+    const value = data[key]
+    if (typeof value === 'string' && value.trim() !== '') return value.trim()
+  }
+  return null
+}
+
+function normalizeHexColor(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  const trimmed = raw.trim()
+  if (/^#[0-9a-fA-F]{6}$/.test(trimmed)) return trimmed.toUpperCase()
+  if (/^#[0-9a-fA-F]{3}$/.test(trimmed)) {
+    const [, r, g, b] = trimmed
+    return `#${r}${r}${g}${g}${b}${b}`.toUpperCase()
+  }
+  if (/^[0-9a-fA-F]{6}$/.test(trimmed)) return `#${trimmed.toUpperCase()}`
+  return null
+}
+
+export function mapTocOperatorDoc(id: string, data: Record<string, unknown>): TocOperator | null {
+  const name = readString(data, 'name', 'Name', 'toc', 'TOC')
+  if (!name) return null
+  const colorHex =
+    normalizeHexColor(readString(data, 'colorHex', 'colorhex', 'color', 'Colour')) ??
+    TOC_OPERATOR_FALLBACK_COLORS.bg
+  return {
+    id,
+    name,
+    colorHex,
+    operatorRegion: readString(data, 'operatorregion', 'operatorRegion', 'region'),
+    operatorType: readString(data, 'operatortype', 'operatorType', 'type'),
+  }
+}
+
+function relativeLuminance(hex: string): number {
+  const normalized = normalizeHexColor(hex) ?? TOC_OPERATOR_FALLBACK_COLORS.bg
+  const value = normalized.slice(1)
+  const channels = [0, 2, 4].map((offset) => {
+    const channel = parseInt(value.slice(offset, offset + 2), 16) / 255
+    return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
+  })
+  return 0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!
+}
+
+export function getContrastingTextColor(backgroundHex: string): string {
+  return relativeLuminance(backgroundHex) > 0.45 ? '#1a1a1a' : '#ffffff'
+}
+
+export function findTocOperator(
+  operators: TocOperator[],
+  tocName: string
+): TocOperator | undefined {
+  const needle = tocName.trim().toLowerCase()
+  if (!needle) return undefined
+  return operators.find((op) => op.name.toLowerCase() === needle)
+}
+
+export function getTocOperatorChipColors(
+  operators: TocOperator[],
+  tocName: string
+): { bg: string; text: string } {
+  const match = findTocOperator(operators, tocName)
+  const bg = match?.colorHex ?? TOC_OPERATOR_FALLBACK_COLORS.bg
+  return { bg, text: getContrastingTextColor(bg) }
+}
+
+/** Canonical display name from the operators catalog when an exact match exists. */
+export function resolveTocOperatorDisplayName(
+  operators: TocOperator[],
+  tocName: string
+): string {
+  return findTocOperator(operators, tocName)?.name ?? tocName.trim()
+}
+
+export function isTocOperatorRecord(value: unknown): value is TocOperator {
+  if (!value || typeof value !== 'object') return false
+  const row = value as Record<string, unknown>
+  return (
+    typeof row.id === 'string' &&
+    typeof row.name === 'string' &&
+    typeof row.colorHex === 'string'
+  )
+}

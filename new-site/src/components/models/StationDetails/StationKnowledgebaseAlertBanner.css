@@ -1,0 +1,20 @@
+.kb-station-alert-banner {
+  margin: 0 0 var(--space-lg, 1rem);
+}
+
+.kb-station-alert-banner__card {
+  cursor: default;
+  pointer-events: none;
+}
+
+.kb-station-alert-banner__card .rs-text-card__chevron {
+  display: none;
+}
+
+.kb-station-alert-banner__card .rs-text-card__content {
+  padding-right: 0;
+}
+
+.kb-station-alert-banner__card .rs-text-card__description {
+  white-space: pre-line;
+}

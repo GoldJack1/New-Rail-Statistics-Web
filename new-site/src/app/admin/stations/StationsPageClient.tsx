@@ -204,11 +204,13 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
   )
 
   useEffect(() => {
-    if (initialMode === 'edit' || isAdminMode) {
+    if (initialMode === 'edit') {
       setIsEditMode(true)
       return
     }
-    setIsEditMode(false)
+    if (!isAdminMode) {
+      setIsEditMode(false)
+    }
   }, [initialMode, isAdminMode])
 
   useEffect(() => {
@@ -619,11 +621,11 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
         .join(' ')}
     >
       <PageTopHeader
-        title="Station Database"
+        title="Stations & Light Rail Database"
         subtitle={
           isEditMode
             ? 'View or edit station fields and prepare changes for publishing'
-            : 'Explore railway stations and passenger data'
+            : 'Explore all Railway Stations, Metro and Tram Stops.'
         }
       />
       <div className="stations-toolbar-band">

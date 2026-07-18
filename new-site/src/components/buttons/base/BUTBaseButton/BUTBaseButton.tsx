@@ -26,6 +26,7 @@ export interface ButtonProps {
   children?: React.ReactNode
   onClick?: (event: React.MouseEvent<HTMLButtonElement | HTMLAnchorElement>) => void
   className?: string
+  style?: React.CSSProperties
   ariaLabel?: string
   /** Optional ARIA role (e.g. `tab` when used inside a `tablist`). */
   role?: React.AriaRole
@@ -71,6 +72,7 @@ const BUTBaseButton: React.FC<ButtonProps> = ({
   children,
   onClick,
   className = '',
+  style,
   ariaLabel,
   role,
   ariaSelected,
@@ -137,6 +139,7 @@ const BUTBaseButton: React.FC<ButtonProps> = ({
       return (
         <BUTSharedNativeButton
           className={buttonClasses}
+          style={style}
           type="button"
           disabled
           role={role}
@@ -187,6 +190,7 @@ const BUTBaseButton: React.FC<ButtonProps> = ({
   return (
     <BUTSharedNativeButton
       className={buttonClasses}
+      style={style}
       type={type}
       form={form}
       onClick={handleClick}

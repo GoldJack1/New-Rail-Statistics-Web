@@ -12,6 +12,7 @@ import {
 import type { StationUrlFieldKey } from './stationUrlField'
 import { getStationUrlFieldKey, getStationUrlFieldLabel } from './stationUrlField'
 import { LIGHT_RAIL_DOC_FIELDS } from './lightRailStationFields'
+import { filterKnowledgebaseOverlapFacilityKeys } from './knowledgebaseOverlapFacilityKeys'
 
 export type StationDetailsTab =
   | 'details'
@@ -22,6 +23,8 @@ export type StationDetailsTab =
   | 'service'
   | 'facilities'
   | 'admin'
+  /** Dynamic Knowledgebase sidebar sections, e.g. `kb:Accessibility`. */
+  | `kb:${string}`
 
 export const STEP_FREE_SECTION_LABEL = 'Step Free Status'
 
@@ -53,6 +56,8 @@ export type StationCollectionFieldSchema = {
   showFacilitiesTab: boolean
   facilityKeys: string[]
   showServiceTab: boolean
+  /** GBNR-only live NRE Knowledgebase tab (not stored in Firebase). */
+  showKnowledgebaseTab: boolean
   showAdminTab: boolean
   showAdminUrlSlug: boolean
   showConnectionBus: boolean
@@ -142,6 +147,7 @@ export const EMPTY_STATION_COLLECTION_FIELD_SCHEMA: StationCollectionFieldSchema
   showFacilitiesTab: false,
   facilityKeys: [],
   showServiceTab: false,
+  showKnowledgebaseTab: false,
   showAdminTab: true,
   showAdminUrlSlug: true,
   showConnectionBus: false,
@@ -188,6 +194,7 @@ function schemaFromLayoutProfile(profile: StationDetailLayoutProfile): StationCo
     showFacilitiesTab: profile.showFacilitiesTab,
     facilityKeys: [],
     showServiceTab: profile.showServiceTab,
+    showKnowledgebaseTab: profile.showKnowledgebaseTab,
     showAdminTab: profile.showAdminTab,
     showAdminUrlSlug: profile.showAdminUrlSlug,
     showConnectionBus: profile.showConnectionBus,
@@ -253,6 +260,7 @@ export function inferStationCollectionFieldSchema(
       showConnectionTrain: hasPopulatedTopLevel(docs, [LIGHT_RAIL_DOC_FIELDS.train]),
       showServiceTab: true,
       showAdminTab: true,
+      showKnowledgebaseTab: catalogSchema.showKnowledgebaseTab,
       foldAdditionalIntoDetails: catalogSchema.foldAdditionalIntoDetails,
       stepFreeInDetails: catalogSchema.stepFreeInDetails,
       postEirCodeInLocation: catalogSchema.postEirCodeInLocation,
@@ -268,19 +276,29 @@ export function inferStationCollectionFieldSchema(
 
   const force = profile
   const urlFieldKey: StationUrlFieldKey = catalogSchema.urlFieldKey
-  // When the catalog URL field is the routing slug (Admin), do not promote urlSlug into Details.
+  // Routing slug (urlSlug) is Admin-only — never promote onto Details from station docs.
+  // Public `url` fields (e.g. heritage) may still appear when present or forced.
   const showUrl =
     Boolean(force?.forceShowUrl) ||
-    (urlFieldKey === 'url'
-      ? hasPopulatedTopLevel(docs, ['url', 'urlSlug', 'url_slug'])
-      : hasPopulatedTopLevel(docs, ['url']))
-  const facilityKeys = collectFacilityKeys(docs)
-  const showToiletsSection = [...collectPopulatedNestedKeys(docs, 'toilets')].length > 0
+    catalogSchema.showUrl ||
+    (urlFieldKey === 'url' && hasPopulatedTopLevel(docs, ['url', 'urlSlug', 'url_slug']))
+  const facilityKeysRaw = collectFacilityKeys(docs)
+  const facilityKeysFiltered = force?.suppressKnowledgebaseOverlapFacilityKeys
+    ? filterKnowledgebaseOverlapFacilityKeys(facilityKeysRaw)
+    : facilityKeysRaw
+  const facilityKeys = force?.suppressFacilitiesTab ? [] : facilityKeysFiltered
+  const showToiletsSection =
+    !force?.suppressFacilitiesTab &&
+    !force?.suppressToiletsSection &&
+    [...collectPopulatedNestedKeys(docs, 'toilets')].length > 0
   const showStepFreeSection =
-    Boolean(force?.forceShowStepFreeSection) ||
-    [...collectPopulatedNestedKeys(docs, 'stepFree')].length > 0
+    !force?.suppressStepFreeSection &&
+    (Boolean(force?.forceShowStepFreeSection) ||
+      [...collectPopulatedNestedKeys(docs, 'stepFree')].length > 0)
   const showStepFreeNote =
-    !force?.suppressStepFreeNote && hasPopulatedNested(docs, 'stepFree', 'stepFreeNote')
+    !force?.suppressStepFreeNote &&
+    !force?.suppressStepFreeSection &&
+    hasPopulatedNested(docs, 'stepFree', 'stepFreeNote')
   const showLiftSection =
     !force?.suppressLiftSection && [...collectPopulatedNestedKeys(docs, 'lift')].length > 0
   // GBNR (stepFreeInDetails false): Step Free Status lives on the Step-free tab, so open that tab
@@ -288,24 +306,36 @@ export function inferStationCollectionFieldSchema(
   const showStepFreeTab = catalogSchema.stepFreeInDetails
     ? showLiftSection
     : showStepFreeSection || showLiftSection
-  const showConnectionBus = hasPopulatedNested(docs, 'connections', 'connectionBus')
-  const showConnectionTaxi = hasPopulatedNested(docs, 'connections', 'connectionTaxi')
-  const showConnectionUnderground = hasPopulatedNested(docs, 'connections', 'connectionUnderground')
+  const showConnectionBus =
+    !force?.suppressConnections && hasPopulatedNested(docs, 'connections', 'connectionBus')
+  const showConnectionTaxi =
+    !force?.suppressConnections && hasPopulatedNested(docs, 'connections', 'connectionTaxi')
+  const showConnectionUnderground =
+    !force?.suppressConnections && hasPopulatedNested(docs, 'connections', 'connectionUnderground')
   const showRequestStop =
-    Boolean(force?.forceShowRequestStop) || hasPopulatedNested(docs, 'is', 'isrequeststop')
-  const showLimitedService = hasPopulatedNested(docs, 'is', 'Islimitedservice')
+    !force?.suppressServiceFlags &&
+    (Boolean(force?.forceShowRequestStop) || hasPopulatedNested(docs, 'is', 'isrequeststop'))
+  const showLimitedService =
+    !force?.suppressServiceFlags && hasPopulatedNested(docs, 'is', 'Islimitedservice')
   const showStationStatusSection =
-    Boolean(force?.forceShowStationStatusSection) ||
-    hasPopulatedNested(docs, 'stationstatus', 'status') ||
-    hasPopulatedNested(docs, 'stationstatus', 'operationalperiod')
+    !force?.suppressServiceFlags &&
+    (Boolean(force?.forceShowStationStatusSection) ||
+      hasPopulatedNested(docs, 'stationstatus', 'status') ||
+      hasPopulatedNested(docs, 'stationstatus', 'operationalperiod'))
   const showStaffingLevel =
-    Boolean(force?.forceShowStaffingLevel) ||
-    hasPopulatedTopLevel(docs, ['staffingLevel', 'staffing_level'])
+    !force?.suppressStaffingLevel &&
+    (Boolean(force?.forceShowStaffingLevel) ||
+      hasPopulatedTopLevel(docs, ['staffingLevel', 'staffing_level']))
   const showNlc =
-    Boolean(force?.forceShowNlc) || hasPopulatedTopLevel(docs, ['nlc', 'NLC'])
+    !force?.suppressNlc &&
+    (Boolean(force?.forceShowNlc) || hasPopulatedTopLevel(docs, ['nlc', 'NLC']))
   const showGauge =
     Boolean(force?.forceShowGauge) || hasPopulatedTopLevel(docs, ['guage', 'Guage'])
-  const showFacilitiesTab = facilityKeys.length > 0 || showToiletsSection
+  const showFacilitiesTab =
+    !force?.suppressFacilitiesTab && (facilityKeys.length > 0 || showToiletsSection)
+  const showMinConnectionTime =
+    !force?.suppressMinConnectionTime &&
+    hasPopulatedTopLevel(docs, ['min-connection-time', 'minConnectionTime'])
 
   const showUsageTab = docs.some((d) => {
     const yp = d.yearlyPassengers
@@ -316,15 +346,20 @@ export function inferStationCollectionFieldSchema(
   return {
     isLightRail: false,
     defaultStnarea: catalogSchema.defaultStnarea,
+    // Catalog `show*` floors keep empty optional rows stable on first paint; sampling can only add.
     showBorough:
+      catalogSchema.showBorough ||
       hasPopulatedTopLevel(docs, BOROUGH_KEYS) ||
       hasPopulatedTopLevel(docs, ['londonBorough', 'london_borough']),
-    showFareZone: hasPopulatedTopLevel(docs, FARE_ZONE_KEYS),
-    showOperatorCode: hasPopulatedTopLevel(docs, ['operatorCode', 'operator_code']),
+    showFareZone: catalogSchema.showFareZone || hasPopulatedTopLevel(docs, FARE_ZONE_KEYS),
+    showOperatorCode:
+      !force?.suppressOperatorCode &&
+      (catalogSchema.showOperatorCode ||
+        hasPopulatedTopLevel(docs, ['operatorCode', 'operator_code'])),
     showStaffingLevel,
     showNlc,
-    showGauge,
-    showMinConnectionTime: hasPopulatedTopLevel(docs, ['min-connection-time', 'minConnectionTime']),
+    showGauge: catalogSchema.showGauge || showGauge,
+    showMinConnectionTime,
     showUrl,
     urlFieldKey,
     urlFieldLabel: catalogSchema.urlFieldLabel,
@@ -350,6 +385,7 @@ export function inferStationCollectionFieldSchema(
       showLimitedService ||
       showStationStatusSection ||
       showStaffingLevel,
+    showKnowledgebaseTab: catalogSchema.showKnowledgebaseTab,
     showAdminTab: true,
     showAdminUrlSlug: catalogSchema.showAdminUrlSlug,
     showConnectionBus,
@@ -401,6 +437,7 @@ export function mergeStationCollectionFieldSchemas(
     showFacilitiesTab: a.showFacilitiesTab || b.showFacilitiesTab,
     facilityKeys: [...new Set([...a.facilityKeys, ...b.facilityKeys])].sort(),
     showServiceTab: a.showServiceTab || b.showServiceTab,
+    showKnowledgebaseTab: a.showKnowledgebaseTab || b.showKnowledgebaseTab,
     showAdminTab: a.showAdminTab || b.showAdminTab,
     showAdminUrlSlug: a.showAdminUrlSlug || b.showAdminUrlSlug,
     showConnectionBus: a.showConnectionBus || b.showConnectionBus,

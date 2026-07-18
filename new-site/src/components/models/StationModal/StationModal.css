@@ -190,6 +190,17 @@
   min-width: 0;
 }
 
+.modal-map-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin: var(--space-md) 0;
+}
+
+.modal-map-links .modal-map-link {
+  margin: 0;
+}
+
 .station-info-card .modal-map-link {
   margin-top: var(--space-lg);
 }

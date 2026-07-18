@@ -1,0 +1,363 @@
+.kb-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.kb-panel--readonly {
+  opacity: 0.72;
+  filter: grayscale(0.15);
+}
+
+.kb-panel__readonly-banner {
+  margin: 0 0 var(--space-md, 0.75rem);
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: 500;
+  color: var(--text-secondary, #666);
+}
+
+.kb-panel--readonly .kb-note-trigger {
+  opacity: 1;
+  filter: none;
+}
+
+.kb-section .kb-nested-block {
+  grid-column: 1 / -1;
+}
+
+.kb-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.kb-field__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.85;
+  color: var(--text-disabled, #8d8d8d);
+}
+
+.kb-field__value {
+  font-size: 0.95rem;
+  line-height: 1.4;
+  word-break: break-word;
+  color: var(--text-primary, #111);
+}
+
+.kb-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.kb-group__title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary, #111);
+}
+
+.kb-group__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--border-color, rgba(0, 0, 0, 0.12));
+}
+
+.kb-note {
+  margin: 0 0 0.5rem;
+  line-height: 1.45;
+  opacity: 0.95;
+  color: var(--text-secondary, #555);
+}
+
+.kb-error {
+  color: #b42318;
+}
+
+.kb-source-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary, #555);
+}
+
+.kb-nested-block {
+  margin-top: 0.25rem;
+}
+
+.kb-facility-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-lg, 1rem) var(--space-xl, 1.5rem);
+  align-items: start;
+  grid-auto-flow: dense;
+}
+
+.kb-facility-item {
+  min-width: 0;
+}
+
+.kb-facility-item--short {
+  grid-column: span 1;
+}
+
+.kb-facility-item--full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 639px) {
+  .kb-facility-list {
+    grid-template-columns: 1fr;
+  }
+
+  .kb-facility-item--short,
+  .kb-facility-item--full {
+    grid-column: 1 / -1;
+  }
+}
+
+.kb-facility-location {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0.4rem 0 0;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
+}
+
+.kb-facility-location__label {
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #666);
+}
+
+.kb-facility-location__value {
+  font-size: var(--text-sm, 0.875rem);
+  line-height: 1.45;
+  color: var(--text-primary, #111);
+  white-space: pre-line;
+}
+
+.kb-address-lines {
+  white-space: pre-line;
+  line-height: 1.45;
+}
+
+.kb-detail-multiline {
+  white-space: pre-line;
+  line-height: 1.45;
+}
+
+.kb-detail-label-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.kb-detail-label-row .modal-detail-label {
+  min-width: 0;
+}
+
+.kb-note-triggers {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  flex: 0 0 auto;
+}
+
+.kb-note-trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0.1rem;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-secondary, #666);
+  cursor: pointer;
+  line-height: 0;
+  overflow: visible;
+}
+
+.kb-note-trigger:hover {
+  background: transparent;
+  color: var(--text-primary, #111);
+}
+
+.kb-note-overlay__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: color-mix(in srgb, #000 45%, transparent);
+}
+
+.kb-note-overlay {
+  width: min(36rem, 100%);
+  max-height: min(80vh, 40rem);
+  overflow: auto;
+  border-radius: var(--radius-lg, 0.75rem);
+  background: var(--bg-primary, #fff);
+  color: var(--text-primary, #111);
+  box-shadow: var(--shadow-lg, 0 12px 40px rgba(0, 0, 0, 0.25));
+}
+
+.kb-note-overlay__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
+}
+
+.kb-note-overlay__close {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.kb-note-overlay__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.kb-note-overlay__body {
+  padding: 1rem 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.kb-note-overlay__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+}
+
+.kb-note-overlay__section:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.kb-note-overlay__section-title {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #555);
+}
+
+.kb-note-overlay__blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.kb-note-overlay__paragraph {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--text-primary, #111);
+}
+
+.kb-note-overlay__list {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.kb-note-overlay__list li {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--text-primary, #111);
+}
+
+/* Facilities & Staffing: clear subsection spacing */
+.kb-panel > .modal-section + .modal-section {
+  margin-top: var(--space-md, 0.75rem);
+}
+
+/*
+ * Source compare (Admin toggle): Firebase UI green, KB UI red.
+ * Scoped by .station-details--source-compare on the station details page.
+ */
+.station-details--source-compare .kb-panel {
+  color: #c62828;
+}
+
+.station-details--source-compare .kb-panel .modal-section-title,
+.station-details--source-compare .kb-panel .edit-hint,
+.station-details--source-compare .kb-panel .kb-field__label,
+.station-details--source-compare .kb-panel .kb-field__value,
+.station-details--source-compare .kb-panel .kb-group__title,
+.station-details--source-compare .kb-panel .kb-note,
+.station-details--source-compare .kb-panel .kb-source-hint {
+  color: #c62828;
+}
+
+.station-details--source-compare .kb-group__body {
+  border-left-color: color-mix(in srgb, #c62828 35%, transparent);
+}
+
+.station-details--source-compare .kb-detail-item .modal-detail-label,
+.station-details--source-compare .kb-detail-item .modal-detail-value {
+  color: #c62828;
+}
+
+.station-details--source-compare .kb-panel .modal-detail-label,
+.station-details--source-compare .kb-panel .modal-detail-value {
+  color: #c62828;
+}
+
+.station-details--source-compare .kb-note-trigger {
+  border: none;
+  background: transparent;
+  color: #c62828;
+}
+
+.station-details--source-compare .kb-note-trigger:hover {
+  background: transparent;
+  color: #b71c1c;
+}
+
+.station-details--source-compare .station-details-tab--knowledgebase .sidebar-dropdown__title {
+  color: #c62828;
+}
+
+.station-details--source-compare .modal-detail-item:not(.kb-detail-item) .modal-detail-label,
+.station-details--source-compare .modal-detail-item:not(.kb-detail-item) .modal-detail-value,
+.station-details--source-compare .modal-section:not(:has(.kb-panel)) .modal-section-title,
+.station-details--source-compare .edit-hint:not(.kb-error):not(.kb-source-hint) {
+  color: #2e7d32;
+}
+
+.station-details--source-compare .station-details-tab--firebase .sidebar-dropdown__title {
+  color: #2e7d32;
+}

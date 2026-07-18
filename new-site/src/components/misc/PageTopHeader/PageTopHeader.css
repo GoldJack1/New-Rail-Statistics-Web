@@ -48,6 +48,14 @@
   margin: 0;
 }
 
+.rs-page-top-header__subtitle-addon {
+  margin-top: var(--space-sm);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
 .rs-page-top-header__action {
   margin-top: 30px;
 }

@@ -47,6 +47,8 @@ export type StationDetailLayoutProfile = {
   showToiletsSection: boolean
   showFacilitiesTab: boolean
   showServiceTab: boolean
+  /** GBNR-only: live NRE Knowledgebase Stations XML tab (read-only; not Firebase). */
+  showKnowledgebaseTab: boolean
   showAdminTab: boolean
   /** Routing URL slug field in the Admin tab. */
   showAdminUrlSlug: boolean
@@ -77,6 +79,26 @@ export type StationDetailLayoutProfile = {
   /** Heritage: step-free note / lift sections stay off even if nested data exists. */
   suppressStepFreeNote: boolean
   suppressLiftSection: boolean
+  /**
+   * GBNR Knowledgebase-first: hide Firebase fields that KB covers, even when docs have data.
+   * Does not delete Firestore data — view/edit UI only.
+   */
+  suppressStaffingLevel: boolean
+  suppressNlc: boolean
+  suppressToiletsSection: boolean
+  /** Hides step-free code/note; lift section can still show unless suppressLiftSection. */
+  suppressStepFreeSection: boolean
+  /** Hides bus / taxi / underground connection fields. */
+  suppressConnections: boolean
+  /** Drop facility map keys that duplicate KB StationFacilities / CCTV. */
+  suppressKnowledgebaseOverlapFacilityKeys: boolean
+  /** Hide the whole Facilities tab / toilets+facilities UI even if docs have data. */
+  suppressFacilitiesTab: boolean
+  suppressMinConnectionTime: boolean
+  /** Hides request stop, limited service, and station status. */
+  suppressServiceFlags: boolean
+  /** Hide Firebase operatorCode; Details shows KB StationOperator as TOC CODE in the managed-by chip. */
+  suppressOperatorCode: boolean
 }
 
 export type StationDetailLayoutPresetId =
@@ -121,6 +143,7 @@ const HEAVY_RAIL_CATALOG_BASE: Omit<
   showToiletsSection: false,
   showFacilitiesTab: false,
   showServiceTab: false,
+  showKnowledgebaseTab: false,
   showAdminTab: true,
   showAdminUrlSlug: true,
   showConnectionBus: false,
@@ -145,6 +168,16 @@ const HEAVY_RAIL_CATALOG_BASE: Omit<
   forceShowStationStatusSection: false,
   suppressStepFreeNote: false,
   suppressLiftSection: false,
+  suppressStaffingLevel: false,
+  suppressNlc: false,
+  suppressToiletsSection: false,
+  suppressStepFreeSection: false,
+  suppressConnections: false,
+  suppressKnowledgebaseOverlapFacilityKeys: false,
+  suppressFacilitiesTab: false,
+  suppressMinConnectionTime: false,
+  suppressServiceFlags: false,
+  suppressOperatorCode: false,
 }
 
 export const STATION_DETAIL_LAYOUT_PRESETS: Record<
@@ -241,6 +274,26 @@ export const STATION_DETAIL_LAYOUT_PROFILES: Record<
     networkName: NETWORK_LABELS.stations_gbnr,
     networkId: 'stations_gbnr',
     preset: 'mainlineHeavyRail',
+    overrides: {
+      showKnowledgebaseTab: true,
+      // Show from first paint so sampling does not pop empty --- rows in after load.
+      showBorough: true,
+      showFareZone: true,
+      showUrl: false,
+      // Knowledgebase is source of truth for these — hide from Firebase UI (data retained).
+      suppressStaffingLevel: true,
+      suppressNlc: true,
+      suppressToiletsSection: true,
+      suppressStepFreeSection: true,
+      suppressStepFreeNote: true,
+      suppressLiftSection: true,
+      suppressConnections: true,
+      suppressKnowledgebaseOverlapFacilityKeys: true,
+      suppressFacilitiesTab: true,
+      suppressMinConnectionTime: true,
+      suppressServiceFlags: true,
+      suppressOperatorCode: true,
+    },
   }),
   stations_nitranslink: defineNetworkLayout({
     networkName: NETWORK_LABELS.stations_nitranslink,

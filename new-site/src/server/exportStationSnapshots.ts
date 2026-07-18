@@ -8,16 +8,22 @@ import {
 } from '@/services/stationFirestoreMapper'
 import type { StationsCdnManifest } from '@/types/stationsCdn'
 import { mergeNetworkCollections } from '@/utils/mapLeanStation'
+import {
+  TOC_OPERATORS_COLLECTION,
+  mapTocOperatorDoc,
+  type TocOperator,
+} from '@/utils/tocOperatorMap'
 
 const EXPORT_PREFIX = 'station-exports'
 const DETAIL_LEVELS: StationFetchDetailLevel[] = ['list', 'full', 'lean']
 
-async function uploadBundle(
+async function uploadGzipJsonArray(
   bucket: ReturnType<ReturnType<typeof getStorage>['bucket']>,
   objectPath: string,
-  stations: unknown[]
+  items: unknown[],
+  countField: 'stationCount' | 'itemCount' = 'stationCount'
 ) {
-  const gzip = gzipSync(Buffer.from(JSON.stringify(stations), 'utf8'))
+  const gzip = gzipSync(Buffer.from(JSON.stringify(items), 'utf8'))
   await bucket.file(objectPath).save(gzip, {
     metadata: {
       contentType: 'application/json',
@@ -29,7 +35,7 @@ async function uploadBundle(
     path: objectPath,
     encoding: 'gzip' as const,
     byteLength: gzip.byteLength,
-    stationCount: stations.length,
+    [countField]: items.length,
   }
 }
 
@@ -45,6 +51,7 @@ export async function exportStationSnapshotsToStorage(): Promise<StationsCdnMani
     version,
     generatedAt: version,
     bundles: {},
+    references: {},
   }
 
   const listBatches: Array<{
@@ -71,7 +78,11 @@ export async function exportStationSnapshotsToStorage(): Promise<StationsCdnMani
     for (const detailLevel of DETAIL_LEVELS) {
       const stations = mapFirestoreDocsToStations(docs, collectionId, detailLevel)
       const objectPath = `${EXPORT_PREFIX}/${collectionId}.${detailLevel}.json.gz`
-      manifest.bundles[collectionId]![detailLevel] = await uploadBundle(bucket, objectPath, stations)
+      manifest.bundles[collectionId]![detailLevel] = await uploadGzipJsonArray(
+        bucket,
+        objectPath,
+        stations
+      )
       if (detailLevel === 'list') {
         listBatches.push({ collectionId, stations })
       }
@@ -86,24 +97,36 @@ export async function exportStationSnapshotsToStorage(): Promise<StationsCdnMani
 
   manifest.bundles.all = {}
   const mergedList = mergeNetworkCollections(listBatches)
-  manifest.bundles.all.list = await uploadBundle(
+  manifest.bundles.all.list = await uploadGzipJsonArray(
     bucket,
     `${EXPORT_PREFIX}/all.list.json.gz`,
     mergedList
   )
 
   const mergedFull = mergeNetworkCollections(fullBatches)
-  manifest.bundles.all.full = await uploadBundle(
+  manifest.bundles.all.full = await uploadGzipJsonArray(
     bucket,
     `${EXPORT_PREFIX}/all.full.json.gz`,
     mergedFull
   )
 
   const mergedLean = mergeNetworkCollections(leanBatches)
-  manifest.bundles.all.lean = await uploadBundle(
+  manifest.bundles.all.lean = await uploadGzipJsonArray(
     bucket,
     `${EXPORT_PREFIX}/all.lean.json.gz`,
     mergedLean
+  )
+
+  const tocSnapshot = await db.collection(TOC_OPERATORS_COLLECTION).get()
+  const tocOperators: TocOperator[] = tocSnapshot.docs
+    .map((docSnap) => mapTocOperatorDoc(docSnap.id, docSnap.data() as Record<string, unknown>))
+    .filter((op): op is TocOperator => op != null)
+    .sort((a, b) => a.name.localeCompare(b.name))
+  manifest.references!.toc_operators = await uploadGzipJsonArray(
+    bucket,
+    `${EXPORT_PREFIX}/toc_operators.json.gz`,
+    tocOperators,
+    'itemCount'
   )
 
   await bucket.file(`${EXPORT_PREFIX}/manifest.json`).save(Buffer.from(JSON.stringify(manifest, null, 2), 'utf8'), {

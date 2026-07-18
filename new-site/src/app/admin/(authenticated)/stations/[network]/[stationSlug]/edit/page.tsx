@@ -5,6 +5,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 
 import { useStationDetailsRoute } from '@/hooks/useStationDetailsRoute'
 import { useStationCollectionFieldSchema } from '@/hooks/useStationCollectionFieldSchema'
+import { useKnowledgebaseStation } from '@/hooks/useKnowledgebaseStation'
 import type { SandboxStationDoc } from '@/types'
 import { fetchStationDocumentById } from '@/services/firebase'
 import {
@@ -27,6 +28,7 @@ import {
   type StationDetailsTab,
 } from '@/utils/stationCollectionFieldSchema'
 import { StationDetailsEditForm } from '@/components/models'
+import StationKnowledgebasePanel from '@/components/models/StationDetails/StationKnowledgebasePanel'
 import { BUTWideButton } from '@/components/buttons'
 import { BUTCircleButton } from '@/components/buttons'
 import { BackIcon, ChevronRightIcon } from '@/components/icons'
@@ -37,6 +39,14 @@ import '@/components/models/StationEditModal/StationEditModal.css'
 import { Eye } from '@phosphor-icons/react'
 import { paramAsString } from '@/utils/nextParams'
 import { setStationDetailsNavigationState, readStationDetailsNavigationState } from '@/utils/clientNavigationState'
+import {
+  isKnowledgebaseTabId,
+  KNOWLEDGEBASE_OVERVIEW_KEY,
+  parseKnowledgebaseTabId,
+  toKnowledgebaseTabId,
+} from '@/utils/knowledgebaseStationSections'
+import { getStationDetailsSectionIcon } from '@/utils/stationDetailFieldIcons'
+import '@/components/models/StationDetails/StationKnowledgebasePanel.css'
 import '@/app/stations/[network]/[stationSlug]/StationDetailsPage.css'
 
 function getStationDetailsReturnPath(state: unknown): string {
@@ -88,27 +98,54 @@ function AdminStationEditPage() {
         : EMPTY_STATION_COLLECTION_FIELD_SCHEMA,
     [schemaCollectionId]
   )
-  const { fieldSchema: sampledFieldSchema, loading: schemaLoading } =
-    useStationCollectionFieldSchema(schemaCollectionId)
+  const { fieldSchema: sampledFieldSchema } = useStationCollectionFieldSchema(schemaCollectionId)
   // Collection sample + this station's Firestore doc together restore every section tab.
   const fieldSchema = useMemo(() => {
-    const base = schemaLoading ? catalogFieldSchema : sampledFieldSchema
+    const base =
+      sampledFieldSchema.defaultStnarea !== '' ? sampledFieldSchema : catalogFieldSchema
     if (!additionalDoc || !schemaCollectionId) return base
     const fromStationDoc = inferStationCollectionFieldSchema(
       [additionalDoc as Record<string, unknown>],
       schemaCollectionId
     )
     return mergeStationCollectionFieldSchemas(base, fromStationDoc)
-  }, [schemaLoading, catalogFieldSchema, sampledFieldSchema, additionalDoc, schemaCollectionId])
+  }, [catalogFieldSchema, sampledFieldSchema, additionalDoc, schemaCollectionId])
   const showAdditionalTab = stationDetailsShowsAdditionalTab(fieldSchema)
+  const knowledgebase = useKnowledgebaseStation(
+    station?.crsCode,
+    fieldSchema.showKnowledgebaseTab
+  )
   const sectionTabs = useMemo(() => {
-    const tabs: Array<{ id: StationDetailsTab; label: string }> = [{ id: 'details', label: 'Details' }]
+    const tabs: Array<{
+      id: StationDetailsTab
+      label: string
+      knowledgebase?: boolean
+      sectionKey?: string
+    }> = [{ id: 'details', label: 'Details' }]
     if (showAdditionalTab) tabs.push({ id: 'additional', label: 'Additional details' })
     if (fieldSchema.showServiceTab) tabs.push({ id: 'service', label: 'Service & Connections' })
     tabs.push({ id: 'location', label: 'Location' })
     if (fieldSchema.showUsageTab) tabs.push({ id: 'usage', label: 'Usage' })
     if (fieldSchema.showStepFreeTab) tabs.push({ id: 'stepFree', label: fieldSchema.stepFreeTabLabel })
     if (fieldSchema.showFacilitiesTab) tabs.push({ id: 'facilities', label: 'Facilities' })
+    if (fieldSchema.showKnowledgebaseTab && knowledgebase.status === 'ready') {
+      for (const section of knowledgebase.sections) {
+        if (section.key === KNOWLEDGEBASE_OVERVIEW_KEY) continue
+        tabs.push({
+          id: toKnowledgebaseTabId(section.key),
+          label: section.label,
+          knowledgebase: true,
+          sectionKey: section.key,
+        })
+      }
+    } else if (fieldSchema.showKnowledgebaseTab) {
+      tabs.push({
+        id: toKnowledgebaseTabId('__loading__'),
+        label: knowledgebase.status === 'error' ? 'KB (error)' : 'KB (loading…)',
+        knowledgebase: true,
+        sectionKey: '__loading__',
+      })
+    }
     if (fieldSchema.showAdminTab) tabs.push({ id: 'admin', label: 'Admin' })
     return tabs
   }, [
@@ -118,8 +155,17 @@ function AdminStationEditPage() {
     fieldSchema.showStepFreeTab,
     fieldSchema.stepFreeTabLabel,
     fieldSchema.showFacilitiesTab,
+    fieldSchema.showKnowledgebaseTab,
     fieldSchema.showAdminTab,
+    knowledgebase,
   ])
+
+  const activeKnowledgebaseSection = useMemo(() => {
+    if (!isKnowledgebaseTabId(activeTab) || knowledgebase.status !== 'ready') return null
+    const key = parseKnowledgebaseTabId(activeTab)
+    if (!key || key === KNOWLEDGEBASE_OVERVIEW_KEY) return null
+    return knowledgebase.sections.find((section) => section.key === key) ?? null
+  }, [activeTab, knowledgebase])
 
   useEffect(() => {
     if (activeTab === 'additional' && !showAdditionalTab) setActiveTab('details')
@@ -127,6 +173,16 @@ function AdminStationEditPage() {
     if (activeTab === 'usage' && !fieldSchema.showUsageTab) setActiveTab('details')
     if (activeTab === 'stepFree' && !fieldSchema.showStepFreeTab) setActiveTab('details')
     if (activeTab === 'facilities' && !fieldSchema.showFacilitiesTab) setActiveTab('details')
+    if (isKnowledgebaseTabId(activeTab) && !fieldSchema.showKnowledgebaseTab) setActiveTab('details')
+    if (
+      isKnowledgebaseTabId(activeTab) &&
+      knowledgebase.status === 'ready' &&
+      !activeKnowledgebaseSection &&
+      parseKnowledgebaseTabId(activeTab) !== '__loading__' &&
+      parseKnowledgebaseTabId(activeTab) !== KNOWLEDGEBASE_OVERVIEW_KEY
+    ) {
+      setActiveTab('details')
+    }
     if (activeTab === 'admin' && !fieldSchema.showAdminTab) setActiveTab('details')
   }, [
     activeTab,
@@ -135,7 +191,10 @@ function AdminStationEditPage() {
     fieldSchema.showUsageTab,
     fieldSchema.showStepFreeTab,
     fieldSchema.showFacilitiesTab,
+    fieldSchema.showKnowledgebaseTab,
     fieldSchema.showAdminTab,
+    knowledgebase.status,
+    activeKnowledgebaseSection,
   ])
 
   useEffect(() => {
@@ -249,6 +308,10 @@ function AdminStationEditPage() {
               <nav className="station-details-tabs" aria-label="Station sections">
                 {sectionTabs.map((tab) => {
                   const isActive = activeTab === tab.id
+                  const TabIcon = getStationDetailsSectionIcon(tab.id, {
+                    knowledgebaseSectionKey: tab.sectionKey,
+                    label: tab.label,
+                  })
                   return (
                     <div
                       key={tab.id}
@@ -257,7 +320,10 @@ function AdminStationEditPage() {
                         'station-details-tab',
                         'rs-button--color-primary',
                         isActive ? 'station-details-tab--active' : 'station-details-tab--idle',
-                      ].join(' ')}
+                        tab.knowledgebase ? 'station-details-tab--knowledgebase' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
                     >
                       <div className="sidebar-dropdown__header-row">
                         <button
@@ -266,7 +332,17 @@ function AdminStationEditPage() {
                           aria-current={isActive ? 'page' : undefined}
                           onClick={() => setActiveTab(tab.id)}
                         >
-                          <span className="sidebar-dropdown__title">{tab.label}</span>
+                          <span className="sidebar-dropdown__title">
+                            {TabIcon ? (
+                              <TabIcon
+                                className="station-details-tab__icon"
+                                size={16}
+                                weight="regular"
+                                aria-hidden
+                              />
+                            ) : null}
+                            {tab.label}
+                          </span>
                           <ChevronRightIcon className="sidebar-dropdown__chevron" aria-hidden />
                         </button>
                       </div>
@@ -279,16 +355,70 @@ function AdminStationEditPage() {
 
           <main className="station-details-main">
             <section className="station-details-card modal-content modal-content-edit">
-              <StationDetailsEditForm
-                station={station}
-                pendingEntry={pendingEntry}
-                onCancel={() => router.push(backPath)}
-                onSaved={() => router.push(backPath)}
-                activeTab={activeTab}
-                fieldSchema={fieldSchema}
-                actionsPortalId="station-details-header-actions"
-                onUnsavedChangesChange={setEditFormHasUnsavedChanges}
-              />
+              <div
+                hidden={isKnowledgebaseTabId(activeTab)}
+                aria-hidden={isKnowledgebaseTabId(activeTab)}
+              >
+                <StationDetailsEditForm
+                  station={station}
+                  pendingEntry={pendingEntry}
+                  onCancel={() => router.push(backPath)}
+                  onSaved={() => router.push(backPath)}
+                  activeTab={isKnowledgebaseTabId(activeTab) ? 'details' : activeTab}
+                  fieldSchema={fieldSchema}
+                  actionsPortalId="station-details-header-actions"
+                  onUnsavedChangesChange={setEditFormHasUnsavedChanges}
+                  knowledgebaseNlc={
+                    knowledgebase.status === 'ready' ? knowledgebase.nlc : null
+                  }
+                  knowledgebaseStationOperator={
+                    knowledgebase.status === 'ready' ? knowledgebase.stationOperator : null
+                  }
+                  knowledgebaseStationAlert={
+                    knowledgebase.status === 'ready' ? knowledgebase.stationAlert : null
+                  }
+                  knowledgebaseStatus={knowledgebase.status}
+                />
+              </div>
+              {isKnowledgebaseTabId(activeTab) ? (
+                <div className="modal-body">
+                  {activeKnowledgebaseSection ? (
+                    <StationKnowledgebasePanel
+                      sectionKey={activeKnowledgebaseSection.key}
+                      label={activeKnowledgebaseSection.label}
+                      value={activeKnowledgebaseSection.value}
+                      crs={knowledgebase.status === 'ready' ? knowledgebase.crs : station.crsCode}
+                      fetchedAt={
+                        knowledgebase.status === 'ready' ? knowledgebase.fetchedAt : undefined
+                      }
+                      lastUpdatedLabel={
+                        knowledgebase.status === 'ready' ? knowledgebase.lastUpdatedLabel : null
+                      }
+                      showSourceHint
+                      status={knowledgebase.status}
+                      errorMessage={
+                        knowledgebase.status === 'error' ? knowledgebase.message : undefined
+                      }
+                      readOnly
+                    />
+                  ) : (
+                    <StationKnowledgebasePanel
+                      label={
+                        knowledgebase.status === 'error'
+                          ? 'Knowledgebase (error)'
+                          : 'Knowledgebase'
+                      }
+                      value={{}}
+                      crs={station.crsCode}
+                      status={knowledgebase.status === 'error' ? 'error' : 'loading'}
+                      errorMessage={
+                        knowledgebase.status === 'error' ? knowledgebase.message : undefined
+                      }
+                      readOnly
+                    />
+                  )}
+                </div>
+              ) : null}
             </section>
           </main>
         </div>

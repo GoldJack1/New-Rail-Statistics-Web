@@ -9,10 +9,18 @@ export interface StationCdnBundleRef {
   encoding?: 'gzip' | 'identity'
   byteLength?: number
   stationCount?: number
+  /** Item count for non-station reference bundles (e.g. toc_operators). */
+  itemCount?: number
+}
+
+export interface StationsCdnReferenceBundles {
+  toc_operators?: StationCdnBundleRef
 }
 
 export interface StationsCdnManifest {
   version: string
   generatedAt: string
   bundles: Partial<Record<NetworkCollectionId | 'all', Partial<Record<StationCdnBundleLevel, StationCdnBundleRef>>>>
+  /** Non-station reference snapshots (TOC colours, etc.). */
+  references?: StationsCdnReferenceBundles
 }

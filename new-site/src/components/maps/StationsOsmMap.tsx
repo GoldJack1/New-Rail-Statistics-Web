@@ -1,8 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Minus, Plus } from '@phosphor-icons/react'
-import { createPortal } from 'react-dom'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import {
@@ -30,11 +28,11 @@ import { isStationVisibleAtTimelineCutoff } from '../../utils/superTramTimeline'
 import { LIGHTRAIL_COLLECTION_ID } from '../../utils/lightRailStationFields'
 import { LITE_MAP_MAX_MARKERS } from '../../utils/deviceCapability'
 import type { Station } from '../../types'
-import { BUTCircleButton } from '../buttons'
 import {
   MapAddStationContextMenu,
   type MapAddStationContextMenuState,
 } from './MapAddStationContextMenu'
+import { MapZoomControls } from './MapZoomControls'
 import './StationsOsmMap.css'
 import './leafletDarkTiles.css'
 
@@ -211,12 +209,8 @@ export function StationsOsmMap({
   liteMode = false,
 }: StationsOsmMapProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
-  const [mapContainerNode, setMapContainerNode] = useState<HTMLDivElement | null>(null)
-  const assignMapContainer = useCallback((node: HTMLDivElement | null) => {
-    mapContainerRef.current = node
-    setMapContainerNode(node)
-  }, [])
   const mapRef = useRef<L.Map | null>(null)
+  const [mapInstance, setMapInstance] = useState<L.Map | null>(null)
   const tileLayersRef = useRef<MapTileLayerRefs | null>(null)
   const markersLayerRef = useRef<L.LayerGroup | null>(null)
   const markersByIdRef = useRef<Map<string, StationMarkerPair>>(new Map())
@@ -229,7 +223,6 @@ export function StationsOsmMap({
   const [addStationMenu, setAddStationMenu] = useState<MapAddStationContextMenuState | null>(null)
   const [mobileMarkers, setMobileMarkers] = useState(isMobileMapViewport)
   const [visibleLegendNetworks, setVisibleLegendNetworks] = useState<NetworkCollectionId[]>([])
-  const [zoomBounds, setZoomBounds] = useState<{ zoom: number; min: number; max: number } | null>(null)
   const [viewportBounds, setViewportBounds] = useState<L.LatLngBounds | null>(null)
   const liteMoveEndTimerRef = useRef<number | null>(null)
   const { theme } = useTheme()
@@ -388,13 +381,7 @@ export function StationsOsmMap({
     const map = L.map(mapContainerRef.current, { zoomControl: false }).setView(DEFAULT_CENTER, DEFAULT_ZOOM)
     tileLayersRef.current = addThemeTileLayersToMap(map, readThemeFromDocument())
     mapRef.current = map
-
-    const syncZoomBounds = () => {
-      setZoomBounds({ zoom: map.getZoom(), min: map.getMinZoom(), max: map.getMaxZoom() })
-    }
-    syncZoomBounds()
-    map.on('zoomend', syncZoomBounds)
-    map.on('zoomlevelschange', syncZoomBounds)
+    setMapInstance(map)
 
     map.on('click', (event) => {
       if (addStationModeRef.current && onAddStationAtLocationRef.current) {
@@ -441,14 +428,13 @@ export function StationsOsmMap({
         window.clearTimeout(liteMoveEndTimerRef.current)
         liteMoveEndTimerRef.current = null
       }
-      map.off('zoomend', syncZoomBounds)
-      map.off('zoomlevelschange', syncZoomBounds)
       observer?.disconnect()
       if (markersLayerRef.current && mapRef.current) {
         mapRef.current.removeLayer(markersLayerRef.current)
       }
       markersLayerRef.current = null
       markersByIdRef.current.clear()
+      setMapInstance(null)
       map.remove()
       mapRef.current = null
       tileLayersRef.current = null
@@ -559,14 +545,6 @@ export function StationsOsmMap({
     tileLayersRef.current = swapThemeTileLayers(mapRef.current, tileLayersRef.current, themeKey)
   }, [themeKey])
 
-  const handleZoomIn = useCallback(() => {
-    mapRef.current?.zoomIn()
-  }, [])
-
-  const handleZoomOut = useCallback(() => {
-    mapRef.current?.zoomOut()
-  }, [])
-
   useEffect(() => {
     if (!addStationMode) return
 
@@ -580,25 +558,6 @@ export function StationsOsmMap({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [addStationMode])
 
-  const zoomControls = (
-    <div className="stations-osm-map__zoom-control">
-      <BUTCircleButton
-        type="button"
-        ariaLabel="Zoom in"
-        icon={<Plus size={16} weight="bold" aria-hidden />}
-        disabled={zoomBounds != null && zoomBounds.zoom >= zoomBounds.max}
-        onClick={handleZoomIn}
-      />
-      <BUTCircleButton
-        type="button"
-        ariaLabel="Zoom out"
-        icon={<Minus size={16} weight="bold" aria-hidden />}
-        disabled={zoomBounds != null && zoomBounds.zoom <= zoomBounds.min}
-        onClick={handleZoomOut}
-      />
-    </div>
-  )
-
   return (
     <div
       className={[
@@ -609,8 +568,8 @@ export function StationsOsmMap({
         .filter(Boolean)
         .join(' ')}
     >
-      <div ref={assignMapContainer} className="stations-osm-map__canvas" aria-label="Map" />
-      {mapContainerNode ? createPortal(zoomControls, mapContainerNode) : null}
+      <div ref={mapContainerRef} className="stations-osm-map__canvas" aria-label="Map" />
+      <MapZoomControls map={mapInstance} />
       {addStationMode && (
         <p className="stations-osm-map__add-mode-hint" role="status">
           Click the map to add a station · Esc to exit

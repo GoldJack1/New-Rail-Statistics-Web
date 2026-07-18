@@ -21,6 +21,7 @@ Required for full functionality:
 - `NEXT_PUBLIC_FIREBASE_*` — Auth, Firestore, Storage
 - `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` — App Check (production)
 - `DARWIN_API_KEY` (+ optional `DARWIN_API_ORIGIN`) — departures, units, services, API status
+- `KB_STATIONS_API_KEY` (+ optional `KB_STATIONS_API_ORIGIN`) — GBNR station Knowledgebase tab (NRE Stations XML)
 
 ## Deploy
 
