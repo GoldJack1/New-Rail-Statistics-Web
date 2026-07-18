@@ -63,6 +63,9 @@
   outline: none;
   box-shadow: none;
   background: transparent;
+  /* Prefer taps / clicks over accidental browser gestures on the chart surface */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .station-usage-area-chart__plot-inner .recharts-responsive-container,
@@ -71,6 +74,7 @@
   overflow: visible !important;
   border: none;
   outline: none;
+  touch-action: manipulation;
 }
 
 .station-usage-area-chart__tooltip {
@@ -129,16 +133,25 @@
   overflow-y: visible;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
+  /* Allow horizontal swipes to scroll the years; vertical page scroll still works outside */
   touch-action: pan-x;
-  /* Room for dots / line to overflow past the plot edges */
   padding: 12px 0;
   margin: -12px 0;
+  scrollbar-width: thin;
 }
 
 .station-usage-area-chart--expanded .station-usage-area-chart__plot-inner {
   height: 460px;
   min-height: 380px;
   overflow: visible;
+  /* Let the parent scroller own horizontal pans */
+  touch-action: pan-x;
+}
+
+.station-usage-area-chart--expanded .station-usage-area-chart__plot-inner .recharts-responsive-container,
+.station-usage-area-chart--expanded .station-usage-area-chart__plot-inner .recharts-wrapper,
+.station-usage-area-chart--expanded .station-usage-area-chart__plot-inner .recharts-surface {
+  touch-action: pan-x;
 }
 
 /* Recharts clips series to the plot box by default — turn that off in expanded mode */
@@ -154,6 +167,12 @@
 .station-usage-area-chart--expanded .recharts-bar,
 .station-usage-area-chart--expanded .recharts-line {
   clip-path: none !important;
+}
+
+.station-usage-area-chart--touch .station-usage-area-chart__tooltip {
+  /* Slightly larger tap readout on phones */
+  padding: 0.55rem 0.8rem 0.6rem;
+  min-width: 5rem;
 }
 
 .station-usage-area-chart:not(.station-usage-area-chart--expanded) .station-usage-area-chart__scroll-hint {

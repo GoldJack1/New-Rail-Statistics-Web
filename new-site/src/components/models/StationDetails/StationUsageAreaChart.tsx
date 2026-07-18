@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useId, useState } from 'react'
+import React, { useEffect, useId, useState } from 'react'
 import {
   Area,
   AreaChart,
@@ -22,6 +22,7 @@ const MIN_POINTS = 2
 const TOOLTIP_GAP = 12
 const Y_AXIS_WIDTH = 48
 const SCROLL_YEAR_WIDTH = 72
+const COARSE_POINTER_MEDIA = '(pointer: coarse)'
 
 type ChartMode = 'line' | 'bars'
 type DensityMode = 'compact' | 'expanded'
@@ -72,18 +73,36 @@ function YAxisTick(props: {
   )
 }
 
+function useCoarsePointer(): boolean {
+  const [coarse, setCoarse] = useState(false)
+
+  useEffect(() => {
+    const media = window.matchMedia(COARSE_POINTER_MEDIA)
+    const sync = () => setCoarse(media.matches)
+    sync()
+    media.addEventListener('change', sync)
+    return () => media.removeEventListener('change', sync)
+  }, [])
+
+  return coarse
+}
+
 export function StationUsageAreaChart({
   data,
   title,
   className,
 }: StationUsageAreaChartProps) {
   const gradientId = useId().replace(/:/g, '')
+  const coarsePointer = useCoarsePointer()
   const [mode, setMode] = useState<ChartMode>('line')
   const [density, setDensity] = useState<DensityMode>('compact')
   const [activeTooltip, setActiveTooltip] = useState<ActiveTooltip | null>(null)
 
   const expanded = density === 'expanded'
   const denseYears = !expanded && data.length > 14
+  const tooltipTrigger = coarsePointer ? 'click' : 'hover'
+  const dotRadius = coarsePointer || expanded ? 6.5 : 4.5
+  const activeDotRadius = coarsePointer || expanded ? 8.5 : 6.5
 
   if (data.length < MIN_POINTS) return null
 
@@ -176,12 +195,14 @@ export function StationUsageAreaChart({
 
   const tooltip = (
     <Tooltip
+      trigger={tooltipTrigger}
       content={syncTooltip}
+      wrapperStyle={{ outline: 'none' }}
       cursor={
         mode === 'line'
           ? {
               stroke: CHART_CURSOR,
-              strokeWidth: 1.5,
+              strokeWidth: coarsePointer ? 2 : 1.5,
               strokeDasharray: '4 4',
             }
           : {
@@ -191,9 +212,14 @@ export function StationUsageAreaChart({
     />
   )
 
+  const chartInteractionProps = {
+    // Keep tap tooltips sticky on touch; only clear on leave for hover desktop.
+    onMouseLeave: tooltipTrigger === 'hover' ? clearTooltip : undefined,
+  }
+
   const chart =
     mode === 'line' ? (
-      <AreaChart data={data} margin={chartMargin} onMouseLeave={clearTooltip}>
+      <AreaChart data={data} margin={chartMargin} {...chartInteractionProps}>
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={CHART_LINE} stopOpacity={0.4} />
@@ -209,16 +235,16 @@ export function StationUsageAreaChart({
           type="monotone"
           dataKey="value"
           stroke={CHART_LINE}
-          strokeWidth={expanded ? 2.5 : 2}
+          strokeWidth={expanded || coarsePointer ? 2.5 : 2}
           fill={`url(#${gradientId})`}
           dot={{
-            r: expanded ? 5.5 : 4.5,
+            r: dotRadius,
             fill: CHART_DOT_FILL,
             stroke: CHART_LINE,
             strokeWidth: 2,
           }}
           activeDot={{
-            r: expanded ? 7.5 : 6.5,
+            r: activeDotRadius,
             stroke: CHART_LINE,
             strokeWidth: 2.5,
             fill: CHART_DOT_FILL,
@@ -227,7 +253,7 @@ export function StationUsageAreaChart({
         />
       </AreaChart>
     ) : (
-      <BarChart data={data} margin={chartMargin} onMouseLeave={clearTooltip}>
+      <BarChart data={data} margin={chartMargin} {...chartInteractionProps}>
         {grid}
         {xAxis}
         {yAxis}
@@ -236,7 +262,7 @@ export function StationUsageAreaChart({
           dataKey="value"
           fill={CHART_BAR_FILL}
           radius={[3, 3, 0, 0]}
-          maxBarSize={expanded ? 36 : 28}
+          maxBarSize={expanded || coarsePointer ? 40 : 28}
           isAnimationActive={false}
         />
       </BarChart>
@@ -251,6 +277,7 @@ export function StationUsageAreaChart({
       className={[
         'station-usage-area-chart',
         expanded ? 'station-usage-area-chart--expanded' : '',
+        coarsePointer ? 'station-usage-area-chart--touch' : '',
         className,
       ]
         .filter(Boolean)
@@ -331,7 +358,9 @@ export function StationUsageAreaChart({
           </BUTTabButton>
         </div>
         <p className="station-usage-area-chart__scroll-hint">
-          Scroll or swipe sideways to explore years
+          {coarsePointer
+            ? 'Tap a point for details. In Expand, swipe sideways to explore years.'
+            : 'Scroll or swipe sideways to explore years'}
         </p>
       </div>
     </div>
