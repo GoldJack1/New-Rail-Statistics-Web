@@ -6,11 +6,12 @@
 
 .station-usage-area-chart__header {
   display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: var(--space-md, 0.75rem);
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-sm, 0.5rem);
   margin-bottom: var(--space-md, 0.75rem);
-  min-height: 2rem;
+  min-width: 0;
+  overflow: visible;
 }
 
 .station-usage-area-chart__title {
@@ -18,6 +19,25 @@
   font-size: var(--text-sm, 0.875rem);
   font-weight: 600;
   color: var(--text-primary);
+}
+
+.station-usage-area-chart__mode-tabs,
+.station-usage-area-chart__density-tabs,
+.station-usage-area-chart__export-mode-tabs {
+  --network-tab-group-shadow-pad: 0px;
+  --network-tab-group-inline-pad: 0px;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  scroll-padding-inline: 0;
+  overflow: visible;
+}
+
+.station-usage-area-chart__density-tabs.network-station-tab-group {
+  width: max-content;
+  max-width: 100%;
+  flex: 0 0 auto;
 }
 
 .station-usage-area-chart__tabs {
@@ -42,6 +62,7 @@
   outline: none;
   box-shadow: none;
   background: transparent;
+  padding-bottom: var(--space-sm, 0.5rem);
 }
 
 .station-usage-area-chart__scroll {
@@ -109,19 +130,24 @@
 
 .station-usage-area-chart__footer {
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md, 0.75rem);
-  margin-top: var(--space-sm, 0.5rem);
+  margin-top: var(--space-lg, 1rem);
+  min-width: 0;
+  overflow: visible;
 }
 
-.station-usage-area-chart__footer .station-usage-area-chart__tabs {
-  margin-left: 0;
-  flex-shrink: 0;
+.station-usage-area-chart__footer .station-usage-area-chart__density-tabs {
+  margin: 0;
+  flex: 0 0 auto;
+  min-width: 0;
 }
 
 .station-usage-area-chart__footer-end {
   display: inline-flex;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-md, 0.75rem);
@@ -135,12 +161,13 @@
   color: var(--text-secondary);
   text-align: right;
   line-height: 1.35;
+  white-space: nowrap;
 }
 
 .station-usage-area-chart__export-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 10000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -153,9 +180,9 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 32rem;
-  height: min(36rem, 90vh);
-  max-height: min(36rem, 90vh);
+  max-width: 40rem;
+  height: min(42rem, 92dvh);
+  max-height: min(42rem, 92dvh);
   overflow: hidden;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg, 0.75rem);
@@ -206,7 +233,7 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  padding: var(--space-lg, 1rem) var(--space-2xl, 1.5rem);
+  padding: var(--space-lg, 1rem) var(--space-2xl, 1.5rem) var(--space-xl, 1.25rem);
   background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border-color);
 }
@@ -214,37 +241,64 @@
 .station-usage-area-chart__export-main {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  gap: var(--space-md, 0.75rem);
+  gap: var(--space-xl, 1.25rem);
   width: 100%;
   min-width: 0;
 }
 
-.station-usage-area-chart__export-row {
+.station-usage-area-chart__export-section {
   display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: var(--space-sm, 0.5rem) var(--space-md, 0.75rem);
-  width: 100%;
-}
-
-.station-usage-area-chart__export-row--overlay,
-.station-usage-area-chart__export-row--chart {
   flex-direction: column;
-  align-items: stretch;
-  gap: var(--space-sm, 0.5rem);
+  gap: var(--space-md, 0.75rem);
+  min-width: 0;
+  padding: var(--space-lg, 1rem);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, 0.5rem);
+  background: var(--bg-secondary);
 }
 
-.station-usage-area-chart__export-label-block {
+.station-usage-area-chart__export-section-head {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
   min-width: 0;
 }
 
-.station-usage-area-chart__export-row--overlay .station-usage-area-chart__export-label {
-  flex: none;
-  padding-top: 0;
+.station-usage-area-chart__export-section-title {
+  margin: 0;
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.station-usage-area-chart__export-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-md, 0.75rem);
+  width: 100%;
+}
+
+.station-usage-area-chart__export-field {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-sm, 0.5rem);
+  min-width: 0;
+}
+
+.station-usage-area-chart__export-field--title {
+  max-width: 14rem;
+}
+
+.station-usage-area-chart__export-label {
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  line-height: 1.3;
 }
 
 .station-usage-area-chart__export-label-hint {
@@ -257,26 +311,30 @@
   color: var(--text-secondary);
 }
 
-.station-usage-area-chart__export-chips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-sm, 0.5rem);
-  width: 100%;
-  min-width: 0;
-}
-
-.station-usage-area-chart__export-label {
-  flex: 0 0 5.5rem;
-  font-size: var(--text-xs, 0.75rem);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-
 .station-usage-area-chart__export-dialog .station-usage-area-chart__tabs {
   margin-left: 0;
+  width: 100%;
+}
+
+.station-usage-area-chart__tabs--pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm, 0.5rem);
+  width: 100%;
+}
+
+.station-usage-area-chart__export-year-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
+  gap: var(--space-sm, 0.5rem);
+  max-height: 12.5rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: var(--space-sm, 0.5rem);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm, 0.375rem);
+  background: var(--bg-tertiary);
+  scrollbar-width: thin;
 }
 
 .station-usage-area-chart__export-note,
@@ -336,6 +394,7 @@
   flex-shrink: 0;
   padding: var(--space-lg, 1rem) var(--space-2xl, 1.5rem);
   background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
 }
 
 .station-usage-area-chart--expanded .station-usage-area-chart__scroll {
@@ -345,8 +404,9 @@
   overscroll-behavior-x: contain;
   /* Allow horizontal swipes to scroll the years; vertical page scroll still works outside */
   touch-action: pan-x;
-  padding: 12px 0;
-  margin: -12px 0;
+  padding: 12px 0 1rem;
+  /* Keep top bleed for overlay dots; leave bottom space so the scrollbar clears the footer */
+  margin: -12px 0 0;
   scrollbar-width: thin;
 }
 
@@ -399,34 +459,95 @@
     height: 500px;
     min-height: 420px;
   }
+
+  .station-usage-area-chart__export-overlay {
+    align-items: stretch;
+    justify-content: stretch;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.72);
+  }
+
+  .station-usage-area-chart__export-dialog {
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    max-height: 100dvh;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .station-usage-area-chart__export-header {
+    padding:
+      calc(var(--space-lg, 1rem) + env(safe-area-inset-top, 0px))
+      var(--space-lg, 1rem)
+      var(--space-md, 0.75rem);
+  }
+
+  .station-usage-area-chart__export-body {
+    padding: var(--space-md, 0.75rem) var(--space-lg, 1rem);
+  }
+
+  .station-usage-area-chart__export-main {
+    gap: var(--space-md, 0.75rem);
+  }
+
+  .station-usage-area-chart__export-section {
+    padding: var(--space-md, 0.75rem);
+    gap: var(--space-sm, 0.5rem);
+  }
+
+  .station-usage-area-chart__export-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .station-usage-area-chart__export-fields .station-usage-area-chart__export-field:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .station-usage-area-chart__export-field--title {
+    max-width: 12rem;
+  }
+
+  .station-usage-area-chart__export-year-grid {
+    max-height: min(11rem, 28dvh);
+  }
+
+  .station-usage-area-chart__export-footer {
+    padding:
+      var(--space-md, 0.75rem)
+      var(--space-lg, 1rem)
+      calc(var(--space-lg, 1rem) + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 @media (max-width: 640px) {
-  .station-usage-area-chart__header {
-    flex-wrap: wrap;
-  }
-
-  .station-usage-area-chart__header .station-usage-area-chart__tabs {
-    width: 100%;
-    margin-left: 0;
-  }
-
   .station-usage-area-chart__footer {
-    flex-wrap: wrap;
-    align-items: flex-start;
+    flex-wrap: nowrap;
+    align-items: center;
   }
 
   .station-usage-area-chart__footer-end {
-    width: 100%;
-    justify-content: space-between;
+    width: auto;
+    justify-content: flex-end;
   }
 
   .station-usage-area-chart__scroll-hint {
-    text-align: left;
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  .station-usage-area-chart__export-label {
-    flex-basis: 100%;
+  .station-usage-area-chart__export-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .station-usage-area-chart__export-fields .station-usage-area-chart__export-field:last-child {
+    grid-column: auto;
+  }
+
+  .station-usage-area-chart__export-field--title {
+    max-width: none;
   }
 
   .station-usage-area-chart__plot-inner {

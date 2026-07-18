@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useId, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Area,
   AreaChart,
@@ -31,6 +32,7 @@ import {
   type ChartExportFormat,
   type ChartExportTheme,
 } from '../../../utils/exportChartImage'
+import '../../cards/NetworkStationTabGroup/NetworkStationTabGroup.css'
 import './StationUsageAreaChart.css'
 
 const MIN_POINTS = 2
@@ -41,7 +43,7 @@ const COARSE_POINTER_MEDIA = '(pointer: coarse)'
 /** Desktop starts at 1024px — matches site tablet/mobile breakpoint (max-width: 1023px). */
 const DESKTOP_CHART_MEDIA = '(min-width: 1024px)'
 
-type ChartMode = 'line' | 'bars' | 'combined' | 'yoy'
+type ChartMode = 'line' | 'bars' | 'combined' | 'yoy' | 'yoyValue'
 type DensityMode = 'compact' | 'expanded'
 
 type ChartSeriesPoint = {
@@ -53,6 +55,7 @@ const CHART_MODE_OPTIONS: Array<{ id: ChartMode; label: string }> = [
   { id: 'line', label: 'Line' },
   { id: 'bars', label: 'Bars' },
   { id: 'combined', label: 'Combined' },
+  { id: 'yoyValue', label: 'YoY' },
   { id: 'yoy', label: 'YoY %' },
 ]
 
@@ -67,18 +70,23 @@ function padPassengerYDomainMax(dataMax: number): number {
   return dataMax + dataMax / 4
 }
 
+function isYoyMode(mode: ChartMode): boolean {
+  return mode === 'yoy' || mode === 'yoyValue'
+}
+
 function buildChartSeries(
   data: YearlyPassengerChartPoint[],
   mode: ChartMode
 ): ChartSeriesPoint[] {
   if (data.length === 0) return []
 
-  if (mode === 'yoy') {
+  if (isYoyMode(mode)) {
     const points: ChartSeriesPoint[] = []
     for (let i = 1; i < data.length; i += 1) {
       const prev = data[i - 1].value
       const current = data[i].value
-      const change = prev === 0 ? 0 : ((current - prev) / prev) * 100
+      const change =
+        mode === 'yoy' ? (prev === 0 ? 0 : ((current - prev) / prev) * 100) : current - prev
       points.push({ year: data[i].year, value: change })
     }
     return points
@@ -92,6 +100,10 @@ function formatChartValue(value: number, mode: ChartMode): string {
     const rounded = Math.round(value * 10) / 10
     return `${rounded > 0 ? '+' : ''}${rounded.toLocaleString()}%`
   }
+  if (mode === 'yoyValue') {
+    const rounded = Math.round(value)
+    return `${rounded > 0 ? '+' : ''}${rounded.toLocaleString()}`
+  }
   return Math.round(value).toLocaleString()
 }
 
@@ -99,6 +111,10 @@ function formatChartAxisTick(value: number, mode: ChartMode): string {
   if (mode === 'yoy') {
     const rounded = Math.round(value)
     return `${rounded > 0 ? '+' : ''}${rounded}%`
+  }
+  if (mode === 'yoyValue') {
+    const tick = formatPassengerAxisTick(value)
+    return value > 0 ? `+${tick}` : tick
   }
   return formatPassengerAxisTick(value)
 }
@@ -191,6 +207,7 @@ export function StationUsageAreaChart({
   const [exportError, setExportError] = useState<string | null>(null)
   const [exportAgreed, setExportAgreed] = useState(false)
   const [exportCopyrightAgreed, setExportCopyrightAgreed] = useState(false)
+  const [chartEpoch, setChartEpoch] = useState(0)
 
   const expanded = density === 'expanded'
   const denseYears = !expanded && data.length > 14
@@ -207,11 +224,28 @@ export function StationUsageAreaChart({
     ? chartSeries.find((point) => point.year === overlayYear) ?? null
     : null
   const overlayYearOptions = data.map((point) => point.year)
-  const isYoy = mode === 'yoy'
+  const isYoy = isYoyMode(mode)
 
   useEffect(() => {
     if (!overlayYear) setOverlayAnchor(null)
   }, [overlayYear])
+
+  useEffect(() => {
+    // Modal open/close (and body scroll-lock) can shift chart layout; drop stale HTML callout
+    // until ReferenceDot re-anchors to the new coordinates.
+    setOverlayAnchor(null)
+    setActiveTooltip(null)
+  }, [exportOpen])
+
+  useEffect(() => {
+    const plot = plotRef.current
+    if (!plot || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => {
+      setOverlayAnchor(null)
+    })
+    observer.observe(plot)
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     const media = window.matchMedia(DESKTOP_CHART_MEDIA)
@@ -235,8 +269,13 @@ export function StationUsageAreaChart({
         setExportError(null)
       }
     }
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', onKey)
+    }
   }, [exportOpen])
 
   if (data.length < MIN_POINTS) return null
@@ -284,6 +323,12 @@ export function StationUsageAreaChart({
 
   const clearTooltip = () => setActiveTooltip(null)
 
+  const clearChartInteraction = () => {
+    setActiveTooltip(null)
+    setOverlayAnchor(null)
+    setChartEpoch((epoch) => epoch + 1)
+  }
+
   const selectMode = (next: ChartMode) => {
     chartModeTouchedRef.current = true
     setMode(next)
@@ -301,6 +346,7 @@ export function StationUsageAreaChart({
     setExportAgreed(false)
     setExportCopyrightAgreed(false)
     setExportError(null)
+    clearChartInteraction()
   }
 
   const handleExport = async () => {
@@ -318,6 +364,7 @@ export function StationUsageAreaChart({
     setExporting(true)
     setExportError(null)
     clearTooltip()
+    setOverlayAnchor(null)
 
     try {
       // Let tooltip clear from the DOM before capture.
@@ -340,6 +387,7 @@ export function StationUsageAreaChart({
           : undefined,
         fileName: formatStationUsageExportFileName(stationName, exportFormat),
       })
+      closeExport()
     } catch (error) {
       setExportError(error instanceof Error ? error.message : 'Export failed.')
     } finally {
@@ -376,7 +424,7 @@ export function StationUsageAreaChart({
       tickCount={8}
       domain={
         isYoy
-          ? ([dataMin, dataMax]: [number, number]) => {
+          ? ([dataMin, dataMax]: readonly [number, number]) => {
               const extent = Math.max(Math.abs(dataMin), Math.abs(dataMax), 5)
               return [-extent * 1.15, extent * 1.15]
             }
@@ -394,15 +442,17 @@ export function StationUsageAreaChart({
       content={syncTooltip}
       wrapperStyle={{ outline: 'none' }}
       cursor={
-        usesLineCursor(mode)
-          ? {
-              stroke: CHART_CURSOR,
-              strokeWidth: coarsePointer ? 2 : 1.5,
-              strokeDasharray: '4 4',
-            }
-          : {
-              fill: 'color-mix(in srgb, var(--text-primary) 8%, transparent)',
-            }
+        overlayPoint != null
+          ? false
+          : usesLineCursor(mode)
+            ? {
+                stroke: CHART_CURSOR,
+                strokeWidth: coarsePointer ? 2 : 1.5,
+                strokeDasharray: '4 4',
+              }
+            : {
+                fill: 'color-mix(in srgb, var(--text-primary) 8%, transparent)',
+              }
       }
     />
   )
@@ -440,11 +490,10 @@ export function StationUsageAreaChart({
           x={overlayPoint.year}
           y={overlayPoint.value}
           r={activeDotRadius}
-          isFront
           shape={(props) => {
             const cx = typeof props.cx === 'number' ? props.cx : Number(props.cx)
             const cy = typeof props.cy === 'number' ? props.cy : Number(props.cy)
-            if (!Number.isFinite(cx) || !Number.isFinite(cy)) return null
+            if (!Number.isFinite(cx) || !Number.isFinite(cy)) return <g />
             requestAnimationFrame(() => {
               setOverlayAnchor((prev) =>
                 prev?.x === cx && prev?.y === cy ? prev : { x: cx, y: cy }
@@ -492,7 +541,7 @@ export function StationUsageAreaChart({
   )
 
   let chart: React.ReactElement
-  if (mode === 'bars' || mode === 'yoy') {
+  if (mode === 'bars' || isYoy) {
     chart = (
       <BarChart data={chartSeries} margin={chartMargin} {...chartInteractionProps}>
         {grid}
@@ -576,7 +625,11 @@ export function StationUsageAreaChart({
     >
       <div className="station-usage-area-chart__header">
         {title ? <div className="station-usage-area-chart__title">{title}</div> : null}
-        <div className="station-usage-area-chart__tabs" role="tablist" aria-label="Chart type">
+        <div
+          className="network-station-tab-group station-usage-area-chart__mode-tabs"
+          role="tablist"
+          aria-label="Chart type"
+        >
           {CHART_MODE_OPTIONS.map((option) => (
             <BUTTabButton
               key={option.id}
@@ -599,7 +652,7 @@ export function StationUsageAreaChart({
             className="station-usage-area-chart__plot-inner"
             style={plotWidth ? { width: plotWidth } : undefined}
           >
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer key={chartEpoch} width="100%" height="100%">
               {chart}
             </ResponsiveContainer>
             {pinnedTooltip ? (
@@ -620,7 +673,11 @@ export function StationUsageAreaChart({
         </div>
       </div>
       <div className="station-usage-area-chart__footer">
-        <div className="station-usage-area-chart__tabs" role="tablist" aria-label="Chart density">
+        <div
+          className="network-station-tab-group station-usage-area-chart__density-tabs"
+          role="tablist"
+          aria-label="Chart density"
+        >
           <BUTTabButton
             type="button"
             width="hug"
@@ -664,285 +721,345 @@ export function StationUsageAreaChart({
           </BUTWideButton>
         </div>
       </div>
-      {exportOpen ? (
-        <div
-          className="station-usage-area-chart__export-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="station-usage-export-title"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) closeExport()
-          }}
-        >
-          <div className="station-usage-area-chart__export-dialog">
-            <div className="station-usage-area-chart__export-header">
-              <div className="station-usage-area-chart__export-header-text">
-                <h2 id="station-usage-export-title" className="station-usage-area-chart__export-title">
-                  Export chart
-                </h2>
-                <p className="station-usage-area-chart__export-step">
-                  Step {exportStep} of 2 · {exportStep === 1 ? 'Options' : 'Agreement'}
-                </p>
-              </div>
-              <BUTCircleButton
-                type="button"
-                className="station-usage-area-chart__export-close"
-                ariaLabel="Close export"
-                onClick={closeExport}
-                colorVariant="primary"
-                icon={<X size={16} weight="bold" aria-hidden />}
-              />
-            </div>
-
-            <div className="station-usage-area-chart__export-body">
-              {exportStep === 1 ? (
-                <div className="station-usage-area-chart__export-main">
-                  {exportFormat === 'jpeg' ? (
-                    <p className="station-usage-area-chart__export-note">
-                      JPG always includes a solid background.
+      {exportOpen
+        ? createPortal(
+            <div
+              className="station-usage-area-chart__export-overlay"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="station-usage-export-title"
+              onClick={(event) => {
+                if (event.target === event.currentTarget) closeExport()
+              }}
+            >
+              <div className="station-usage-area-chart__export-dialog">
+                <div className="station-usage-area-chart__export-header">
+                  <div className="station-usage-area-chart__export-header-text">
+                    <h2 id="station-usage-export-title" className="station-usage-area-chart__export-title">
+                      Export chart
+                    </h2>
+                    <p className="station-usage-area-chart__export-step">
+                      Step {exportStep} of 2 · {exportStep === 1 ? 'Options' : 'Agreement'}
                     </p>
-                  ) : null}
-                  <div className="station-usage-area-chart__export-row">
-                    <span className="station-usage-area-chart__export-label">Format</span>
-                    <div className="station-usage-area-chart__tabs" role="tablist" aria-label="Export format">
-                      <BUTTabButton
-                        type="button"
-                        width="hug"
-                        role="tab"
-                        pressed={exportFormat === 'png'}
-                        ariaSelected={exportFormat === 'png'}
-                        onClick={() => setExportFormat('png')}
-                      >
-                        PNG
-                      </BUTTabButton>
-                      <BUTTabButton
-                        type="button"
-                        width="hug"
-                        role="tab"
-                        pressed={exportFormat === 'jpeg'}
-                        ariaSelected={exportFormat === 'jpeg'}
-                        onClick={() => {
-                          setExportFormat('jpeg')
-                          setExportBackground(true)
-                        }}
-                      >
-                        JPG
-                      </BUTTabButton>
-                    </div>
                   </div>
-                  <div className="station-usage-area-chart__export-row">
-                    <span className="station-usage-area-chart__export-label">Theme</span>
-                    <div className="station-usage-area-chart__tabs" role="tablist" aria-label="Export theme">
-                      <BUTTabButton
-                        type="button"
-                        width="hug"
-                        role="tab"
-                        pressed={exportTheme === 'light'}
-                        ariaSelected={exportTheme === 'light'}
-                        onClick={() => setExportTheme('light')}
-                      >
-                        Light
-                      </BUTTabButton>
-                      <BUTTabButton
-                        type="button"
-                        width="hug"
-                        role="tab"
-                        pressed={exportTheme === 'dark'}
-                        ariaSelected={exportTheme === 'dark'}
-                        onClick={() => setExportTheme('dark')}
-                      >
-                        Dark
-                      </BUTTabButton>
-                    </div>
-                  </div>
-                  <div className="station-usage-area-chart__export-row">
-                    <span className="station-usage-area-chart__export-label">Background</span>
-                    <div className="station-usage-area-chart__tabs" role="tablist" aria-label="Export background">
-                      <BUTTabButton
-                        type="button"
-                        width="hug"
-                        role="tab"
-                        pressed={exportBackground || exportFormat === 'jpeg'}
-                        ariaSelected={exportBackground || exportFormat === 'jpeg'}
-                        disabled={exportFormat === 'jpeg'}
-                        onClick={() => setExportBackground(true)}
-                      >
-                        On
-                      </BUTTabButton>
-                      <BUTTabButton
-                        type="button"
-                        width="hug"
-                        role="tab"
-                        pressed={!exportBackground && exportFormat === 'png'}
-                        ariaSelected={!exportBackground && exportFormat === 'png'}
-                        disabled={exportFormat === 'jpeg'}
-                        onClick={() => setExportBackground(false)}
-                      >
-                        Off
-                      </BUTTabButton>
-                    </div>
-                  </div>
-                  <div className="station-usage-area-chart__export-row station-usage-area-chart__export-row--chart">
-                    <span className="station-usage-area-chart__export-label">Chart</span>
-                    <div
-                      className="station-usage-area-chart__export-chips"
-                      role="tablist"
-                      aria-label="Export chart type"
-                    >
-                      {CHART_MODE_OPTIONS.map((option) => (
-                        <BUTOperatorChip
-                          key={option.id}
-                          type="button"
-                          instantAction
-                          colorVariant="primary"
-                          width="hug"
-                          state={mode === option.id ? 'pressed' : 'active'}
-                          onClick={() => selectMode(option.id)}
-                          aria-label={`Chart type ${option.label}`}
-                        >
-                          {option.label}
-                        </BUTOperatorChip>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="station-usage-area-chart__export-row">
-                    <span className="station-usage-area-chart__export-label">Title</span>
-                    <div className="station-usage-area-chart__tabs" role="tablist" aria-label="Export title">
-                      <BUTTabButton
-                        type="button"
-                        width="hug"
-                        role="tab"
-                        pressed={exportShowTitle}
-                        ariaSelected={exportShowTitle}
-                        onClick={() => setExportShowTitle(true)}
-                      >
-                        On
-                      </BUTTabButton>
-                      <BUTTabButton
-                        type="button"
-                        width="hug"
-                        role="tab"
-                        pressed={!exportShowTitle}
-                        ariaSelected={!exportShowTitle}
-                        onClick={() => setExportShowTitle(false)}
-                      >
-                        Off
-                      </BUTTabButton>
-                    </div>
-                  </div>
-                  <div className="station-usage-area-chart__export-row station-usage-area-chart__export-row--overlay">
-                    <div className="station-usage-area-chart__export-label-block">
-                      <span className="station-usage-area-chart__export-label" id="station-usage-overlay-label">
-                        Overlay
-                      </span>
-                      <p className="station-usage-area-chart__export-label-hint">
-                        Only one year can be chosen.
-                      </p>
-                    </div>
-                    <div
-                      className="station-usage-area-chart__export-chips"
-                      role="group"
-                      aria-labelledby="station-usage-overlay-label"
-                    >
-                      <BUTOperatorChip
-                        type="button"
-                        instantAction
-                        colorVariant="primary"
-                        width="hug"
-                        state={overlayYear === OVERLAY_NONE ? 'pressed' : 'active'}
-                        onClick={() => {
-                          setOverlayYear(OVERLAY_NONE)
-                          clearTooltip()
-                        }}
-                        aria-label="No year overlay"
-                      >
-                        {OVERLAY_NONE_LABEL}
-                      </BUTOperatorChip>
-                      {overlayYearOptions.map((year) => (
-                        <BUTOperatorChip
-                          key={year}
-                          type="button"
-                          instantAction
-                          colorVariant="primary"
-                          width="hug"
-                          state={overlayYear === year ? 'pressed' : 'active'}
-                          onClick={() => {
-                            setOverlayYear(year)
-                            clearTooltip()
-                          }}
-                          aria-label={`Overlay year ${year}`}
-                        >
-                          {year}
-                        </BUTOperatorChip>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="station-usage-area-chart__export-agreements">
-                  <label className="station-usage-area-chart__export-agree">
-                    <input
-                      type="checkbox"
-                      checked={exportAgreed}
-                      onChange={(event) => {
-                        setExportAgreed(event.target.checked)
-                        if (event.target.checked) setExportError(null)
-                      }}
-                    />
-                    <span>
-                      By checking this box, I agree that the graph design and branding are © Rail
-                      Statistics. The underlying figures are public sector information from the Office
-                      of Rail and Road (ORR) under the Open Government Licence v3.0, and are not owned
-                      by Rail Statistics or by me.
-                    </span>
-                  </label>
-                  <label className="station-usage-area-chart__export-agree">
-                    <input
-                      type="checkbox"
-                      checked={exportCopyrightAgreed}
-                      onChange={(event) => {
-                        setExportCopyrightAgreed(event.target.checked)
-                        if (event.target.checked) setExportError(null)
-                      }}
-                    />
-                    <span>{brandingCopyright}</span>
-                  </label>
-                  {exportError ? (
-                    <p className="station-usage-area-chart__export-error" role="alert">
-                      {exportError}
-                    </p>
-                  ) : null}
-                </div>
-              )}
-            </div>
-
-            <div className="station-usage-area-chart__export-footer">
-              {exportStep === 1 ? (
-                <BUTWideButton type="button" width="hug" onClick={() => setExportStep(2)}>
-                  Continue
-                </BUTWideButton>
-              ) : (
-                <>
-                  <BUTWideButton type="button" width="hug" onClick={() => setExportStep(1)}>
-                    Back
-                  </BUTWideButton>
-                  <BUTWideButton
+                  <BUTCircleButton
                     type="button"
-                    width="hug"
-                    disabled={exporting || !exportAgreed || !exportCopyrightAgreed}
-                    onClick={() => {
-                      void handleExport()
-                    }}
-                    icon={<DownloadSimple size={16} weight="bold" aria-hidden />}
-                  >
-                    {exporting ? 'Exporting…' : 'Download'}
-                  </BUTWideButton>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : null}
+                    className="station-usage-area-chart__export-close"
+                    ariaLabel="Close export"
+                    onClick={closeExport}
+                    colorVariant="primary"
+                    icon={<X size={16} weight="bold" aria-hidden />}
+                  />
+                </div>
+
+                <div className="station-usage-area-chart__export-body">
+                  {exportStep === 1 ? (
+                    <div className="station-usage-area-chart__export-main">
+                      <section
+                        className="station-usage-area-chart__export-section"
+                        aria-labelledby="export-file-heading"
+                      >
+                        <h3 id="export-file-heading" className="station-usage-area-chart__export-section-title">
+                          File
+                        </h3>
+                        <div className="station-usage-area-chart__export-fields">
+                          <div className="station-usage-area-chart__export-field">
+                            <span className="station-usage-area-chart__export-label" id="export-format-label">
+                              Format
+                            </span>
+                            <div
+                              className="station-usage-area-chart__tabs station-usage-area-chart__tabs--pair"
+                              role="tablist"
+                              aria-labelledby="export-format-label"
+                            >
+                              <BUTTabButton
+                                type="button"
+                                width="fill"
+                                role="tab"
+                                pressed={exportFormat === 'png'}
+                                ariaSelected={exportFormat === 'png'}
+                                onClick={() => setExportFormat('png')}
+                              >
+                                PNG
+                              </BUTTabButton>
+                              <BUTTabButton
+                                type="button"
+                                width="fill"
+                                role="tab"
+                                pressed={exportFormat === 'jpeg'}
+                                ariaSelected={exportFormat === 'jpeg'}
+                                onClick={() => {
+                                  setExportFormat('jpeg')
+                                  setExportBackground(true)
+                                }}
+                              >
+                                JPG
+                              </BUTTabButton>
+                            </div>
+                            {exportFormat === 'jpeg' ? (
+                              <p className="station-usage-area-chart__export-note">
+                                JPG always includes a solid background.
+                              </p>
+                            ) : null}
+                          </div>
+                          <div className="station-usage-area-chart__export-field">
+                            <span className="station-usage-area-chart__export-label" id="export-theme-label">
+                              Theme
+                            </span>
+                            <div
+                              className="station-usage-area-chart__tabs station-usage-area-chart__tabs--pair"
+                              role="tablist"
+                              aria-labelledby="export-theme-label"
+                            >
+                              <BUTTabButton
+                                type="button"
+                                width="fill"
+                                role="tab"
+                                pressed={exportTheme === 'light'}
+                                ariaSelected={exportTheme === 'light'}
+                                onClick={() => setExportTheme('light')}
+                              >
+                                Light
+                              </BUTTabButton>
+                              <BUTTabButton
+                                type="button"
+                                width="fill"
+                                role="tab"
+                                pressed={exportTheme === 'dark'}
+                                ariaSelected={exportTheme === 'dark'}
+                                onClick={() => setExportTheme('dark')}
+                              >
+                                Dark
+                              </BUTTabButton>
+                            </div>
+                          </div>
+                          <div className="station-usage-area-chart__export-field">
+                            <span
+                              className="station-usage-area-chart__export-label"
+                              id="export-background-label"
+                            >
+                              Background
+                            </span>
+                            <div
+                              className="station-usage-area-chart__tabs station-usage-area-chart__tabs--pair"
+                              role="tablist"
+                              aria-labelledby="export-background-label"
+                            >
+                              <BUTTabButton
+                                type="button"
+                                width="fill"
+                                role="tab"
+                                pressed={exportBackground || exportFormat === 'jpeg'}
+                                ariaSelected={exportBackground || exportFormat === 'jpeg'}
+                                disabled={exportFormat === 'jpeg'}
+                                onClick={() => setExportBackground(true)}
+                              >
+                                On
+                              </BUTTabButton>
+                              <BUTTabButton
+                                type="button"
+                                width="fill"
+                                role="tab"
+                                pressed={!exportBackground && exportFormat === 'png'}
+                                ariaSelected={!exportBackground && exportFormat === 'png'}
+                                disabled={exportFormat === 'jpeg'}
+                                onClick={() => setExportBackground(false)}
+                              >
+                                Off
+                              </BUTTabButton>
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+
+                      <section
+                        className="station-usage-area-chart__export-section"
+                        aria-labelledby="export-appearance-heading"
+                      >
+                        <h3
+                          id="export-appearance-heading"
+                          className="station-usage-area-chart__export-section-title"
+                        >
+                          Appearance
+                        </h3>
+                        <div className="station-usage-area-chart__export-field">
+                          <span className="station-usage-area-chart__export-label" id="export-chart-label">
+                            Chart type
+                          </span>
+                          <div
+                            className="network-station-tab-group station-usage-area-chart__export-mode-tabs"
+                            role="tablist"
+                            aria-labelledby="export-chart-label"
+                          >
+                            {CHART_MODE_OPTIONS.map((option) => (
+                              <BUTTabButton
+                                key={option.id}
+                                type="button"
+                                width="hug"
+                                role="tab"
+                                pressed={mode === option.id}
+                                ariaSelected={mode === option.id}
+                                onClick={() => selectMode(option.id)}
+                              >
+                                {option.label}
+                              </BUTTabButton>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="station-usage-area-chart__export-field station-usage-area-chart__export-field--title">
+                          <span className="station-usage-area-chart__export-label" id="export-title-label">
+                            Title on image
+                          </span>
+                          <div
+                            className="station-usage-area-chart__tabs station-usage-area-chart__tabs--pair"
+                            role="tablist"
+                            aria-labelledby="export-title-label"
+                          >
+                            <BUTTabButton
+                              type="button"
+                              width="fill"
+                              role="tab"
+                              pressed={exportShowTitle}
+                              ariaSelected={exportShowTitle}
+                              onClick={() => setExportShowTitle(true)}
+                            >
+                              On
+                            </BUTTabButton>
+                            <BUTTabButton
+                              type="button"
+                              width="fill"
+                              role="tab"
+                              pressed={!exportShowTitle}
+                              ariaSelected={!exportShowTitle}
+                              onClick={() => setExportShowTitle(false)}
+                            >
+                              Off
+                            </BUTTabButton>
+                          </div>
+                        </div>
+                      </section>
+
+                      <section
+                        className="station-usage-area-chart__export-section"
+                        aria-labelledby="station-usage-overlay-label"
+                      >
+                        <div className="station-usage-area-chart__export-section-head">
+                          <h3
+                            id="station-usage-overlay-label"
+                            className="station-usage-area-chart__export-section-title"
+                          >
+                            Year overlay
+                          </h3>
+                          <p className="station-usage-area-chart__export-label-hint">
+                            Optional. Only one year can be chosen.
+                          </p>
+                        </div>
+                        <div
+                          className="station-usage-area-chart__export-year-grid"
+                          role="group"
+                          aria-labelledby="station-usage-overlay-label"
+                        >
+                          <BUTOperatorChip
+                            type="button"
+                            instantAction
+                            colorVariant="primary"
+                            width="fill"
+                            state={overlayYear === OVERLAY_NONE ? 'pressed' : 'active'}
+                            onClick={() => {
+                              setOverlayYear(OVERLAY_NONE)
+                              clearTooltip()
+                            }}
+                            aria-label="No year overlay"
+                          >
+                            {OVERLAY_NONE_LABEL}
+                          </BUTOperatorChip>
+                          {overlayYearOptions.map((year) => (
+                            <BUTOperatorChip
+                              key={year}
+                              type="button"
+                              instantAction
+                              colorVariant="primary"
+                              width="fill"
+                              state={overlayYear === year ? 'pressed' : 'active'}
+                              onClick={() => {
+                                setOverlayYear(year)
+                                clearTooltip()
+                              }}
+                              aria-label={`Overlay year ${year}`}
+                            >
+                              {year}
+                            </BUTOperatorChip>
+                          ))}
+                        </div>
+                      </section>
+                    </div>
+                  ) : (
+                    <div className="station-usage-area-chart__export-agreements">
+                      <label className="station-usage-area-chart__export-agree">
+                        <input
+                          type="checkbox"
+                          checked={exportAgreed}
+                          onChange={(event) => {
+                            setExportAgreed(event.target.checked)
+                            if (event.target.checked) setExportError(null)
+                          }}
+                        />
+                        <span>
+                          By checking this box, I agree that the graph design and branding are © Rail
+                          Statistics. The underlying figures are public sector information from the
+                          Office of Rail and Road (ORR) under the Open Government Licence v3.0, and are
+                          not owned by Rail Statistics or by me.
+                        </span>
+                      </label>
+                      <label className="station-usage-area-chart__export-agree">
+                        <input
+                          type="checkbox"
+                          checked={exportCopyrightAgreed}
+                          onChange={(event) => {
+                            setExportCopyrightAgreed(event.target.checked)
+                            if (event.target.checked) setExportError(null)
+                          }}
+                        />
+                        <span>{brandingCopyright}</span>
+                      </label>
+                      {exportError ? (
+                        <p className="station-usage-area-chart__export-error" role="alert">
+                          {exportError}
+                        </p>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
+
+                <div className="station-usage-area-chart__export-footer">
+                  {exportStep === 1 ? (
+                    <BUTWideButton type="button" width="hug" onClick={() => setExportStep(2)}>
+                      Continue
+                    </BUTWideButton>
+                  ) : (
+                    <>
+                      <BUTWideButton type="button" width="hug" onClick={() => setExportStep(1)}>
+                        Back
+                      </BUTWideButton>
+                      <BUTWideButton
+                        type="button"
+                        width="hug"
+                        disabled={exporting || !exportAgreed || !exportCopyrightAgreed}
+                        onClick={() => {
+                          void handleExport()
+                        }}
+                        icon={<DownloadSimple size={16} weight="bold" aria-hidden />}
+                      >
+                        {exporting ? 'Exporting…' : 'Download'}
+                      </BUTWideButton>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   )
 }

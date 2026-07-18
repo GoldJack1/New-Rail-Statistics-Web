@@ -90,7 +90,10 @@ function exportCanvasFont(weight: number | string, sizePx: number): string {
 
 function applyExportFontVariation(ctx: CanvasRenderingContext2D) {
   try {
-    ctx.fontVariationSettings = "'CRSV' 1, 'MONO' 0, 'slnt' 0"
+    const withVariation = ctx as CanvasRenderingContext2D & {
+      fontVariationSettings?: string
+    }
+    withVariation.fontVariationSettings = "'CRSV' 1, 'MONO' 0, 'slnt' 0"
   } catch {
     // Older browsers may not support canvas font-variation-settings.
   }

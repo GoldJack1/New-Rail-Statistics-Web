@@ -779,6 +779,11 @@
   margin-bottom: var(--space-xl, 1.5rem);
 }
 
+.station-details-subsection:has(.station-usage-area-chart),
+.station-details-subsection:has(.station-usage-area-chart) .station-usage-area-chart {
+  overflow: visible;
+}
+
 .station-details-subsection:last-child {
   margin-bottom: 0;
 }
