@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const DEFAULT_ORIGIN =
-  'https://api1.raildata.org.uk/1010-knowlegebase-stations-xml-feed1_1/4.0'
-
 function json(status: number, body: unknown) {
   return NextResponse.json(body, { status })
 }
@@ -38,7 +35,13 @@ export async function GET(
     })
   }
 
-  const origin = (process.env.KB_STATIONS_API_ORIGIN || DEFAULT_ORIGIN).replace(/\/$/, '')
+  const origin = (process.env.KB_STATIONS_API_ORIGIN || '').replace(/\/$/, '')
+  if (!origin) {
+    return json(500, {
+      error: 'not_configured',
+      message: 'KB_STATIONS_API_ORIGIN is not configured',
+    })
+  }
   const upstreamUrl = `${origin}/station-${crs}.xml`
 
   try {
