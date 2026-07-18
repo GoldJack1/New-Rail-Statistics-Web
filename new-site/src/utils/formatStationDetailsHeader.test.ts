@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  formatStationDetailsHeaderManagedBy,
+  formatStationDetailsHeaderManagedByToc,
   formatStationDetailsHeaderSubtitle,
   getStationDetailsHeaderToc,
 } from './formatStationDetailsHeader'
@@ -27,7 +29,7 @@ describe('getStationDetailsHeaderToc', () => {
 })
 
 describe('formatStationDetailsHeaderSubtitle', () => {
-  it('joins TOC and locale', () => {
+  it('returns locale only (TOC is shown above the title)', () => {
     expect(
       formatStationDetailsHeaderSubtitle({
         toc: 'Northern',
@@ -37,10 +39,10 @@ describe('formatStationDetailsHeaderSubtitle', () => {
         country: 'England',
         sourceCollectionId: 'stations_gbnr',
       })
-    ).toBe('Northern, Bury, Greater Manchester, England')
+    ).toBe('Bury, Greater Manchester, England')
   })
 
-  it('formats Supertram with fixed TOC and locale', () => {
+  it('formats Supertram locale without TOC', () => {
     expect(
       formatStationDetailsHeaderSubtitle({
         toc: null,
@@ -50,7 +52,7 @@ describe('formatStationDetailsHeaderSubtitle', () => {
         country: 'England',
         sourceCollectionId: 'lightrail_GBSHEFFSUPERTRAM',
       })
-    ).toBe('SY Supertram, Sheffield, South Yorkshire, England')
+    ).toBe('Sheffield, South Yorkshire, England')
   })
 
   it('omits empty TOC and keeps locale', () => {
@@ -77,6 +79,28 @@ describe('formatStationDetailsHeaderSubtitle', () => {
         },
         { pendingSuffix: 'Unpublished changes' }
       )
-    ).toBe('Northern, Greater Manchester, England · Unpublished changes')
+    ).toBe('Greater Manchester, England · Unpublished changes')
+  })
+})
+
+describe('formatStationDetailsHeaderManagedBy', () => {
+  it('formats name with TOC code', () => {
+    expect(formatStationDetailsHeaderManagedBy('Elizabeth Line', 'XR')).toBe(
+      'Station Managed by: Elizabeth Line (XR)'
+    )
+  })
+
+  it('formats name without code', () => {
+    expect(formatStationDetailsHeaderManagedBy('Northern', null)).toBe(
+      'Station Managed by: Northern'
+    )
+  })
+})
+
+describe('formatStationDetailsHeaderManagedByToc', () => {
+  it('formats name with TOC code', () => {
+    expect(formatStationDetailsHeaderManagedByToc('Elizabeth Line', 'XR')).toBe(
+      'Elizabeth Line (XR)'
+    )
   })
 })

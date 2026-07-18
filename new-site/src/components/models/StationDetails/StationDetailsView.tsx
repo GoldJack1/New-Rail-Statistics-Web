@@ -18,7 +18,6 @@ import StationKnowledgebaseAlertBanner from './StationKnowledgebaseAlertBanner'
 import type { StationFieldChange } from '../../../utils/stationFieldDiffs'
 import { LIGHT_RAIL_DOC_FIELDS, readLightRailDocString } from '../../../utils/lightRailStationFields'
 import { LightRailLinesServedChips } from './LightRailLinesServedChips'
-import { StationTocChips } from './StationTocChips'
 import {
   getStationDetailsSectionIcon,
 } from '../../../utils/stationDetailFieldIcons'
@@ -240,7 +239,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
       {showDetails && (
         <>
         <div className="modal-section">
-          <StationSectionTitle title="Details" icon={getStationDetailsSectionIcon('details')} />
+          <StationSectionTitle title="Details" icon={getStationDetailsSectionIcon('details')} pageHeading />
           {!fieldSchema.isLightRail && (
             <div className="station-details-code-chips" role="list" aria-label="Station codes">
               <BUTOperatorChip
@@ -320,73 +319,72 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
             </div>
           </StationDetailsSubsection>
 
-          <StationDetailsSubsection title="Other">
-            <div className="modal-details-grid modal-facilities-grid">
-              {!fieldSchema.isLightRail && (
-                <StationTocChips
-                  toc={station.toc}
-                  tocCode={
-                    fieldSchema.showKnowledgebaseTab ? knowledgebaseStationOperator : null
-                  }
-                  tocCodeStatus={
-                    fieldSchema.showKnowledgebaseTab ? knowledgebaseStatus : 'ready'
-                  }
-                  pendingFieldChanges={pendingFieldChanges}
-                />
-              )}
-              {fieldSchema.showLinesServed && (
-                <LightRailLinesServedChips
-                  linesServed={readLightRailDocString(lightRailDoc, LIGHT_RAIL_DOC_FIELDS.linesServed)}
-                  pendingFieldChanges={pendingFieldChanges}
-                />
-              )}
-              {fieldSchema.showPlatforms && (
-                <StationDetailField
-                  label="Platforms"
-                  value={formatValue(readLightRailDocString(lightRailDoc, LIGHT_RAIL_DOC_FIELDS.platforms))}
-                  pendingFieldChanges={pendingFieldChanges}
-                />
-              )}
-              {fieldSchema.showGauge && (
-                <StationDetailField label="Gauge" value={formatValue(additionalDoc?.guage)} pendingFieldChanges={pendingFieldChanges} />
-              )}
-              {fieldSchema.showUrl && (
-                <StationDetailField
-                  label={fieldSchema.urlFieldLabel}
-                  value={formatOptionalText(stationUrlValue)}
-                  pendingFieldChanges={pendingFieldChanges}
-                />
-              )}
-              {fieldSchema.foldAdditionalIntoDetails && fieldSchema.showOperatorCode && (
-                <StationDetailField
-                  label="Operator code"
-                  value={formatValue(additionalDoc?.operatorCode)}
-                  pendingFieldChanges={pendingFieldChanges}
-                />
-              )}
-              {fieldSchema.foldAdditionalIntoDetails && fieldSchema.showMinConnectionTime && (
-                <StationDetailField
-                  label="Min connection time"
-                  value={formatValue(additionalDoc?.['min-connection-time'])}
-                  pendingFieldChanges={pendingFieldChanges}
-                />
-              )}
-              {fieldSchema.foldAdditionalIntoDetails && fieldSchema.showProvince && (
-                <StationDetailField
-                  label="Province"
-                  value={formatValue(additionalDoc?.province)}
-                  pendingFieldChanges={pendingFieldChanges}
-                />
-              )}
-              {fieldSchema.foldAdditionalIntoDetails && fieldSchema.showPostEirCode && !fieldSchema.postEirCodeInLocation && (
-                <StationDetailField
-                  label="Post / Eircode"
-                  value={formatValue(additionalDoc?.['post-eir_code'])}
-                  pendingFieldChanges={pendingFieldChanges}
-                />
-              )}
+          {(
+            fieldSchema.showLinesServed ||
+            fieldSchema.showPlatforms ||
+            fieldSchema.showGauge ||
+            fieldSchema.showUrl ||
+            (fieldSchema.foldAdditionalIntoDetails && fieldSchema.showOperatorCode) ||
+            (fieldSchema.foldAdditionalIntoDetails && fieldSchema.showMinConnectionTime) ||
+            (fieldSchema.foldAdditionalIntoDetails && fieldSchema.showProvince) ||
+            (fieldSchema.foldAdditionalIntoDetails && fieldSchema.showPostEirCode && !fieldSchema.postEirCodeInLocation)
+          ) ? (
+            <div className="station-details-subsection">
+              <div className="modal-details-grid modal-facilities-grid">
+                {fieldSchema.showLinesServed && (
+                  <LightRailLinesServedChips
+                    linesServed={readLightRailDocString(lightRailDoc, LIGHT_RAIL_DOC_FIELDS.linesServed)}
+                    pendingFieldChanges={pendingFieldChanges}
+                  />
+                )}
+                {fieldSchema.showPlatforms && (
+                  <StationDetailField
+                    label="Platforms"
+                    value={formatValue(readLightRailDocString(lightRailDoc, LIGHT_RAIL_DOC_FIELDS.platforms))}
+                    pendingFieldChanges={pendingFieldChanges}
+                  />
+                )}
+                {fieldSchema.showGauge && (
+                  <StationDetailField label="Gauge" value={formatValue(additionalDoc?.guage)} pendingFieldChanges={pendingFieldChanges} />
+                )}
+                {fieldSchema.showUrl && (
+                  <StationDetailField
+                    label={fieldSchema.urlFieldLabel}
+                    value={formatOptionalText(stationUrlValue)}
+                    pendingFieldChanges={pendingFieldChanges}
+                  />
+                )}
+                {fieldSchema.foldAdditionalIntoDetails && fieldSchema.showOperatorCode && (
+                  <StationDetailField
+                    label="Operator code"
+                    value={formatValue(additionalDoc?.operatorCode)}
+                    pendingFieldChanges={pendingFieldChanges}
+                  />
+                )}
+                {fieldSchema.foldAdditionalIntoDetails && fieldSchema.showMinConnectionTime && (
+                  <StationDetailField
+                    label="Min connection time"
+                    value={formatValue(additionalDoc?.['min-connection-time'])}
+                    pendingFieldChanges={pendingFieldChanges}
+                  />
+                )}
+                {fieldSchema.foldAdditionalIntoDetails && fieldSchema.showProvince && (
+                  <StationDetailField
+                    label="Province"
+                    value={formatValue(additionalDoc?.province)}
+                    pendingFieldChanges={pendingFieldChanges}
+                  />
+                )}
+                {fieldSchema.foldAdditionalIntoDetails && fieldSchema.showPostEirCode && !fieldSchema.postEirCodeInLocation && (
+                  <StationDetailField
+                    label="Post / Eircode"
+                    value={formatValue(additionalDoc?.['post-eir_code'])}
+                    pendingFieldChanges={pendingFieldChanges}
+                  />
+                )}
+              </div>
             </div>
-          </StationDetailsSubsection>
+          ) : null}
           {fieldSchema.showUrl && stationUrlHref && (
             <Button
               type="button"
@@ -436,7 +434,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
 
       {showLocationTab && showLocation && (
         <div className="modal-section modal-section--location">
-          <StationSectionTitle title="Location" icon={getStationDetailsSectionIcon('location')} />
+          <StationSectionTitle title="Location" icon={getStationDetailsSectionIcon('location')} pageHeading />
           {(() => {
             const showKbAddress =
               fieldSchema.showKnowledgebaseTab &&
@@ -551,7 +549,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
 
       {showAdditional && additionalDoc && (
         <div className="modal-section">
-          <StationSectionTitle title="Additional details" icon={getStationDetailsSectionIcon('additional')} />
+          <StationSectionTitle title="Additional details" icon={getStationDetailsSectionIcon('additional')} pageHeading />
           <StationDetailsSubsection title="Identifiers">
             <div className="modal-details-grid modal-facilities-grid">
               {fieldSchema.showOperatorCode && (
@@ -625,6 +623,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
               <StationSectionTitle
                 title={STEP_FREE_SECTION_LABEL}
                 icon={getStationDetailsSectionIcon('stepFree', { label: STEP_FREE_SECTION_LABEL })}
+                pageHeading
               />
               <StationDetailsSubsection title="Access">
                 <div className="modal-details-grid modal-facilities-grid">
@@ -693,7 +692,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
 
       {showService && fieldSchema.isLightRail && (
         <div className="modal-section">
-          <StationSectionTitle title="Service & Connections" icon={getStationDetailsSectionIcon('service')} />
+          <StationSectionTitle title="Service & Connections" icon={getStationDetailsSectionIcon('service')} pageHeading />
           <StationDetailsSubsection title="Service">
             <div className="modal-details-grid modal-facilities-grid">
               {fieldSchema.showDateOpened && (
@@ -850,7 +849,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
 
       {showFacilities && fieldSchema.facilityKeys.length > 0 && additionalDoc?.facilities && (
         <div className="modal-section">
-          <StationSectionTitle title="Facilities" icon={getStationDetailsSectionIcon('facilities')} />
+          <StationSectionTitle title="Facilities" icon={getStationDetailsSectionIcon('facilities')} pageHeading />
           <StationDetailsSubsection title="Amenities">
             <div className="modal-details-grid modal-facilities-grid">
               {fieldSchema.facilityKeys.map((key) => (
@@ -917,7 +916,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
 
       {showUsage && (station.yearlyPassengers || additionalDoc?.yearlyPassengers) && (
         <div className="modal-section">
-          <StationSectionTitle title="Usage" icon={getStationDetailsSectionIcon('usage')} />
+          <StationSectionTitle title="Station Usage" icon={getStationDetailsSectionIcon('usage')} pageHeading />
           <StationDetailsSubsection title="Passengers">
             <div className="modal-details-grid modal-facilities-grid">
               {getYearlyPassengerEntries(
@@ -939,7 +938,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
       {showAdmin && (
         <>
           <div className="modal-section">
-            <StationSectionTitle title="Admin" icon={getStationDetailsSectionIcon('admin')} />
+            <StationSectionTitle title="Admin" icon={getStationDetailsSectionIcon('admin')} pageHeading />
             <StationDetailsSubsection title="Identifiers">
               <div className="modal-details-grid modal-facilities-grid">
                 <StationDetailField

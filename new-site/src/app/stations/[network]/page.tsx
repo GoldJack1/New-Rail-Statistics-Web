@@ -11,6 +11,7 @@ import {
   getCollectionIdFromNetworkUrlSlug,
 } from '@/utils/stationAreaSlug'
 import { paramAsString } from '@/utils/nextParams'
+import PageTopHeader from '@/components/misc/PageTopHeader/PageTopHeader'
 
 /**
  * Handles short-id URLs (`/stations/gbnr-1566`) by redirecting to
@@ -37,11 +38,8 @@ export default function StationNetworkOrLegacyPage() {
 
   if (loading) {
     return (
-      <div className="container">
-        <div className="loading-state">
-          <div className="loading-spinner"></div>
-          <p>Loading station…</p>
-        </div>
+      <div className="container container--station-details">
+        <PageTopHeader title="Loading station" />
       </div>
     )
   }

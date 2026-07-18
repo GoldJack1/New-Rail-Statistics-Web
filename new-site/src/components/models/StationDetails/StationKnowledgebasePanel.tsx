@@ -583,6 +583,7 @@ function KbNode({ label, value, depth = 0 }: { label?: string; value: KbJson; de
           <StationSectionTitle
             title={humanizeKnowledgebaseKey(label)}
             icon={getKnowledgebaseSectionIcon(label, label)}
+            pageHeading
           />
         ) : (
           <h4 className="kb-group__title">{humanizeKnowledgebaseKey(label)}</h4>
@@ -681,7 +682,7 @@ function FlatDetailsLayout({ title, value, sectionKey }: { title: string; value:
   const rows = detailsRowsFromObject(value)
   return (
     <div className="modal-section">
-      <StationSectionTitle title={title} icon={getKnowledgebaseSectionIcon(sectionKey ?? title, title)} />
+      <StationSectionTitle title={title} icon={getKnowledgebaseSectionIcon(sectionKey ?? title, title)} pageHeading />
       <div className="kb-facility-list">
         {rows.map((row) => (
           <KbDetailField
@@ -749,7 +750,7 @@ const StationKnowledgebasePanel: React.FC<StationKnowledgebasePanelProps> = ({
     return (
       <div className={panelClass}>
         <div className="modal-section">
-          <StationSectionTitle title={label} icon={getKnowledgebaseSectionIcon(sectionKey ?? label, label)} />
+          <StationSectionTitle title={label} icon={getKnowledgebaseSectionIcon(sectionKey ?? label, label)} pageHeading />
           <p className="edit-hint">Loading Knowledgebase…</p>
         </div>
       </div>
@@ -760,7 +761,7 @@ const StationKnowledgebasePanel: React.FC<StationKnowledgebasePanelProps> = ({
     return (
       <div className={panelClass}>
         <div className="modal-section">
-          <StationSectionTitle title={label} icon={getKnowledgebaseSectionIcon(sectionKey ?? label, label)} />
+          <StationSectionTitle title={label} icon={getKnowledgebaseSectionIcon(sectionKey ?? label, label)} pageHeading />
           <p className="edit-hint kb-error">{errorMessage || 'Failed to load Knowledgebase data'}</p>
         </div>
       </div>

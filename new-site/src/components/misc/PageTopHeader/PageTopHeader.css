@@ -20,6 +20,19 @@
   min-width: 0;
 }
 
+.rs-page-top-header__eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: 0 0 var(--space-md) 0;
+  font-size: var(--text-sm);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+  line-height: 1.2;
+}
+
 .rs-page-top-header__title {
   display: flex;
   align-items: center;

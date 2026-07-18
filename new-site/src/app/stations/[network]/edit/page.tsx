@@ -11,6 +11,7 @@ import {
   getCollectionIdFromNetworkUrlSlug,
 } from '@/utils/stationAreaSlug'
 import { paramAsString } from '@/utils/nextParams'
+import PageTopHeader from '@/components/misc/PageTopHeader/PageTopHeader'
 
 /** Redirects `/stations/gbnr-1566/edit` to `/admin/stations/:network/:stationSlug/edit`. */
 export default function LegacyStationEditRedirectPage() {
@@ -32,11 +33,8 @@ export default function LegacyStationEditRedirectPage() {
 
   if (loading) {
     return (
-      <div className="container">
-        <div className="loading-state">
-          <div className="loading-spinner"></div>
-          <p>Loading station…</p>
-        </div>
+      <div className="container container--station-details">
+        <PageTopHeader title="Loading station" />
       </div>
     )
   }

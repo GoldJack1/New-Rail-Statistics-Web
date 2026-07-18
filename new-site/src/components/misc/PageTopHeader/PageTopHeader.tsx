@@ -22,6 +22,8 @@ interface PageTopHeaderProps {
   title: string
   subtitle?: React.ReactNode
   titleAddon?: React.ReactNode
+  /** Small label rendered above the title (e.g. TOC). */
+  eyebrow?: React.ReactNode
   /** Content rendered below the subtitle (e.g. TOC chips). */
   subtitleAddon?: React.ReactNode
   className?: string
@@ -34,6 +36,7 @@ const PageTopHeader: React.FC<PageTopHeaderProps> = ({
   title,
   subtitle,
   titleAddon,
+  eyebrow,
   subtitleAddon,
   className = '',
   innerClassName = '',
@@ -52,6 +55,7 @@ const PageTopHeader: React.FC<PageTopHeaderProps> = ({
     <header className={headerClassName}>
       <div className={innerClassNameCombined}>
         <div className="rs-page-top-header__copy">
+          {eyebrow ? <div className="rs-page-top-header__eyebrow">{eyebrow}</div> : null}
           <h1 className="rs-page-top-header__title">
             <span className="rs-page-top-header__title-text">{title}</span>
             {titleAddon}

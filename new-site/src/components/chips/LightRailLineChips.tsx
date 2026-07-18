@@ -10,12 +10,15 @@ interface LightRailLineChipsProps {
   linesServed: string | null | undefined
   className?: string
   emptyLabel?: string
+  /** Appended to each line label (e.g. ` Route` → "Blue Route"). */
+  labelSuffix?: string
 }
 
 export function LightRailLineChips({
   linesServed,
   className,
   emptyLabel,
+  labelSuffix = '',
 }: LightRailLineChipsProps) {
   const lines = parseLightRailLinesServed(linesServed ?? '')
   const rootClass = ['light-rail-lines-chips', className].filter(Boolean).join(' ')
@@ -36,7 +39,7 @@ export function LightRailLineChips({
             role="listitem"
             style={{ backgroundColor: colors.bg, color: colors.text }}
           >
-            {line}
+            {`${line}${labelSuffix}`}
           </span>
         )
       })}

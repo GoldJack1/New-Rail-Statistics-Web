@@ -13,8 +13,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 auto;
+  flex-shrink: 0;
   width: var(--tog-track-w);
+  min-width: var(--tog-track-w);
+  max-width: var(--tog-track-w);
   height: var(--tog-knob-size);
+  min-height: var(--tog-knob-size);
   border: 0;
   padding: 0;
   background: transparent;
@@ -25,6 +30,7 @@
   vertical-align: middle;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  overflow: visible;
 }
 
 .rs-tog-toggle__track {

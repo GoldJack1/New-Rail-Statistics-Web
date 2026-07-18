@@ -7,11 +7,12 @@ import { useNextStationId } from '@/hooks/useNextStationId'
 import { useStationCollectionFieldSchema } from '@/hooks/useStationCollectionFieldSchema'
 import { usePendingStationChanges } from '@/hooks/usePendingStationChanges'
 import { NewStationForm } from '@/components/models'
+import StationDetailsSectionNav from '@/components/models/StationDetails/StationDetailsSectionNav'
 import { PageTopHeader } from '@/components/misc'
 import ChooseNetworkForNewStationModal from '@/components/models/ChooseNetworkForNewStationModal/ChooseNetworkForNewStationModal'
 import { stationDetailsShowsAdditionalTab, type StationDetailsTab } from '@/utils/stationCollectionFieldSchema'
 import { BUTWideButton } from '@/components/buttons'
-import { BackIcon, ChevronRightIcon } from '@/components/icons'
+import { BackIcon } from '@/components/icons'
 import { NETWORK_LABELS } from '@/constants/stationCollections'
 import type { NetworkCollectionId } from '@/constants/stationCollections'
 import type { NewStationNavigationState } from '@/types/newStationNavigation'
@@ -19,7 +20,6 @@ import {
   buildPendingNewStationDraftPrefill,
   isPendingNewStationEntry,
 } from '@/utils/pendingNewStationEdit'
-import '@/components/misc/SidebarDropdownSection/SidebarDropdownSection.css'
 import '@/components/models/StationModal/StationModal.css'
 import '@/components/models/StationEditModal/StationEditModal.css'
 import { readNewStationNavigationState } from '@/utils/clientNavigationState'
@@ -67,7 +67,7 @@ const NewStationPageContent: React.FC<NewStationPageContentProps> = ({
     if (showAdditionalTab) tabs.push({ id: 'additional', label: 'Additional details' })
     if (fieldSchema.showServiceTab) tabs.push({ id: 'service', label: 'Service & Connections' })
     tabs.push({ id: 'location', label: 'Location' })
-    if (fieldSchema.showUsageTab) tabs.push({ id: 'usage', label: 'Usage' })
+    if (fieldSchema.showUsageTab) tabs.push({ id: 'usage', label: 'Station Usage' })
     if (fieldSchema.showStepFreeTab) tabs.push({ id: 'stepFree', label: fieldSchema.stepFreeTabLabel })
     if (fieldSchema.showFacilitiesTab) tabs.push({ id: 'facilities', label: 'Facilities' })
     if (fieldSchema.showAdminTab) tabs.push({ id: 'admin', label: 'Admin' })
@@ -170,38 +170,13 @@ const NewStationPageContent: React.FC<NewStationPageContentProps> = ({
       />
       <div className="station-details-page">
         <div className="station-details-layout">
-          <aside className="station-details-sidebar">
-            <div className="station-details-sidebar-panel">
-              <nav className="station-details-tabs" aria-label="Form sections">
-                {sectionTabs.map((tab) => {
-                  const isActive = activeTab === tab.id
-                  return (
-                    <div
-                      key={tab.id}
-                      className={[
-                        'sidebar-dropdown',
-                        'station-details-tab',
-                        'rs-button--color-primary',
-                        isActive ? 'station-details-tab--active' : 'station-details-tab--idle',
-                      ].join(' ')}
-                    >
-                      <div className="sidebar-dropdown__header-row">
-                        <button
-                          type="button"
-                          className="sidebar-dropdown__header"
-                          aria-current={isActive ? 'page' : undefined}
-                          onClick={() => setActiveTab(tab.id)}
-                        >
-                          <span className="sidebar-dropdown__title">{tab.label}</span>
-                          <ChevronRightIcon className="sidebar-dropdown__chevron" aria-hidden />
-                        </button>
-                      </div>
-                    </div>
-                  )
-                })}
-              </nav>
-            </div>
-          </aside>
+          <StationDetailsSectionNav
+            tabs={sectionTabs}
+            activeTab={activeTab}
+            onSelect={setActiveTab}
+            ariaLabel="Form sections"
+            showIcons={false}
+          />
 
           <main className="station-details-main">
             <section className="station-details-card modal-content modal-content-edit">

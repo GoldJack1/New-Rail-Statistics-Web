@@ -244,9 +244,12 @@ button, a, input, select, textarea, [role="button"] {
     min-width: unset;
 }
 
-button.rs-tog-toggle {
+button.rs-tog-toggle,
+button.rs-tog-toggle[role='switch'] {
     min-height: unset;
     min-width: unset;
+    width: var(--tog-track-w, 45px);
+    height: var(--tog-knob-size, 25px);
 }
 
 .universal-header a.header-nav-link {

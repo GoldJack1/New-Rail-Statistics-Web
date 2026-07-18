@@ -1,0 +1,164 @@
+/*
+ * Shared mobile header menu: hamburger toggle + collapsible panel.
+ * Used by the site Header and by in-page menus (e.g. station detail sections).
+ */
+
+.header-menu-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-sm);
+    margin: 0;
+    border: none;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    line-height: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.header-menu-toggle:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
+.header-menu-toggle__icon {
+    position: relative;
+    display: block;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.header-menu-toggle__glyph {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    color: currentColor;
+    transition:
+        transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.2s ease;
+}
+
+.header-menu-toggle__glyph--list {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(0deg) scale(1);
+}
+
+.header-menu-toggle__glyph--close {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(-90deg) scale(0.85);
+}
+
+.header-menu-toggle[aria-expanded='true'] .header-menu-toggle__glyph--list {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(90deg) scale(0.85);
+}
+
+.header-menu-toggle[aria-expanded='true'] .header-menu-toggle__glyph--close {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(0deg) scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .header-menu-toggle__glyph {
+        transition-duration: 0.01ms;
+    }
+}
+
+.header-mobile-panel {
+    display: none;
+}
+
+.header-mobile-panel-inner {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.header-mobile-nav-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.header-nav--mobile .header-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    width: 100%;
+    padding: var(--space-md) var(--space-lg);
+    border-radius: 0;
+    box-shadow: none;
+    box-sizing: border-box;
+    font-weight: 400;
+    font-variation-settings: 'CRSV' 1, 'wght' 400;
+}
+
+/* Button items (e.g. station section tabs) need a reset; links keep Header typography */
+.header-nav--mobile button.header-nav-link {
+    border: none;
+    background: transparent;
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: 400;
+    font-variation-settings: 'CRSV' 1, 'wght' 400;
+    line-height: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.header-nav--mobile .header-nav-link:hover,
+.header-nav--mobile button.header-nav-link:hover {
+    border-radius: 0;
+    box-shadow: none;
+    background: var(--bg-secondary);
+}
+
+.header-nav--mobile .header-nav-link--active,
+.header-nav--mobile .header-nav-link--active:hover,
+.header-nav--mobile button.header-nav-link--active,
+.header-nav--mobile button.header-nav-link--active:hover {
+    border-radius: 0;
+    box-shadow: none;
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+}
+
+.header-mobile-nav-list li + li {
+    margin-top: 0;
+}
+
+.header-nav--mobile {
+    padding: 0;
+}
+
+/*
+ * Standalone menu shell (station detail, etc.): toggle + panel always participate;
+ * the parent decides when this shell is shown via its own breakpoint CSS.
+ */
+.mobile-header-menu .header-menu-toggle {
+    display: inline-flex;
+    min-height: 44px;
+    min-width: 44px;
+}
+
+.mobile-header-menu .header-mobile-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.22s ease;
+}
+
+/* Beat `.universal-header .header-mobile-panel { 0fr }` from Header.css (same cascade file order). */
+.mobile-header-menu.mobile-header-menu--open .header-mobile-panel,
+.universal-header.universal-header--menu-open .header-mobile-panel {
+    grid-template-rows: 1fr;
+    border-top: 1px solid var(--border-color);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mobile-header-menu .header-mobile-panel {
+        transition-duration: 0.01ms;
+    }
+}

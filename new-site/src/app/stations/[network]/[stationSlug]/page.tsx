@@ -29,25 +29,27 @@ import {
   type StationDetailsTab,
 } from '@/utils/stationCollectionFieldSchema'
 import StationDetailsView from '@/components/models/StationDetails/StationDetailsView'
+import StationDetailsSectionNav from '@/components/models/StationDetails/StationDetailsSectionNav'
 import { BUTWideButton } from '@/components/buttons'
 import { BUTCircleButton } from '@/components/buttons'
-import { BackIcon, ChevronRightIcon } from '@/components/icons'
+import { BackIcon } from '@/components/icons'
 import PageTopHeader from '@/components/misc/PageTopHeader/PageTopHeader'
 import { LightRailLineChips } from '@/components/chips/LightRailLineChips'
-import '@/components/misc/SidebarDropdownSection/SidebarDropdownSection.css'
 import '@/components/models/StationModal/StationModal.css'
 import { PencilSimple } from '@phosphor-icons/react'
 import { paramAsString } from '@/utils/nextParams'
 import { setStationDetailsNavigationState, readStationDetailsNavigationState } from '@/utils/clientNavigationState'
-import { formatStationDetailsHeaderSubtitle } from '@/utils/formatStationDetailsHeader'
+import { formatStationDetailsHeaderManagedByToc, formatStationDetailsHeaderSubtitle, getStationDetailsHeaderToc } from '@/utils/formatStationDetailsHeader'
 import { isLightRailStop } from '@/utils/stationCardForNetwork'
+import { useTocOperators } from '@/hooks/useTocOperators'
+import { resolveTocOperatorDisplayName } from '@/services/tocOperators'
+import { parseStationTocValues } from '@/components/models/StationDetails/StationTocChips'
 import {
   isKnowledgebaseTabId,
   KNOWLEDGEBASE_OVERVIEW_KEY,
   parseKnowledgebaseTabId,
   toKnowledgebaseTabId,
 } from '@/utils/knowledgebaseStationSections'
-import { getStationDetailsSectionIcon } from '@/utils/stationDetailFieldIcons'
 import '@/components/models/StationDetails/StationKnowledgebasePanel.css'
 import {
   readKnowledgebaseSourceCompareEnabled,
@@ -164,7 +166,7 @@ function StationDetailsPage() {
     if (showAdditionalTab) tabs.push({ id: 'additional', label: 'Additional details' })
     if (fieldSchema.showServiceTab) tabs.push({ id: 'service', label: 'Service & Connections' })
     tabs.push({ id: 'location', label: 'Location' })
-    if (fieldSchema.showUsageTab) tabs.push({ id: 'usage', label: 'Usage' })
+    if (fieldSchema.showUsageTab) tabs.push({ id: 'usage', label: 'Station Usage' })
     if (fieldSchema.showStepFreeTab) tabs.push({ id: 'stepFree', label: fieldSchema.stepFreeTabLabel })
     if (fieldSchema.showFacilitiesTab) tabs.push({ id: 'facilities', label: 'Facilities' })
     if (fieldSchema.showKnowledgebaseTab && knowledgebase.status === 'ready') {
@@ -216,6 +218,57 @@ function StationDetailsPage() {
     knowledgebase.status === 'ready' ? knowledgebase.stationAlert : null
   const knowledgebaseLastUpdatedLabel =
     knowledgebase.status === 'ready' ? knowledgebase.lastUpdatedLabel : null
+
+  const headerDisplayStation = displayStation ?? station
+  const headerIsLightRail = Boolean(headerDisplayStation && isLightRailStop(headerDisplayStation))
+  const headerTocRaw = headerDisplayStation ? getStationDetailsHeaderToc(headerDisplayStation) : ''
+  const headerTocPrimary = parseStationTocValues(headerTocRaw)[0] ?? headerTocRaw
+  const tocOperators = useTocOperators(Boolean(headerDisplayStation) && !headerIsLightRail && Boolean(headerTocPrimary))
+  const headerManagedByToc = useMemo(() => {
+    if (!headerDisplayStation || headerIsLightRail) return ''
+    const displayName = headerTocPrimary
+      ? resolveTocOperatorDisplayName(tocOperators.operators, headerTocPrimary)
+      : ''
+    const tocCode = !fieldSchema.showKnowledgebaseTab
+      ? null
+      : knowledgebase.status === 'loading' || knowledgebase.status === 'idle'
+        ? '…'
+        : knowledgebaseStationOperator
+    return formatStationDetailsHeaderManagedByToc(displayName || headerTocPrimary, tocCode)
+  }, [
+    headerDisplayStation,
+    headerIsLightRail,
+    headerTocPrimary,
+    tocOperators.operators,
+    fieldSchema.showKnowledgebaseTab,
+    knowledgebase.status,
+    knowledgebaseStationOperator,
+  ])
+
+  const headerEyebrow = useMemo(() => {
+    if (!headerDisplayStation) return undefined
+    if (headerIsLightRail) {
+      const toc = headerTocRaw
+      if (!toc && !headerDisplayStation.linesServed) return undefined
+      return (
+        <>
+          {toc ? <span className="station-details-header-toc">{toc}</span> : null}
+          <LightRailLineChips
+            linesServed={headerDisplayStation.linesServed}
+            className="station-details-header-line-chips"
+            labelSuffix=" Route"
+          />
+        </>
+      )
+    }
+    if (!headerManagedByToc) return undefined
+    return (
+      <span className="station-details-header-managed-by">
+        <span className="station-details-header-managed-by__label">Station Managed by:</span>
+        <span className="station-details-header-managed-by__toc">{headerManagedByToc}</span>
+      </span>
+    )
+  }, [headerDisplayStation, headerIsLightRail, headerTocRaw, headerManagedByToc])
 
   useEffect(() => {
     if (activeTab === 'additional' && !showAdditionalTab) setActiveTab('details')
@@ -318,11 +371,22 @@ function StationDetailsPage() {
 
   if (loading) {
     return (
-      <div className="container">
-        <div className="loading-state">
-          <div className="loading-spinner"></div>
-          <p>Loading station…</p>
-        </div>
+      <div className="container container--station-details">
+        <PageTopHeader
+          title="Loading station"
+          actionContent={
+            <div className="station-details-header-actions">
+              <BUTWideButton
+                type="button"
+                width="hug"
+                icon={<BackIcon />}
+                onClick={() => router.push(backPath)}
+              >
+                Back
+              </BUTWideButton>
+            </div>
+          }
+        />
       </div>
     )
   }
@@ -355,15 +419,8 @@ function StationDetailsPage() {
   return (
     <div className="container container--station-details">
       <PageTopHeader
+        eyebrow={headerEyebrow}
         title={(displayStation ?? station).stationName || 'Station'}
-        titleAddon={
-          isLightRailStop(displayStation ?? station) ? (
-            <LightRailLineChips
-              linesServed={(displayStation ?? station).linesServed}
-              className="station-details-header-line-chips"
-            />
-          ) : undefined
-        }
         subtitle={formatStationDetailsHeaderSubtitle(displayStation ?? station, {
           pendingSuffix: showPendingOverlay ? 'Unpublished changes' : null,
         })}
@@ -402,58 +459,13 @@ function StationDetailsPage() {
           .join(' ')}
       >
         <div className="station-details-layout">
-          <aside className="station-details-sidebar">
-            <div className="station-details-sidebar-panel">
-              <nav className="station-details-tabs" aria-label="Station sections">
-                {sectionTabs.map((tab) => {
-                  const isActive = activeTab === tab.id
-                  const TabIcon = getStationDetailsSectionIcon(tab.id, {
-                    knowledgebaseSectionKey: tab.sectionKey,
-                    label: tab.label,
-                  })
-                  return (
-                    <div
-                      key={tab.id}
-                      className={[
-                        'sidebar-dropdown',
-                        'station-details-tab',
-                        'rs-button--color-primary',
-                        isActive ? 'station-details-tab--active' : 'station-details-tab--idle',
-                        tab.knowledgebase ? 'station-details-tab--knowledgebase' : '',
-                        fieldSchema.showKnowledgebaseTab && !tab.knowledgebase
-                          ? 'station-details-tab--firebase'
-                          : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                    >
-                      <div className="sidebar-dropdown__header-row">
-                        <button
-                          type="button"
-                          className="sidebar-dropdown__header"
-                          aria-current={isActive ? 'page' : undefined}
-                          onClick={() => setActiveTab(tab.id)}
-                        >
-                          <span className="sidebar-dropdown__title">
-                            {TabIcon ? (
-                              <TabIcon
-                                className="station-details-tab__icon"
-                                size={16}
-                                weight="regular"
-                                aria-hidden
-                              />
-                            ) : null}
-                            {tab.label}
-                          </span>
-                          <ChevronRightIcon className="sidebar-dropdown__chevron" aria-hidden />
-                        </button>
-                      </div>
-                    </div>
-                  )
-                })}
-              </nav>
-            </div>
-          </aside>
+          <StationDetailsSectionNav
+            tabs={sectionTabs}
+            activeTab={activeTab}
+            onSelect={setActiveTab}
+            ariaLabel="Station sections"
+            markFirebaseTabs={fieldSchema.showKnowledgebaseTab}
+          />
 
           <main className="station-details-main">
             <section className="station-details-card modal-content">

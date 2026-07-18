@@ -624,7 +624,7 @@ const StationDetailsEditForm: React.FC<StationDetailsEditFormProps> = ({
           </div>
         ) : null}
         <div className="modal-section">
-          <h3 className="modal-section-title">Details</h3>
+          <h3 className="modal-section-title station-section-title--page-heading">Details</h3>
 
           <p className="edit-hint">Required fields are marked *</p>
 
@@ -942,7 +942,7 @@ const StationDetailsEditForm: React.FC<StationDetailsEditFormProps> = ({
 
           {showLocationTab && (
             <div className="modal-section">
-              <h3 className="modal-section-title">Location</h3>
+              <h3 className="modal-section-title station-section-title--page-heading">Location</h3>
               <LocationMapPicker
                 latitude={Number(form.latitude ?? 0)}
                 longitude={Number(form.longitude ?? 0)}
@@ -996,7 +996,7 @@ const StationDetailsEditForm: React.FC<StationDetailsEditFormProps> = ({
 
           {showUsage && (
           <div className="modal-section">
-            <h3 className="modal-section-title">Usage</h3>
+            <h3 className="modal-section-title station-section-title--page-heading">Station Usage</h3>
             {yearlyPassengersRows.length === 0 && <p className="edit-hint">No yearly passenger rows set.</p>}
             {yearlyPassengersRows.map((row, idx) => (
               <div key={`${idx}-${row.year}`} className="edit-form-grid">
@@ -1054,7 +1054,7 @@ const StationDetailsEditForm: React.FC<StationDetailsEditFormProps> = ({
 
           {showAdditional && (
           <div className="modal-section">
-            <h3 className="modal-section-title">Additional details</h3>
+            <h3 className="modal-section-title station-section-title--page-heading">Additional details</h3>
             {additionalLoading && <p className="modal-sandbox-loading">Loading additional details…</p>}
 
             <div className="edit-form-grid">
@@ -1170,7 +1170,7 @@ const StationDetailsEditForm: React.FC<StationDetailsEditFormProps> = ({
             <>
               {fieldSchema.showStepFreeSection && !fieldSchema.stepFreeInDetails && (
                 <div className="modal-section">
-                  <h3 className="modal-section-title">{STEP_FREE_SECTION_LABEL}</h3>
+                  <h3 className="modal-section-title station-section-title--page-heading">{STEP_FREE_SECTION_LABEL}</h3>
                   <div className="edit-form-grid">
                     <div className="edit-field">
                       <label className="edit-label" htmlFor="edit-stepFreeCode-tab">
@@ -1279,7 +1279,7 @@ const StationDetailsEditForm: React.FC<StationDetailsEditFormProps> = ({
 
           {showService && (
             <div className="modal-section">
-              <h3 className="modal-section-title">Service & Connections</h3>
+              <h3 className="modal-section-title station-section-title--page-heading">Service & Connections</h3>
               <div className="edit-form-grid">
                 {fieldSchema.isLightRail && fieldSchema.showDateOpened && (
                   <div className="edit-field">
@@ -1466,7 +1466,7 @@ const StationDetailsEditForm: React.FC<StationDetailsEditFormProps> = ({
 
           {showFacilities && fieldSchema.facilityKeys.length > 0 && (
             <div className="modal-section">
-              <h3 className="modal-section-title">Facilities</h3>
+              <h3 className="modal-section-title station-section-title--page-heading">Facilities</h3>
               {facilitiesRows.length === 0 && <p className="edit-hint">No facilities set for this station.</p>}
               {facilitiesRows.length > 0 && (
                 <div className="edit-form-grid">
@@ -1502,7 +1502,7 @@ const StationDetailsEditForm: React.FC<StationDetailsEditFormProps> = ({
 
           {showAdmin && (
             <div className="modal-section">
-              <h3 className="modal-section-title">Admin</h3>
+              <h3 className="modal-section-title station-section-title--page-heading">Admin</h3>
               <div className="modal-detail-item edit-readonly">
                 <span className="modal-detail-label">ID</span>
                 <span className="modal-detail-value">{station.id}</span>

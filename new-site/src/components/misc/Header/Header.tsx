@@ -2,11 +2,16 @@
 
 import React, { useEffect, useId } from 'react'
 import { usePathname } from 'next/navigation'
-import { List, X } from '@phosphor-icons/react'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useAppHeaderOffset } from '@/hooks/useAppHeaderOffset'
 import { BUTHeaderLink } from '../../buttons'
 import BetaTag from '../BetaTag/BetaTag'
+import {
+  MobileHeaderPanel,
+  MobileHeaderTitle,
+  MobileHeaderToggle,
+  type MobileHeaderNavItem,
+} from './MobileHeader'
 import './Header.css'
 
 /** Title shown next to the logo on narrow viewports (main nav items stay in the hamburger). */
@@ -55,13 +60,16 @@ const Header: React.FC = () => {
 
   const pageTitle = getHeaderPageTitle(pathname)
 
-  const navItems = [
-    { to: '/' as const, label: 'Home', active: isHomeActive, show: true, showBeta: false },
-    { to: '/migration' as const, label: 'Migration', active: isMigrationActive, show: true, showBeta: false },
-    { to: '/stations' as const, label: 'Stations', active: isStationsActive && !isMapActive, show: true, showBeta: false },
-    { to: '/stations/map' as const, label: 'Map', active: isMapActive, show: true, showBeta: true },
-    { to: '/admin/messages' as const, label: 'Messages', active: isMessagesActive, show: Boolean(user), showBeta: false },
-  ].filter((item) => item.show)
+  const navItems: MobileHeaderNavItem[] = [
+    { to: '/' as const, label: 'Home', active: isHomeActive, showBeta: false },
+    { to: '/migration' as const, label: 'Migration', active: isMigrationActive, showBeta: false },
+    { to: '/stations' as const, label: 'Stations', active: isStationsActive && !isMapActive, showBeta: false },
+    { to: '/stations/map' as const, label: 'Map', active: isMapActive, showBeta: true },
+    { to: '/admin/messages' as const, label: 'Messages', active: isMessagesActive, showBeta: false },
+  ].filter((item) => {
+    if (item.to === '/admin/messages') return Boolean(user)
+    return true
+  })
 
   useEffect(() => {
     setMobileMenuOpen(false)
@@ -77,11 +85,6 @@ const Header: React.FC = () => {
   }, [mobileMenuOpen])
 
   const closeMobileMenu = () => setMobileMenuOpen(false)
-  const handleMenuToggleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return
-    event.preventDefault()
-    setMobileMenuOpen((open) => !open)
-  }
 
   return (
     <header
@@ -108,19 +111,11 @@ const Header: React.FC = () => {
                 <span className="logo-text">Rail Statistics</span>
               </div>
             </BUTHeaderLink>
-            <div className="logo logo--mobile">
-              <BUTHeaderLink
-                to="/"
-                replace={logoNavReplace}
-                className="logo-link logo-link--mobile-title"
-                ariaLabel="Rail Statistics home"
-              >
-                <span className="header-page-title-row">
-                  <span className="header-page-title">{pageTitle}</span>
-                  {isMapActive ? <BetaTag className="header-page-title__beta" /> : null}
-                </span>
-              </BUTHeaderLink>
-            </div>
+            <MobileHeaderTitle
+              pageTitle={pageTitle}
+              showBeta={isMapActive}
+              logoNavReplace={logoNavReplace}
+            />
           </div>
 
           <div className="header-right">
@@ -134,46 +129,20 @@ const Header: React.FC = () => {
                 ))}
               </div>
             </nav>
-            <div
-              role="button"
-              tabIndex={0}
-              className="header-menu-toggle"
-              aria-expanded={mobileMenuOpen}
-              aria-controls={mobileNavId}
-              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-              onClick={() => {
-                setMobileMenuOpen((open) => !open)
-              }}
-              onKeyDown={handleMenuToggleKeyDown}
-            >
-              <span className="header-menu-toggle__icon" aria-hidden>
-                <List className="header-menu-toggle__glyph header-menu-toggle__glyph--list" size={20} weight="bold" />
-                <X className="header-menu-toggle__glyph header-menu-toggle__glyph--close" size={20} weight="bold" />
-              </span>
-            </div>
+            <MobileHeaderToggle
+              menuOpen={mobileMenuOpen}
+              navId={mobileNavId}
+              onMenuOpenChange={setMobileMenuOpen}
+            />
           </div>
         </div>
 
-        <div
-          className="header-mobile-panel"
-          id={mobileNavId}
-          aria-hidden={!mobileMenuOpen}
-        >
-          <div className="header-mobile-panel-inner" inert={mobileMenuOpen ? undefined : true}>
-            <nav className="header-nav header-nav--mobile" aria-label="Main">
-              <ul className="header-mobile-nav-list">
-                {navItems.map(({ to, label, active, showBeta }) => (
-                  <li key={to}>
-                    <BUTHeaderLink to={to} active={active} onClick={closeMobileMenu}>
-                      <span className="header-nav-link__label">{label}</span>
-                      {showBeta ? <BetaTag /> : null}
-                    </BUTHeaderLink>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          </div>
-        </div>
+        <MobileHeaderPanel
+          menuOpen={mobileMenuOpen}
+          navId={mobileNavId}
+          navItems={navItems}
+          onClose={closeMobileMenu}
+        />
       </div>
     </header>
   )

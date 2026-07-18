@@ -29,11 +29,11 @@ import {
 } from '@/utils/stationCollectionFieldSchema'
 import { StationDetailsEditForm } from '@/components/models'
 import StationKnowledgebasePanel from '@/components/models/StationDetails/StationKnowledgebasePanel'
+import StationDetailsSectionNav from '@/components/models/StationDetails/StationDetailsSectionNav'
 import { BUTWideButton } from '@/components/buttons'
 import { BUTCircleButton } from '@/components/buttons'
-import { BackIcon, ChevronRightIcon } from '@/components/icons'
+import { BackIcon } from '@/components/icons'
 import { PageTopHeader } from '@/components/misc'
-import '@/components/misc/SidebarDropdownSection/SidebarDropdownSection.css'
 import '@/components/models/StationModal/StationModal.css'
 import '@/components/models/StationEditModal/StationEditModal.css'
 import { Eye } from '@phosphor-icons/react'
@@ -45,7 +45,6 @@ import {
   parseKnowledgebaseTabId,
   toKnowledgebaseTabId,
 } from '@/utils/knowledgebaseStationSections'
-import { getStationDetailsSectionIcon } from '@/utils/stationDetailFieldIcons'
 import '@/components/models/StationDetails/StationKnowledgebasePanel.css'
 import '@/app/stations/[network]/[stationSlug]/StationDetailsPage.css'
 
@@ -125,7 +124,7 @@ function AdminStationEditPage() {
     if (showAdditionalTab) tabs.push({ id: 'additional', label: 'Additional details' })
     if (fieldSchema.showServiceTab) tabs.push({ id: 'service', label: 'Service & Connections' })
     tabs.push({ id: 'location', label: 'Location' })
-    if (fieldSchema.showUsageTab) tabs.push({ id: 'usage', label: 'Usage' })
+    if (fieldSchema.showUsageTab) tabs.push({ id: 'usage', label: 'Station Usage' })
     if (fieldSchema.showStepFreeTab) tabs.push({ id: 'stepFree', label: fieldSchema.stepFreeTabLabel })
     if (fieldSchema.showFacilitiesTab) tabs.push({ id: 'facilities', label: 'Facilities' })
     if (fieldSchema.showKnowledgebaseTab && knowledgebase.status === 'ready') {
@@ -221,11 +220,22 @@ function AdminStationEditPage() {
 
   if (loading) {
     return (
-      <div className="container">
-        <div className="loading-state">
-          <div className="loading-spinner"></div>
-          <p>Loading station…</p>
-        </div>
+      <div className="container container--station-details">
+        <PageTopHeader
+          title="Loading station"
+          actionContent={
+            <div className="station-details-header-actions">
+              <BUTWideButton
+                type="button"
+                width="hug"
+                icon={<BackIcon />}
+                onClick={() => router.push(backPath)}
+              >
+                Back
+              </BUTWideButton>
+            </div>
+          }
+        />
       </div>
     )
   }
@@ -303,55 +313,12 @@ function AdminStationEditPage() {
       />
       <div className="station-details-page">
         <div className="station-details-layout">
-          <aside className="station-details-sidebar">
-            <div className="station-details-sidebar-panel">
-              <nav className="station-details-tabs" aria-label="Station sections">
-                {sectionTabs.map((tab) => {
-                  const isActive = activeTab === tab.id
-                  const TabIcon = getStationDetailsSectionIcon(tab.id, {
-                    knowledgebaseSectionKey: tab.sectionKey,
-                    label: tab.label,
-                  })
-                  return (
-                    <div
-                      key={tab.id}
-                      className={[
-                        'sidebar-dropdown',
-                        'station-details-tab',
-                        'rs-button--color-primary',
-                        isActive ? 'station-details-tab--active' : 'station-details-tab--idle',
-                        tab.knowledgebase ? 'station-details-tab--knowledgebase' : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                    >
-                      <div className="sidebar-dropdown__header-row">
-                        <button
-                          type="button"
-                          className="sidebar-dropdown__header"
-                          aria-current={isActive ? 'page' : undefined}
-                          onClick={() => setActiveTab(tab.id)}
-                        >
-                          <span className="sidebar-dropdown__title">
-                            {TabIcon ? (
-                              <TabIcon
-                                className="station-details-tab__icon"
-                                size={16}
-                                weight="regular"
-                                aria-hidden
-                              />
-                            ) : null}
-                            {tab.label}
-                          </span>
-                          <ChevronRightIcon className="sidebar-dropdown__chevron" aria-hidden />
-                        </button>
-                      </div>
-                    </div>
-                  )
-                })}
-              </nav>
-            </div>
-          </aside>
+          <StationDetailsSectionNav
+            tabs={sectionTabs}
+            activeTab={activeTab}
+            onSelect={setActiveTab}
+            ariaLabel="Station sections"
+          />
 
           <main className="station-details-main">
             <section className="station-details-card modal-content modal-content-edit">

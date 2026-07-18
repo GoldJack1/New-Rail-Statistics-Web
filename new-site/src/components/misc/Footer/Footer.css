@@ -225,8 +225,27 @@
       calc(var(--space-xl) + env(safe-area-inset-left, 0px));
   }
 
+  .site-footer-primary-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
+  }
+
   .site-footer-links {
     gap: var(--space-md);
+  }
+
+  .site-footer-links--base-row,
+  .site-footer-links--logged-in-row {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .site-footer-secondary-row {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 }
 
@@ -247,18 +266,7 @@
     gap: var(--space-sm) var(--space-md);
   }
 
-  .site-footer-links--logged-in-row {
-    justify-content: flex-end;
-  }
-
   .site-footer-secondary-row {
-    flex-wrap: wrap;
     padding-top: var(--space-sm);
-  }
-
-  .site-footer-primary-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-sm);
   }
 }

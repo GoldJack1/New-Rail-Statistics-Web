@@ -11,6 +11,10 @@
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
+  /* Shared insets for PageTopHeader + section menu + main (header is outside .station-details-page) */
+  --stations-card-gap: var(--space-lg);
+  --stations-content-inset: var(--stations-card-gap);
+  --stations-panel-text-inset: var(--stations-content-inset);
 }
 
 @media (max-width: 1023px) {
@@ -59,6 +63,28 @@
 .station-details-header-line-chips .light-rail-lines-chip {
   font-size: 0.75rem;
   padding: 0.15rem 0.5rem;
+}
+
+.station-details-header-managed-by {
+  display: inline;
+}
+
+.station-details-header-managed-by__toc::before {
+  content: ' ';
+}
+
+@media (max-width: 639px) {
+  .station-details-header-managed-by {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+    width: 100%;
+  }
+
+  .station-details-header-managed-by__toc::before {
+    content: none;
+  }
 }
 
 .station-toc-detail__chips {
@@ -389,10 +415,9 @@
 
 }
 
-/* Detail page sidebar now follows the same panel system as the stations list page. */
-.station-details-page {
-  --stations-card-gap: var(--space-lg);
-  --stations-content-inset: var(--stations-card-gap);
+/* Header-menu section nav: hidden on desktop; shown ≤1023px */
+.station-details-mobile-sections {
+  display: none;
 }
 
 @media (min-width: 1024px) {
@@ -533,16 +558,22 @@
 }
 
 @media (max-width: 1023px) {
-  .station-details-page {
+  .container.container--station-details {
     --stations-content-inset: var(--stations-card-gap);
-    --stations-panel-text-inset: var(--stations-content-inset);
-    padding-left: var(--stations-content-inset);
-    padding-right: var(--stations-content-inset);
+    /* Match PageTopHeader tablet inset */
+    --stations-panel-text-inset: var(--space-2xl);
+  }
+
+  .station-details-page {
+    /* Keep page flush so the section menu can be full-bleed like PageTopHeader */
+    padding-left: 0;
+    padding-right: 0;
   }
 
   .container--station-details .rs-page-top-header__inner {
-    padding-left: var(--stations-content-inset);
-    padding-right: var(--stations-content-inset);
+    max-width: none;
+    padding-left: var(--stations-panel-text-inset);
+    padding-right: var(--stations-panel-text-inset);
   }
 
   .station-details-layout {
@@ -555,28 +586,57 @@
     box-sizing: border-box;
   }
 
+  /* Desktop sidebar replaced by header-style section menu on narrow screens */
   .station-details-sidebar {
-    order: 1;
-    width: calc(100% + (var(--stations-content-inset) * 2));
-    max-width: none;
-    margin-left: calc(var(--stations-content-inset) * -1);
-    margin-right: calc(var(--stations-content-inset) * -1);
-    min-width: 0;
-    padding-top: 0;
-    gap: 0;
+    display: none;
   }
 
-  .station-details-sidebar-panel {
+  .station-details-mobile-sections {
+    display: block;
+    order: 1;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    min-width: 0;
     background-color: var(--bg-secondary);
     border-bottom: 1px solid var(--border-color);
   }
 
-  .station-details-sidebar-panel .station-details-tabs {
+  .station-details-mobile-sections__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    min-height: 44px;
+    padding: var(--space-xs) var(--stations-panel-text-inset);
+    box-sizing: border-box;
+    background-color: var(--bg-secondary);
+    background-image: linear-gradient(
+      color-mix(in srgb, var(--bg-primary) 50%, transparent),
+      color-mix(in srgb, var(--bg-primary) 50%, transparent)
+    );
+  }
+
+  .station-details-mobile-sections__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: var(--font-body);
+    font-size: var(--text-lg);
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--text-primary);
+    font-variation-settings: 'CRSV' 1, 'wght' 600, 'MONO' 0, 'slnt' 0;
+    min-width: 0;
+  }
+
+  .station-details-mobile-sections__menu .header-mobile-panel {
     padding: 0;
   }
 
-  .station-details-sidebar-panel .station-details-tab .sidebar-dropdown__header {
-    padding: var(--space-lg) var(--stations-panel-text-inset);
+  .station-details-mobile-sections__menu .header-nav--mobile .header-nav-link {
+    padding-left: var(--stations-panel-text-inset);
+    padding-right: var(--stations-panel-text-inset);
   }
 
   .station-details-main {
@@ -584,29 +644,49 @@
     width: 100%;
     min-width: 0;
     max-width: 100%;
-    padding: var(--stations-content-inset) 0;
+    padding: var(--stations-content-inset) var(--stations-panel-text-inset);
     box-sizing: border-box;
     overflow-x: clip;
   }
-}
 
-@media (max-width: 639px) {
-  .station-details-page {
-    --stations-card-gap: var(--space-md);
-    --stations-content-inset: var(--stations-card-gap);
+  /* Avoid double-inset vs header / section bar (StationModal adds space-xl by default). */
+  .station-details-main .modal-body {
     padding-left: 0;
     padding-right: 0;
   }
 
-  .station-details-sidebar {
-    width: 100%;
-    margin-left: 0;
-    margin-right: 0;
+  /* Section menu bar already shows the selected page title */
+  .station-details-main .station-section-title--page-heading {
+    display: none;
+  }
+}
+
+@media (max-width: 639px) {
+  .container.container--station-details {
+    --stations-card-gap: var(--space-md);
+    --stations-content-inset: var(--stations-card-gap);
+    /* Match PageTopHeader phone inset */
+    --stations-panel-text-inset: var(--space-lg);
+  }
+
+  .container--station-details .rs-page-top-header__inner {
+    padding-left: var(--stations-panel-text-inset);
+    padding-right: var(--stations-panel-text-inset);
+  }
+
+  .station-details-mobile-sections__bar {
+    padding-left: var(--stations-panel-text-inset);
+    padding-right: var(--stations-panel-text-inset);
+  }
+
+  .station-details-mobile-sections__menu .header-nav--mobile .header-nav-link {
+    padding-left: var(--stations-panel-text-inset);
+    padding-right: var(--stations-panel-text-inset);
   }
 
   .station-details-main {
-    padding-left: var(--stations-content-inset);
-    padding-right: var(--stations-content-inset);
+    padding-left: var(--stations-panel-text-inset);
+    padding-right: var(--stations-panel-text-inset);
   }
 }
 
@@ -641,10 +721,17 @@
 }
 
 .station-details-source-compare-toggle__label {
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: var(--text-sm);
   font-weight: 500;
   color: var(--text-primary);
   line-height: 1.35;
+}
+
+.station-details-source-compare-toggle .rs-tog-toggle {
+  flex: 0 0 auto;
+  align-self: center;
 }
 
 /* Section titles with Phosphor icons */
