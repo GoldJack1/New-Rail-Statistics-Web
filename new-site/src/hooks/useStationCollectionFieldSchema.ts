@@ -27,7 +27,10 @@ export function useStationCollectionFieldSchema(collectionId: StationCollectionI
     if (!collectionId) return EMPTY_STATION_COLLECTION_FIELD_SCHEMA
     return fieldSchemaCache.get(collectionId) ?? catalogSchemaFor(collectionId)
   })
-  const [loading, setLoading] = useState(() => Boolean(collectionId) && !fieldSchemaCache.has(collectionId))
+  const [loading, setLoading] = useState(() => {
+    if (!collectionId) return false
+    return !fieldSchemaCache.has(collectionId)
+  })
 
   useEffect(() => {
     if (!collectionId) {

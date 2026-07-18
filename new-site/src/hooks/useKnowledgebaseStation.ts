@@ -76,8 +76,10 @@ export function useKnowledgebaseStation(
   }, [crs, enabled])
 
   return useMemo((): KnowledgebaseStationState => {
-    if (result.status === 'idle' || result.status === 'loading') return { status: result.status }
-    if (result.status === 'error') return result
+    if (result.status !== 'ready') {
+      if (result.status === 'error') return result
+      return { status: result.status }
+    }
     return {
       status: 'ready',
       crs: result.crs,

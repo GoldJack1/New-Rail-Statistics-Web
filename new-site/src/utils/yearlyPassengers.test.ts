@@ -14,13 +14,13 @@ describe('yearlyPassengers', () => {
 
   it('reads latest passengers from nested yearlyPassengers with string values', () => {
     const count = getLatestYearlyPassengerCount({
-      '2022': '1000',
+      '2022': 1000,
       '2024': null,
-      '2023': '2500',
+      '2023': 2500,
     })
 
     expect(count).toBe(2500)
-    expect(getLatestYearlyPassengerDisplay({ '2023': '2500' })).toBe('(2023) 2,500')
+    expect(getLatestYearlyPassengerDisplay({ '2023': 2500 })).toBe('(2023) 2,500')
   })
 
   it('extracts yearly passengers from top-level Firestore year keys', () => {

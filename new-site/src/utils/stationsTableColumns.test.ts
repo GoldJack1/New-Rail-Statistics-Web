@@ -163,7 +163,7 @@ describe('stationsTableColumns', () => {
 
   it('reads latest passengers from string and null yearly values', () => {
     const station = baseStation({
-      yearlyPassengers: { '2024': null, '2023': '12345' },
+      yearlyPassengers: { '2024': null, '2023': 12345 },
     })
 
     expect(getTableColumnValue(station, 'latestPassengers')).toBe('12345')

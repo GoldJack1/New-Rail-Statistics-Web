@@ -9,6 +9,7 @@ describe('getStationDetailsHeaderToc', () => {
     expect(
       getStationDetailsHeaderToc({
         toc: 'Something else',
+        stnarea: null,
         sourceCollectionId: 'lightrail_GBSHEFFSUPERTRAM',
       })
     ).toBe('SY Supertram')
@@ -18,6 +19,7 @@ describe('getStationDetailsHeaderToc', () => {
     expect(
       getStationDetailsHeaderToc({
         toc: 'Northern',
+        stnarea: null,
         sourceCollectionId: 'stations_gbnr',
       })
     ).toBe('Northern')
@@ -29,6 +31,7 @@ describe('formatStationDetailsHeaderSubtitle', () => {
     expect(
       formatStationDetailsHeaderSubtitle({
         toc: 'Northern',
+        stnarea: null,
         borough: 'Bury',
         county: 'Greater Manchester',
         country: 'England',
@@ -41,6 +44,7 @@ describe('formatStationDetailsHeaderSubtitle', () => {
     expect(
       formatStationDetailsHeaderSubtitle({
         toc: null,
+        stnarea: null,
         borough: 'Sheffield',
         county: 'South Yorkshire',
         country: 'England',
@@ -53,6 +57,7 @@ describe('formatStationDetailsHeaderSubtitle', () => {
     expect(
       formatStationDetailsHeaderSubtitle({
         toc: null,
+        stnarea: null,
         county: 'North Yorkshire',
         country: 'England',
         sourceCollectionId: 'stations_gbnr',
@@ -65,6 +70,7 @@ describe('formatStationDetailsHeaderSubtitle', () => {
       formatStationDetailsHeaderSubtitle(
         {
           toc: 'Northern',
+          stnarea: null,
           county: 'Greater Manchester',
           country: 'England',
           sourceCollectionId: 'stations_gbnr',
