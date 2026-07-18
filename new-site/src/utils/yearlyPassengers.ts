@@ -96,3 +96,52 @@ export function getLatestYearlyPassengerDisplay(
   const formattedCount = entry.count.toLocaleString()
   return entry.year ? `(${entry.year}) ${formattedCount}` : formattedCount
 }
+
+export type YearlyPassengerChartPoint = {
+  year: string
+  value: number
+}
+
+/** Numeric year→count points sorted ascending, for charts. Skips null/blank years. */
+export function getYearlyPassengerChartPoints(
+  passengers: Station['yearlyPassengers'] | YearlyPassengers | number | string | null | undefined
+): YearlyPassengerChartPoint[] {
+  if (passengers == null) return []
+
+  if (typeof passengers === 'number' || typeof passengers === 'string') {
+    const count = parseYearlyPassengerCount(passengers)
+    return count != null ? [{ year: 'Total', value: count }] : []
+  }
+
+  if (typeof passengers !== 'object' || Array.isArray(passengers)) return []
+
+  return Object.keys(passengers)
+    .filter((year) => /^\d{4}$/.test(year))
+    .map((year) => ({
+      year,
+      value: parseYearlyPassengerCount(passengers[year]),
+    }))
+    .filter((entry): entry is YearlyPassengerChartPoint => entry.value != null)
+    .sort((a, b) => parseInt(a.year, 10) - parseInt(b.year, 10))
+}
+
+/** Compact axis label: 0, 500, 3K, 1.2M */
+export function formatPassengerAxisTick(value: number): string {
+  if (!Number.isFinite(value) || value === 0) return '0'
+  const abs = Math.abs(value)
+  if (abs >= 1_000_000) {
+    const millions = value / 1_000_000
+    const rounded = Math.abs(millions) >= 10 || Number.isInteger(millions)
+      ? millions.toFixed(0)
+      : millions.toFixed(1)
+    return `${rounded}M`
+  }
+  if (abs >= 1000) {
+    const thousands = value / 1000
+    const rounded = Math.abs(thousands) >= 10 || Number.isInteger(thousands)
+      ? thousands.toFixed(0)
+      : thousands.toFixed(1)
+    return `${rounded}K`
+  }
+  return String(Math.round(value))
+}

@@ -393,25 +393,46 @@ function StationDetailsPage() {
 
   if (error && !station) {
     return (
-      <div className="container">
-        <div className="error-state">
-          <h3>Failed to Load Station</h3>
-          <p>{error}</p>
-        </div>
+      <div className="container container--station-details">
+        <PageTopHeader
+          title="Failed to load station"
+          subtitle={error}
+          actionContent={
+            <div className="station-details-header-actions">
+              <BUTWideButton
+                type="button"
+                width="hug"
+                icon={<BackIcon />}
+                onClick={() => router.push(backPath)}
+              >
+                Back
+              </BUTWideButton>
+            </div>
+          }
+        />
       </div>
     )
   }
 
   if (!network || !stationSlug || !station) {
     return (
-      <div className="container">
-        <div className="error-state">
-          <h3>Station not found</h3>
-          <p>We couldn’t find that station in the current data source.</p>
-          <BUTWideButton type="button" width="hug" icon={<BackIcon />} onClick={() => router.push(backPath)}>
-            Back to stations
-          </BUTWideButton>
-        </div>
+      <div className="container container--station-details">
+        <PageTopHeader
+          title="Station not found"
+          subtitle="We couldn’t find that station in the current data source."
+          actionContent={
+            <div className="station-details-header-actions">
+              <BUTWideButton
+                type="button"
+                width="hug"
+                icon={<BackIcon />}
+                onClick={() => router.push(backPath)}
+              >
+                Back
+              </BUTWideButton>
+            </div>
+          }
+        />
       </div>
     )
   }

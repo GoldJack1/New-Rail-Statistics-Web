@@ -15,13 +15,16 @@ import { StationSectionTitle } from './StationSectionTitle'
 import { StationDetailsSubsection } from './StationDetailsSubsection'
 import { StationPendingChangesBanner } from './StationPendingChangesBanner'
 import StationKnowledgebaseAlertBanner from './StationKnowledgebaseAlertBanner'
+import { StationUsageAreaChart } from './StationUsageAreaChart'
 import type { StationFieldChange } from '../../../utils/stationFieldDiffs'
 import { LIGHT_RAIL_DOC_FIELDS, readLightRailDocString } from '../../../utils/lightRailStationFields'
 import { LightRailLinesServedChips } from './LightRailLinesServedChips'
 import {
   getStationDetailsSectionIcon,
 } from '../../../utils/stationDetailFieldIcons'
+import { getYearlyPassengerChartPoints } from '../../../utils/yearlyPassengers'
 import './StationPendingChangesBanner.css'
+import './StationUsageDataNotice.css'
 import dynamic from 'next/dynamic'
 
 const StationResponsiveLocationMap = dynamic(() => import('./StationResponsiveLocationMap'), {
@@ -93,12 +96,16 @@ const getYearlyPassengerEntries = (
     const years = Object.keys(passengers).filter((k) => /^\d{4}$/.test(k))
     if (years.length > 0) {
       const sortedYears = years.sort((a, b) => parseInt(b, 10) - parseInt(a, 10))
-      return sortedYears.map((year) => {
-        const count = (passengers as Record<string, number | null>)[year]
-        if (typeof count === 'number') {
-          return { year, value: count.toLocaleString() }
-        }
-        return { year, value: BLANK_DISPLAY }
+      return sortedYears.flatMap((year) => {
+        const raw = (passengers as Record<string, number | null | string>)[year]
+        const count =
+          typeof raw === 'number'
+            ? raw
+            : typeof raw === 'string'
+              ? Number(String(raw).replace(/,/g, '').trim())
+              : Number.NaN
+        if (!Number.isFinite(count)) return []
+        return [{ year, value: count.toLocaleString() }]
       })
     }
 
@@ -212,6 +219,13 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
     fieldSchema.showKnowledgebaseTab &&
     (showAll || (typeof activeTab === 'string' && isKnowledgebaseTabId(activeTab)))
   const showAdmin = fieldSchema.showAdminTab && (showAll || activeTab === 'admin')
+
+  const yearlyPassengersSource =
+    (additionalDoc?.yearlyPassengers as Record<string, number> | number | null) ??
+    (station.yearlyPassengers as Record<string, number> | number | null)
+  const yearlyPassengerEntries = getYearlyPassengerEntries(yearlyPassengersSource)
+  const yearlyPassengerChartPoints = getYearlyPassengerChartPoints(yearlyPassengersSource)
+  const hasLimitedPassengerData = yearlyPassengerEntries.length < 5
 
   const knowledgebaseOverviewSection =
     knowledgebaseSections.find((section) => section.key === KNOWLEDGEBASE_OVERVIEW_KEY) ?? null
@@ -917,12 +931,14 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
       {showUsage && (station.yearlyPassengers || additionalDoc?.yearlyPassengers) && (
         <div className="modal-section">
           <StationSectionTitle title="Station Usage" icon={getStationDetailsSectionIcon('usage')} pageHeading />
-          <StationDetailsSubsection title="Passengers">
+          {yearlyPassengerChartPoints.length >= 2 ? (
+            <StationDetailsSubsection title="Graph view">
+              <StationUsageAreaChart data={yearlyPassengerChartPoints} />
+            </StationDetailsSubsection>
+          ) : null}
+          <StationDetailsSubsection title="Data view">
             <div className="modal-details-grid modal-facilities-grid">
-              {getYearlyPassengerEntries(
-                (additionalDoc?.yearlyPassengers as Record<string, number> | number | null) ??
-                  (station.yearlyPassengers as Record<string, number> | number | null)
-              ).map((entry) => (
+              {yearlyPassengerEntries.map((entry) => (
                 <StationDetailField
                   key={entry.year}
                   label={entry.year}
@@ -932,6 +948,22 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
               ))}
             </div>
           </StationDetailsSubsection>
+          <p className="station-usage-data-notice">
+            {hasLimitedPassengerData ? (
+              <>This is a new station, so usage data for it will be limited.</>
+            ) : (
+              <>
+                Data is supplied by the Office of Rail and Road (ORR).
+                <br />
+                New data added once a year, usually in November.
+                <br />
+                Please note we show usage data by the year it was released, as the data period ranges
+                from April to March (for example, April 2024 to March 2025).
+                <br />
+                Please note that no data was released for 2003–2004, so those years are not shown.
+              </>
+            )}
+          </p>
         </div>
       )}
 

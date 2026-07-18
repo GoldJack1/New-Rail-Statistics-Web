@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   extractYearlyPassengersFromFirestoreData,
+  formatPassengerAxisTick,
   getLatestYearlyPassengerCount,
   getLatestYearlyPassengerDisplay,
+  getYearlyPassengerChartPoints,
   parseYearlyPassengerCount,
 } from './yearlyPassengers'
 
@@ -44,5 +46,27 @@ describe('yearlyPassengers', () => {
     })
 
     expect(extracted).toEqual({ '2024': 100 })
+  })
+
+  it('builds ascending chart points and skips null years', () => {
+    expect(
+      getYearlyPassengerChartPoints({
+        '2022': 1000,
+        '2024': null,
+        '2023': 2500,
+        '2019': 900,
+      })
+    ).toEqual([
+      { year: '2019', value: 900 },
+      { year: '2022', value: 1000 },
+      { year: '2023', value: 2500 },
+    ])
+  })
+
+  it('formats compact passenger axis ticks', () => {
+    expect(formatPassengerAxisTick(0)).toBe('0')
+    expect(formatPassengerAxisTick(500)).toBe('500')
+    expect(formatPassengerAxisTick(3000)).toBe('3K')
+    expect(formatPassengerAxisTick(10655006)).toBe('11M')
   })
 })

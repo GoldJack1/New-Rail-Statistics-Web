@@ -1,0 +1,7 @@
+.station-usage-data-notice {
+  margin: var(--space-xl, 1.5rem) 0 0;
+  max-width: 42rem;
+  font-size: var(--text-sm, 0.875rem);
+  line-height: 1.5;
+  color: var(--text-secondary, #666);
+}

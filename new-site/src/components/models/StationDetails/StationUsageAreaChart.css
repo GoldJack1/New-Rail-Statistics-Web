@@ -1,0 +1,204 @@
+.station-usage-area-chart {
+  margin: 0 0 var(--space-xl, 1.5rem);
+  color: var(--text-primary);
+  overflow: visible;
+}
+
+.station-usage-area-chart__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md, 0.75rem);
+  margin-bottom: var(--space-sm, 0.5rem);
+  min-height: 2rem;
+}
+
+.station-usage-area-chart__title {
+  margin: 0;
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.station-usage-area-chart__tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--space-sm, 0.5rem);
+  margin-left: auto;
+  max-width: 100%;
+}
+
+.station-usage-area-chart__tabs .rs-button--tab {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.station-usage-area-chart__plot {
+  position: relative;
+  width: 100%;
+  overflow: visible;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.station-usage-area-chart__scroll {
+  width: 100%;
+  overflow: visible;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.station-usage-area-chart__plot-inner {
+  position: relative;
+  width: 100%;
+  height: 440px;
+  min-height: 360px;
+  overflow: visible;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.station-usage-area-chart__plot-inner .recharts-responsive-container,
+.station-usage-area-chart__plot-inner .recharts-wrapper,
+.station-usage-area-chart__plot-inner .recharts-surface {
+  overflow: visible !important;
+  border: none;
+  outline: none;
+}
+
+.station-usage-area-chart__tooltip {
+  position: absolute;
+  z-index: 2;
+  transform: translate(-50%, -100%);
+  padding: 0.45rem 0.7rem 0.5rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid color-mix(in srgb, var(--text-primary) 12%, transparent);
+  border-radius: var(--radius-md, 0.5rem);
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+  min-width: 4.5rem;
+  text-align: center;
+}
+
+.station-usage-area-chart__tooltip-year {
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 500;
+  color: var(--text-secondary);
+  line-height: 1.2;
+}
+
+.station-usage-area-chart__tooltip-value {
+  margin-top: 0.15rem;
+  font-size: var(--text-base, 1rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+.station-usage-area-chart__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md, 0.75rem);
+  margin-top: var(--space-sm, 0.5rem);
+}
+
+.station-usage-area-chart__footer .station-usage-area-chart__tabs {
+  margin-left: 0;
+  flex-shrink: 0;
+}
+
+.station-usage-area-chart__scroll-hint {
+  margin: 0;
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--text-secondary);
+  text-align: right;
+  line-height: 1.35;
+}
+
+.station-usage-area-chart--expanded .station-usage-area-chart__scroll {
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
+  /* Room for dots / line to overflow past the plot edges */
+  padding: 12px 0;
+  margin: -12px 0;
+}
+
+.station-usage-area-chart--expanded .station-usage-area-chart__plot-inner {
+  height: 460px;
+  min-height: 380px;
+  overflow: visible;
+}
+
+/* Recharts clips series to the plot box by default — turn that off in expanded mode */
+.station-usage-area-chart--expanded .recharts-surface,
+.station-usage-area-chart--expanded .recharts-wrapper,
+.station-usage-area-chart--expanded .recharts-responsive-container {
+  overflow: visible !important;
+}
+
+.station-usage-area-chart--expanded .recharts-surface [clip-path],
+.station-usage-area-chart--expanded .recharts-layer[clip-path],
+.station-usage-area-chart--expanded .recharts-area,
+.station-usage-area-chart--expanded .recharts-bar,
+.station-usage-area-chart--expanded .recharts-line {
+  clip-path: none !important;
+}
+
+.station-usage-area-chart:not(.station-usage-area-chart--expanded) .station-usage-area-chart__scroll-hint {
+  opacity: 0.55;
+}
+
+@media (max-width: 1023px) {
+  .station-usage-area-chart__plot-inner {
+    height: 480px;
+    min-height: 400px;
+  }
+
+  .station-usage-area-chart--expanded .station-usage-area-chart__plot-inner {
+    height: 500px;
+    min-height: 420px;
+  }
+}
+
+@media (max-width: 640px) {
+  .station-usage-area-chart__header {
+    flex-wrap: wrap;
+  }
+
+  .station-usage-area-chart__header .station-usage-area-chart__tabs {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .station-usage-area-chart__footer {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .station-usage-area-chart__scroll-hint {
+    width: 100%;
+    text-align: left;
+  }
+
+  .station-usage-area-chart__plot-inner {
+    height: 420px;
+    min-height: 360px;
+  }
+
+  .station-usage-area-chart--expanded .station-usage-area-chart__plot-inner {
+    height: 440px;
+    min-height: 380px;
+  }
+}
