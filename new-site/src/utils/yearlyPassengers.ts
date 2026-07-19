@@ -125,6 +125,37 @@ export function getYearlyPassengerChartPoints(
     .sort((a, b) => parseInt(a.year, 10) - parseInt(b.year, 10))
 }
 
+/**
+ * Drop long runs of leading/trailing zeros on a chart series, but keep the
+ * zero immediately before the first non-zero (and after the last) so the line
+ * can rise from / return to the axis. All-zero series become empty.
+ */
+export function trimLeadingTrailingChartZeros(
+  points: YearlyPassengerChartPoint[]
+): YearlyPassengerChartPoint[] {
+  if (points.length === 0) return points
+
+  let firstNonZero = -1
+  let lastNonZero = -1
+  for (let i = 0; i < points.length; i += 1) {
+    if (points[i].value !== 0) {
+      if (firstNonZero < 0) firstNonZero = i
+      lastNonZero = i
+    }
+  }
+
+  if (firstNonZero < 0) return []
+
+  const start =
+    firstNonZero > 0 && points[firstNonZero - 1].value === 0 ? firstNonZero - 1 : firstNonZero
+  const end =
+    lastNonZero < points.length - 1 && points[lastNonZero + 1].value === 0
+      ? lastNonZero + 1
+      : lastNonZero
+
+  return points.slice(start, end + 1)
+}
+
 /** Compact axis label: 0, 500, 3K, 1.2M */
 export function formatPassengerAxisTick(value: number): string {
   if (!Number.isFinite(value) || value === 0) return '0'

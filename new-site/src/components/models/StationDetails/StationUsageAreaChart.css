@@ -21,6 +21,35 @@
   color: var(--text-primary);
 }
 
+.station-usage-area-chart__legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md, 0.75rem);
+  min-width: 0;
+  margin: var(--space-md, 0.75rem) 0 0;
+  padding: var(--space-sm, 0.5rem) 0;
+  border-top: 1px solid color-mix(in srgb, var(--text-primary) 12%, transparent);
+}
+
+.station-usage-area-chart__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 500;
+  color: var(--text-secondary);
+  line-height: 1.2;
+}
+
+.station-usage-area-chart__legend-swatch {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.2);
+}
+
 .station-usage-area-chart__mode-tabs,
 .station-usage-area-chart__density-tabs,
 .station-usage-area-chart__export-mode-tabs {
@@ -126,6 +155,37 @@
   font-weight: 700;
   line-height: 1.2;
   color: var(--text-primary);
+}
+
+.station-usage-area-chart__tooltip-series {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  column-gap: 0.45rem;
+  row-gap: 0.35rem;
+  margin-top: 0.35rem;
+  text-align: left;
+  width: max-content;
+  max-width: min(20rem, 80vw);
+  align-items: center;
+}
+
+.station-usage-area-chart__tooltip-row {
+  display: contents;
+}
+
+.station-usage-area-chart__tooltip-row-label {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--text-secondary);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.station-usage-area-chart__tooltip-row .station-usage-area-chart__tooltip-value {
+  margin-top: 0;
+  font-size: var(--text-sm, 0.875rem);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  justify-self: end;
 }
 
 .station-usage-area-chart__footer {

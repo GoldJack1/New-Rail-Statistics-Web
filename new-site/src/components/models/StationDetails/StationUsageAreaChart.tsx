@@ -51,6 +51,12 @@ type ChartSeriesPoint = {
   value: number
 }
 
+type DualChartSeriesPoint = {
+  year: string
+  primary: number | null
+  secondary: number | null
+}
+
 const CHART_MODE_OPTIONS: Array<{ id: ChartMode; label: string }> = [
   { id: 'line', label: 'Line' },
   { id: 'bars', label: 'Bars' },
@@ -95,6 +101,27 @@ function buildChartSeries(
   return data.map((point) => ({ year: point.year, value: point.value }))
 }
 
+function buildDualChartSeries(
+  primary: YearlyPassengerChartPoint[],
+  secondary: YearlyPassengerChartPoint[],
+  mode: ChartMode
+): DualChartSeriesPoint[] {
+  const primarySeries = buildChartSeries(primary, mode)
+  const secondarySeries = buildChartSeries(secondary, mode)
+  const years = new Set<string>()
+  for (const point of primarySeries) years.add(point.year)
+  for (const point of secondarySeries) years.add(point.year)
+  const primaryByYear = new Map(primarySeries.map((point) => [point.year, point.value]))
+  const secondaryByYear = new Map(secondarySeries.map((point) => [point.year, point.value]))
+  return [...years]
+    .sort((a, b) => parseInt(a, 10) - parseInt(b, 10))
+    .map((year) => ({
+      year,
+      primary: primaryByYear.get(year) ?? null,
+      secondary: secondaryByYear.get(year) ?? null,
+    }))
+}
+
 function formatChartValue(value: number, mode: ChartMode): string {
   if (mode === 'yoy') {
     const rounded = Math.round(value * 10) / 10
@@ -123,6 +150,12 @@ function usesLineCursor(mode: ChartMode): boolean {
   return mode === 'line'
 }
 
+function dualOverlayValue(point: DualChartSeriesPoint): number | null {
+  if (point.primary != null && Number.isFinite(point.primary)) return point.primary
+  if (point.secondary != null && Number.isFinite(point.secondary)) return point.secondary
+  return null
+}
+
 /** Theme-aware colours — resolve against CSS variables so dark mode works. */
 const CHART_LINE = 'var(--text-primary)'
 const CHART_MUTED = 'var(--text-secondary)'
@@ -132,18 +165,26 @@ const CHART_BASELINE = 'color-mix(in srgb, var(--text-primary) 45%, transparent)
 const CHART_DOT_FILL = 'var(--bg-primary)'
 const CHART_BAR_FILL = 'color-mix(in srgb, var(--text-primary) 72%, transparent)'
 const CHART_OVERLAY_LINE = 'color-mix(in srgb, var(--text-primary) 35%, transparent)'
+const CHART_SERIES_SECONDARY = 'var(--accent-base)'
+const CHART_SERIES_SECONDARY_BAR = 'color-mix(in srgb, var(--accent-base) 72%, transparent)'
 const OVERLAY_NONE = ''
 const OVERLAY_NONE_LABEL = 'None'
 
 type ActiveTooltip = {
   year: string
   value: number
+  primaryValue?: number | null
+  secondaryValue?: number | null
   x: number
   y: number
 }
 
 export type StationUsageAreaChartProps = {
   data: YearlyPassengerChartPoint[]
+  /** Optional second series (e.g. interchanges) plotted alongside `data` in a different colour. */
+  secondaryData?: YearlyPassengerChartPoint[] | null
+  primarySeriesLabel?: string
+  secondarySeriesLabel?: string
   stationName?: string
   title?: string
   className?: string
@@ -184,11 +225,15 @@ function useCoarsePointer(): boolean {
 
 export function StationUsageAreaChart({
   data,
+  secondaryData = null,
+  primarySeriesLabel = 'Entries & exits',
+  secondarySeriesLabel = 'Interchanges',
   stationName = 'Station',
   title,
   className,
 }: StationUsageAreaChartProps) {
   const gradientId = useId().replace(/:/g, '')
+  const secondaryGradientId = `${gradientId}-secondary`
   const plotRef = useRef<HTMLDivElement>(null)
   const chartModeTouchedRef = useRef(false)
   const coarsePointer = useCoarsePointer()
@@ -209,21 +254,45 @@ export function StationUsageAreaChart({
   const [exportCopyrightAgreed, setExportCopyrightAgreed] = useState(false)
   const [chartEpoch, setChartEpoch] = useState(0)
 
+  const isDualSeries = (secondaryData?.length ?? 0) > 0
   const expanded = density === 'expanded'
-  const denseYears = !expanded && data.length > 14
+  const yearCount = isDualSeries
+    ? new Set([
+        ...data.map((point) => point.year),
+        ...(secondaryData ?? []).map((point) => point.year),
+      ]).size
+    : data.length
+  const denseYears = !expanded && yearCount > 14
   const tooltipTrigger = coarsePointer ? 'click' : 'hover'
   const dotRadius = coarsePointer || expanded ? 6.5 : 4.5
   const activeDotRadius = coarsePointer || expanded ? 8.5 : 6.5
-  const firstYear = data[0]?.year ?? ''
-  const lastYear = data[data.length - 1]?.year ?? ''
+  const firstYear = isDualSeries
+    ? [...data, ...(secondaryData ?? [])].map((point) => point.year).sort()[0] ?? ''
+    : data[0]?.year ?? ''
+  const lastYear = isDualSeries
+    ? [...data, ...(secondaryData ?? [])].map((point) => point.year).sort().at(-1) ?? ''
+    : data[data.length - 1]?.year ?? ''
   const brandingTitle = formatStationUsageChartTitle(stationName, firstYear, lastYear)
   const brandingAttribution = formatStationUsageChartAttribution()
   const brandingCopyright = formatRailStatisticsCopyright()
-  const chartSeries = buildChartSeries(data, mode)
+  const chartSeries = isDualSeries
+    ? buildDualChartSeries(data, secondaryData ?? [], mode)
+    : buildChartSeries(data, mode)
   const overlayPoint = overlayYear
-    ? chartSeries.find((point) => point.year === overlayYear) ?? null
+    ? isDualSeries
+      ? (() => {
+          const point = (chartSeries as DualChartSeriesPoint[]).find(
+            (entry) => entry.year === overlayYear
+          )
+          if (!point) return null
+          const value = dualOverlayValue(point)
+          return value == null ? null : { year: point.year, value }
+        })()
+      : (chartSeries as ChartSeriesPoint[]).find((point) => point.year === overlayYear) ?? null
     : null
-  const overlayYearOptions = data.map((point) => point.year)
+  const overlayYearOptions = isDualSeries
+    ? (chartSeries as DualChartSeriesPoint[]).map((point) => point.year)
+    : data.map((point) => point.year)
   const isYoy = isYoyMode(mode)
 
   useEffect(() => {
@@ -278,7 +347,7 @@ export function StationUsageAreaChart({
     }
   }, [exportOpen])
 
-  if (data.length < MIN_POINTS) return null
+  if (data.length < MIN_POINTS && (secondaryData?.length ?? 0) < MIN_POINTS) return null
 
   const chartMargin = {
     top: expanded || overlayPoint ? 56 : 12,
@@ -288,16 +357,25 @@ export function StationUsageAreaChart({
   }
 
   const syncTooltip = ({ active, payload, label, coordinate }: TooltipContentProps) => {
-    const value = payload?.[0]?.value
+    const primaryRaw = payload?.find((entry) => entry.dataKey === 'primary')?.value
+    const secondaryRaw = payload?.find((entry) => entry.dataKey === 'secondary')?.value
+    const singleRaw =
+      payload?.find((entry) => entry.dataKey === 'value')?.value ?? payload?.[0]?.value
+    const primaryValue = typeof primaryRaw === 'number' ? primaryRaw : null
+    const secondaryValue = typeof secondaryRaw === 'number' ? secondaryRaw : null
+    const singleValue = typeof singleRaw === 'number' ? singleRaw : null
+    const value = isDualSeries ? (primaryValue ?? secondaryValue) : singleValue
     const next: ActiveTooltip | null =
       active &&
-      typeof value === 'number' &&
+      value != null &&
       coordinate != null &&
       typeof coordinate.x === 'number' &&
       typeof coordinate.y === 'number'
         ? {
             year: String(label ?? ''),
             value,
+            primaryValue: isDualSeries ? primaryValue : null,
+            secondaryValue: isDualSeries ? secondaryValue : null,
             x: coordinate.x,
             y: coordinate.y,
           }
@@ -311,7 +389,9 @@ export function StationUsageAreaChart({
           prev.x === next.x &&
           prev.y === next.y &&
           prev.year === next.year &&
-          prev.value === next.value
+          prev.value === next.value &&
+          prev.primaryValue === next.primaryValue &&
+          prev.secondaryValue === next.secondaryValue
         ) {
           return prev
         }
@@ -475,6 +555,18 @@ export function StationUsageAreaChart({
     strokeWidth: 2.5,
     fill: CHART_DOT_FILL,
   }
+  const secondaryDots = {
+    r: dotRadius,
+    fill: CHART_DOT_FILL,
+    stroke: CHART_SERIES_SECONDARY,
+    strokeWidth: 2,
+  }
+  const secondaryActiveDot = {
+    r: activeDotRadius,
+    stroke: CHART_SERIES_SECONDARY,
+    strokeWidth: 2.5,
+    fill: CHART_DOT_FILL,
+  }
 
   const yearOverlay =
     overlayPoint != null ? (
@@ -537,13 +629,119 @@ export function StationUsageAreaChart({
         <stop offset="55%" stopColor={CHART_LINE} stopOpacity={0.18} />
         <stop offset="100%" stopColor={CHART_LINE} stopOpacity={0.04} />
       </linearGradient>
+      {isDualSeries ? (
+        <linearGradient id={secondaryGradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={CHART_SERIES_SECONDARY} stopOpacity={0.35} />
+          <stop offset="55%" stopColor={CHART_SERIES_SECONDARY} stopOpacity={0.14} />
+          <stop offset="100%" stopColor={CHART_SERIES_SECONDARY} stopOpacity={0.03} />
+        </linearGradient>
+      ) : null}
     </defs>
   )
 
+  const dualBarMaxSize = expanded || coarsePointer ? 28 : 20
+  const singleBarMaxSize = expanded || coarsePointer ? 40 : 28
+  const combinedBarMaxSize = expanded || coarsePointer ? 36 : 24
+
   let chart: React.ReactElement
-  if (mode === 'bars' || isYoy) {
+  if (isDualSeries) {
+    const dualData = chartSeries as DualChartSeriesPoint[]
+    if (mode === 'bars' || isYoy) {
+      chart = (
+        <BarChart data={dualData} margin={chartMargin} {...chartInteractionProps}>
+          {grid}
+          {xAxis}
+          {yAxis}
+          {tooltip}
+          {yearOverlay}
+          <Bar
+            dataKey="primary"
+            name={primarySeriesLabel}
+            fill={CHART_BAR_FILL}
+            radius={[3, 3, 0, 0]}
+            maxBarSize={dualBarMaxSize}
+            isAnimationActive={false}
+          />
+          <Bar
+            dataKey="secondary"
+            name={secondarySeriesLabel}
+            fill={CHART_SERIES_SECONDARY_BAR}
+            radius={[3, 3, 0, 0]}
+            maxBarSize={dualBarMaxSize}
+            isAnimationActive={false}
+          />
+          {isYoy ? <ReferenceLine y={0} stroke={CHART_BASELINE} strokeWidth={1} /> : null}
+        </BarChart>
+      )
+    } else if (mode === 'combined') {
+      chart = (
+        <ComposedChart data={dualData} margin={chartMargin} {...chartInteractionProps}>
+          {grid}
+          {xAxis}
+          {yAxis}
+          {tooltip}
+          {yearOverlay}
+          <Bar
+            dataKey="primary"
+            name={primarySeriesLabel}
+            fill={CHART_BAR_FILL}
+            radius={[3, 3, 0, 0]}
+            maxBarSize={combinedBarMaxSize}
+            isAnimationActive={false}
+          />
+          <RechartsLine
+            type="monotone"
+            dataKey="secondary"
+            name={secondarySeriesLabel}
+            stroke={CHART_SERIES_SECONDARY}
+            strokeWidth={lineStrokeWidth}
+            dot={secondaryDots}
+            activeDot={secondaryActiveDot}
+            connectNulls
+            isAnimationActive={false}
+          />
+        </ComposedChart>
+      )
+    } else {
+      chart = (
+        <AreaChart data={dualData} margin={chartMargin} {...chartInteractionProps}>
+          {areaGradient}
+          {grid}
+          {xAxis}
+          {yAxis}
+          {tooltip}
+          {yearOverlay}
+          <Area
+            type="monotone"
+            dataKey="primary"
+            name={primarySeriesLabel}
+            stroke={CHART_LINE}
+            strokeWidth={lineStrokeWidth}
+            fill={`url(#${gradientId})`}
+            dot={sharedDots}
+            activeDot={sharedActiveDot}
+            connectNulls
+            isAnimationActive={false}
+          />
+          <Area
+            type="monotone"
+            dataKey="secondary"
+            name={secondarySeriesLabel}
+            stroke={CHART_SERIES_SECONDARY}
+            strokeWidth={lineStrokeWidth}
+            fill={`url(#${secondaryGradientId})`}
+            dot={secondaryDots}
+            activeDot={secondaryActiveDot}
+            connectNulls
+            isAnimationActive={false}
+          />
+        </AreaChart>
+      )
+    }
+  } else if (mode === 'bars' || isYoy) {
+    const singleSeries = chartSeries as ChartSeriesPoint[]
     chart = (
-      <BarChart data={chartSeries} margin={chartMargin} {...chartInteractionProps}>
+      <BarChart data={singleSeries} margin={chartMargin} {...chartInteractionProps}>
         {grid}
         {xAxis}
         {yAxis}
@@ -553,15 +751,16 @@ export function StationUsageAreaChart({
           dataKey="value"
           fill={CHART_BAR_FILL}
           radius={[3, 3, 0, 0]}
-          maxBarSize={expanded || coarsePointer ? 40 : 28}
+          maxBarSize={singleBarMaxSize}
           isAnimationActive={false}
         />
         {isYoy ? <ReferenceLine y={0} stroke={CHART_BASELINE} strokeWidth={1} /> : null}
       </BarChart>
     )
   } else if (mode === 'combined') {
+    const singleSeries = chartSeries as ChartSeriesPoint[]
     chart = (
-      <ComposedChart data={chartSeries} margin={chartMargin} {...chartInteractionProps}>
+      <ComposedChart data={singleSeries} margin={chartMargin} {...chartInteractionProps}>
         {grid}
         {xAxis}
         {yAxis}
@@ -571,7 +770,7 @@ export function StationUsageAreaChart({
           dataKey="value"
           fill={CHART_BAR_FILL}
           radius={[3, 3, 0, 0]}
-          maxBarSize={expanded || coarsePointer ? 36 : 24}
+          maxBarSize={combinedBarMaxSize}
           isAnimationActive={false}
         />
         <RechartsLine
@@ -586,8 +785,9 @@ export function StationUsageAreaChart({
       </ComposedChart>
     )
   } else {
+    const singleSeries = chartSeries as ChartSeriesPoint[]
     chart = (
-      <AreaChart data={chartSeries} margin={chartMargin} {...chartInteractionProps}>
+      <AreaChart data={singleSeries} margin={chartMargin} {...chartInteractionProps}>
         {areaGradient}
         {grid}
         {xAxis}
@@ -609,7 +809,7 @@ export function StationUsageAreaChart({
   }
 
   const plotWidth = expanded
-    ? Math.max(data.length * SCROLL_YEAR_WIDTH + Y_AXIS_WIDTH + 40, 480)
+    ? Math.max(yearCount * SCROLL_YEAR_WIDTH + Y_AXIS_WIDTH + 40, 480)
     : undefined
 
   return (
@@ -664,14 +864,72 @@ export function StationUsageAreaChart({
                 }}
               >
                 <div className="station-usage-area-chart__tooltip-year">{pinnedTooltip.year}</div>
-                <div className="station-usage-area-chart__tooltip-value">
-                  {formatChartValue(pinnedTooltip.value, mode)}
-                </div>
+                {isDualSeries &&
+                pinnedTooltip.primaryValue != null &&
+                pinnedTooltip.secondaryValue != null ? (
+                  <div className="station-usage-area-chart__tooltip-series">
+                    <div className="station-usage-area-chart__tooltip-row">
+                      <span
+                        className="station-usage-area-chart__legend-swatch"
+                        style={{ backgroundColor: CHART_LINE }}
+                        aria-hidden
+                      />
+                      <span className="station-usage-area-chart__tooltip-row-label">
+                        {primarySeriesLabel}
+                      </span>
+                      <span className="station-usage-area-chart__tooltip-value">
+                        {formatChartValue(pinnedTooltip.primaryValue, mode)}
+                      </span>
+                    </div>
+                    <div className="station-usage-area-chart__tooltip-row">
+                      <span
+                        className="station-usage-area-chart__legend-swatch"
+                        style={{ backgroundColor: CHART_SERIES_SECONDARY }}
+                        aria-hidden
+                      />
+                      <span className="station-usage-area-chart__tooltip-row-label">
+                        {secondarySeriesLabel}
+                      </span>
+                      <span className="station-usage-area-chart__tooltip-value">
+                        {formatChartValue(pinnedTooltip.secondaryValue, mode)}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="station-usage-area-chart__tooltip-value">
+                    {formatChartValue(
+                      pinnedTooltip.primaryValue ??
+                        pinnedTooltip.secondaryValue ??
+                        pinnedTooltip.value,
+                      mode
+                    )}
+                  </div>
+                )}
               </div>
             ) : null}
           </div>
         </div>
       </div>
+      {isDualSeries ? (
+        <div className="station-usage-area-chart__legend" aria-label="Series legend">
+          <span className="station-usage-area-chart__legend-item">
+            <span
+              className="station-usage-area-chart__legend-swatch"
+              style={{ backgroundColor: CHART_LINE }}
+              aria-hidden
+            />
+            {primarySeriesLabel}
+          </span>
+          <span className="station-usage-area-chart__legend-item">
+            <span
+              className="station-usage-area-chart__legend-swatch"
+              style={{ backgroundColor: CHART_SERIES_SECONDARY }}
+              aria-hidden
+            />
+            {secondarySeriesLabel}
+          </span>
+        </div>
+      ) : null}
       <div className="station-usage-area-chart__footer">
         <div
           className="network-station-tab-group station-usage-area-chart__density-tabs"

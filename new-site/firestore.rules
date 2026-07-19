@@ -126,6 +126,18 @@ service cloud.firestore {
       allow read, create, update, delete: if isSignedIn();
     }
 
+    // ORR Table 1415 station usage time series (Admin SDK writes only).
+    match /GBNR-PASS-USAGE-DATA/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ORR ODM top-25 origin→destination flows by NLC (Admin SDK writes only).
+    match /GBNR-ODM-FLOWS/{nlc} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Every other collection/subcollection: public read; no client writes unless you add a match above.
     match /{document=**} {
       allow read: if true;

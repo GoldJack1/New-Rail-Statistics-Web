@@ -1,0 +1,101 @@
+.station-odm-flows-meta {
+  margin: 0 0 var(--space-lg, 1rem);
+  font-size: var(--text-sm, 0.875rem);
+  line-height: 1.45;
+  color: var(--text-secondary, #666);
+}
+
+.station-odm-flows-table-panel {
+  margin: 0;
+}
+
+/* Shared fixed layout so top/bottom tables stay column-aligned */
+.station-odm-flows-table.stations-table {
+  table-layout: fixed;
+  width: 100%;
+  min-width: 100%;
+}
+
+.station-odm-flows-table__col-rank {
+  width: 4.25rem;
+}
+
+.station-odm-flows-table__col-dest {
+  width: auto;
+}
+
+.station-odm-flows-table__col-journeys {
+  width: 9rem;
+}
+
+.station-odm-flows-table__header {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--space-sm) var(--space-md);
+}
+
+.station-odm-flows-table__row {
+  cursor: default;
+}
+
+/* Beat `.stations-table th/td { text-align: left }` */
+.station-odm-flows-table.stations-table th.station-odm-flows-table__rank-col,
+.station-odm-flows-table.stations-table td.station-odm-flows-table__rank-col {
+  width: 4.25rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.station-odm-flows-table.stations-table th.station-odm-flows-table__rank-col {
+  padding: 0;
+}
+
+.station-odm-flows-table.stations-table td.station-odm-flows-table__rank-col {
+  padding-inline: var(--space-sm, 0.5rem) var(--space-md, 0.75rem);
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 600;
+}
+
+.station-odm-flows-table.stations-table
+  th.station-odm-flows-table__rank-col
+  .station-odm-flows-table__header {
+  padding-inline: var(--space-sm, 0.5rem) var(--space-md, 0.75rem);
+  text-align: right;
+}
+
+.station-odm-flows-table.stations-table th.station-odm-flows-table__journeys-col,
+.station-odm-flows-table.stations-table td.station-odm-flows-table__journeys-col {
+  width: 9rem;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.station-odm-flows-table.stations-table th.station-odm-flows-table__journeys-col {
+  padding: 0;
+}
+
+.station-odm-flows-table.stations-table
+  th.station-odm-flows-table__journeys-col
+  .station-odm-flows-table__header {
+  text-align: left;
+}
+
+.station-odm-flows-table__dest {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem;
+  min-width: 0;
+  font-weight: inherit;
+}
+
+.station-odm-flows-table__crs {
+  flex: 0 0 auto;
+  color: var(--text-secondary, #888);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

@@ -83,8 +83,14 @@ function StationDetailsPage() {
   const [activeTab, setActiveTab] = useState<StationDetailsTab>('details')
   const [maxTabContentHeight, setMaxTabContentHeight] = useState(0)
   const [sourceCompareEnabled, setSourceCompareEnabled] = useState(false)
+  /** GBNR: null while ORR usage lookup is pending; false when no Table 1415 data. */
+  const [gbnrUsageAvailable, setGbnrUsageAvailable] = useState<boolean | null>(null)
   const visibleBodyRef = useRef<HTMLDivElement | null>(null)
   const tabMeasureRefs = useRef<Partial<Record<StationDetailsTab, HTMLDivElement | null>>>({})
+
+  useEffect(() => {
+    setGbnrUsageAvailable(null)
+  }, [station?.id])
 
   useEffect(() => {
     const sync = () => setSourceCompareEnabled(readKnowledgebaseSourceCompareEnabled())
@@ -192,7 +198,10 @@ function StationDetailsPage() {
       })
     }
     tabs.push({ id: 'location', label: 'Location', subheaders: subheadersFor('location') })
-    if (fieldSchema.showUsageTab) {
+    const showUsageNavTab =
+      fieldSchema.showUsageTab &&
+      (!fieldSchema.showKnowledgebaseTab || gbnrUsageAvailable === true)
+    if (showUsageNavTab) {
       tabs.push({ id: 'usage', label: 'Station Usage', subheaders: subheadersFor('usage') })
     }
     if (fieldSchema.showStepFreeTab) {
@@ -239,6 +248,7 @@ function StationDetailsPage() {
     fieldSchema,
     knowledgebase,
     canEdit,
+    gbnrUsageAvailable,
   ])
 
   const activeKnowledgebaseSection = useMemo(() => {
@@ -315,6 +325,13 @@ function StationDetailsPage() {
     if (activeTab === 'additional' && !showAdditionalTab) setActiveTab('details')
     if (activeTab === 'service' && !fieldSchema.showServiceTab) setActiveTab('details')
     if (activeTab === 'usage' && !fieldSchema.showUsageTab) setActiveTab('details')
+    if (
+      activeTab === 'usage' &&
+      fieldSchema.showKnowledgebaseTab &&
+      gbnrUsageAvailable === false
+    ) {
+      setActiveTab('details')
+    }
     if (activeTab === 'stepFree' && !fieldSchema.showStepFreeTab) setActiveTab('details')
     if (activeTab === 'facilities' && !fieldSchema.showFacilitiesTab) setActiveTab('details')
     if (isKnowledgebaseTabId(activeTab) && !fieldSchema.showKnowledgebaseTab) setActiveTab('details')
@@ -345,6 +362,7 @@ function StationDetailsPage() {
     fieldSchema.showAdminTab,
     knowledgebase.status,
     activeKnowledgebaseSection,
+    gbnrUsageAvailable,
   ])
 
   useEffect(() => {
@@ -569,6 +587,7 @@ function StationDetailsPage() {
                     writeKnowledgebaseSourceCompareEnabled(enabled)
                     setSourceCompareEnabled(enabled)
                   }}
+                  onGbnrUsageAvailabilityChange={setGbnrUsageAvailable}
                 />
                 <div className="station-details-measure-layer" aria-hidden="true">
                   {measureTabs.map((tab) => (

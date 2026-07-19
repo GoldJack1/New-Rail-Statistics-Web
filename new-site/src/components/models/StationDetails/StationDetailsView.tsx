@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { ArrowSquareOut, MapPin } from '@phosphor-icons/react'
 import type { Station, SandboxStationDoc } from '../../../types'
 import { formatFareZoneDisplay } from '../../../utils/formatFareZone'
@@ -8,7 +8,9 @@ import { readStationUrl, resolveStationUrlHref } from '../../../utils/stationUrl
 import type { StationCollectionFieldSchema } from '../../../utils/stationCollectionFieldSchema'
 import { stationDetailsShowsAdditionalTab, STEP_FREE_SECTION_LABEL } from '../../../utils/stationCollectionFieldSchema'
 import { useStationFieldSchema } from '../../../hooks/useStationCollectionFieldSchema'
-import { BUTBaseButton as Button, BUTOperatorChip } from '../../buttons'
+import { useGbnrPassUsageData } from '../../../hooks/useGbnrPassUsageData'
+import { useGbnrOdmFlows } from '../../../hooks/useGbnrOdmFlows'
+import { BUTBaseButton as Button, BUTOperatorChip, BUTTabButton } from '../../buttons'
 import { TOGToggleVisited } from '../../buttons'
 import { StationDetailField } from './StationDetailField'
 import { StationSectionTitle } from './StationSectionTitle'
@@ -16,16 +18,22 @@ import { StationDetailsSubsection } from './StationDetailsSubsection'
 import { StationPendingChangesBanner } from './StationPendingChangesBanner'
 import StationKnowledgebaseAlertBanner from './StationKnowledgebaseAlertBanner'
 import { StationUsageAreaChart } from './StationUsageAreaChart'
+import { StationOdmFlowsSection } from './StationOdmFlowsSection'
 import type { StationFieldChange } from '../../../utils/stationFieldDiffs'
 import { LIGHT_RAIL_DOC_FIELDS, readLightRailDocString } from '../../../utils/lightRailStationFields'
 import { LightRailLinesServedChips } from './LightRailLinesServedChips'
 import {
   getStationDetailsSectionIcon,
 } from '../../../utils/stationDetailFieldIcons'
-import { getYearlyPassengerChartPoints } from '../../../utils/yearlyPassengers'
+import {
+  getYearlyPassengerChartPoints,
+  trimLeadingTrailingChartZeros,
+} from '../../../utils/yearlyPassengers'
+import { DEFAULT_NETWORK_COLLECTION_ID } from '../../../constants/stationCollections'
 import './StationPendingChangesBanner.css'
 import './StationUsageDataNotice.css'
 import './StationKnowledgebasePanel.css'
+import './StationUsageAreaChart.css'
 import dynamic from 'next/dynamic'
 
 function KnowledgebaseSourceHint({ label }: { label?: string | null }) {
@@ -38,6 +46,14 @@ const LOCATION_SOURCE_HINT =
   'This data was sourced and is currently being reviewed by Rail Statistics.'
 const USAGE_SOURCE_HINT =
   'Data on this page is sourced from the Office for Rail and Road (ORR)'
+
+type GbnrUsageMetric = 'entriesExits' | 'interchanges' | 'combined'
+
+const GBNR_USAGE_METRIC_OPTIONS: Array<{ id: GbnrUsageMetric; label: string }> = [
+  { id: 'entriesExits', label: 'Entries & exits' },
+  { id: 'interchanges', label: 'Interchanges' },
+  { id: 'combined', label: 'Combined' },
+]
 
 const StationResponsiveLocationMap = dynamic(() => import('./StationResponsiveLocationMap'), {
   ssr: false,
@@ -180,6 +196,11 @@ interface StationDetailsViewProps {
   /** Admin: highlight Firebase (green) vs Knowledgebase (red) sources. */
   sourceCompareEnabled?: boolean
   onSourceCompareChange?: (enabled: boolean) => void
+  /**
+   * GBNR: reports whether ORR Table 1415 usage data is available for this station.
+   * `null` while loading / waiting for codes; `false` when confirmed missing.
+   */
+  onGbnrUsageAvailabilityChange?: (available: boolean | null) => void
 }
 
 const StationDetailsView: React.FC<StationDetailsViewProps> = ({
@@ -204,8 +225,10 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
   knowledgebaseStationAlert = null,
   sourceCompareEnabled = false,
   onSourceCompareChange,
+  onGbnrUsageAvailabilityChange,
 }) => {
   const { fieldSchema } = useStationFieldSchema(station, fieldSchemaProp)
+  const [gbnrUsageMetric, setGbnrUsageMetric] = useState<GbnrUsageMetric>('entriesExits')
   const showAdditionalFields = stationDetailsShowsAdditionalTab(fieldSchema)
   const hasCoordinates = station.latitude !== 0 && station.longitude !== 0
   const googleMapsUrl = hasCoordinates ? `https://www.google.com/maps?q=${station.latitude},${station.longitude}` : null
@@ -232,12 +255,121 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
     (showAll || (typeof activeTab === 'string' && isKnowledgebaseTabId(activeTab)))
   const showAdmin = fieldSchema.showAdminTab && (showAll || activeTab === 'admin')
 
+  const isGbnrStation =
+    station.sourceCollectionId === DEFAULT_NETWORK_COLLECTION_ID ||
+    (!station.sourceCollectionId && fieldSchema.showKnowledgebaseTab)
+
   const yearlyPassengersSource =
     (additionalDoc?.yearlyPassengers as Record<string, number> | number | null) ??
     (station.yearlyPassengers as Record<string, number> | number | null)
   const yearlyPassengerEntries = getYearlyPassengerEntries(yearlyPassengersSource)
   const yearlyPassengerChartPoints = getYearlyPassengerChartPoints(yearlyPassengersSource)
   const hasLimitedPassengerData = yearlyPassengerEntries.length < 5
+
+  const resolvedPassUsageNlc = useMemo(() => {
+    const fromKb = knowledgebaseNlc?.trim()
+    if (fromKb) return fromKb
+    const fromDoc = additionalDoc?.nlc ?? (additionalDoc as Record<string, unknown> | null | undefined)?.NLC
+    if (fromDoc == null || fromDoc === '') return null
+    return String(fromDoc).trim() || null
+  }, [knowledgebaseNlc, additionalDoc])
+
+  const passUsageState = useGbnrPassUsageData(
+    station.crsCode,
+    resolvedPassUsageNlc,
+    isGbnrStation
+  )
+  const odmFlowsState = useGbnrOdmFlows(resolvedPassUsageNlc, isGbnrStation)
+
+  const orrEntriesExits = passUsageState.status === 'ready' ? passUsageState.doc.entriesExits : null
+  const orrInterchanges = passUsageState.status === 'ready' ? passUsageState.doc.interchanges : null
+  const orrEntryEntries = getYearlyPassengerEntries(orrEntriesExits)
+  const orrEntryChartPoints = getYearlyPassengerChartPoints(orrEntriesExits)
+  const orrInterchangeEntries = getYearlyPassengerEntries(orrInterchanges)
+  const orrInterchangeChartPoints = trimLeadingTrailingChartZeros(
+    getYearlyPassengerChartPoints(orrInterchanges)
+  )
+  const hasMeaningfulInterchanges = Object.values(orrInterchanges ?? {}).some(
+    (value) => typeof value === 'number' && Number.isFinite(value) && value > 0
+  )
+  const visibleGbnrUsageMetricOptions = hasMeaningfulInterchanges
+    ? GBNR_USAGE_METRIC_OPTIONS
+    : GBNR_USAGE_METRIC_OPTIONS.filter((option) => option.id === 'entriesExits')
+
+  useEffect(() => {
+    if (!hasMeaningfulInterchanges && gbnrUsageMetric !== 'entriesExits') {
+      setGbnrUsageMetric('entriesExits')
+    }
+  }, [hasMeaningfulInterchanges, gbnrUsageMetric])
+
+  const hasGbnrPassUsageData =
+    passUsageState.status === 'ready' &&
+    (orrEntryEntries.length > 0 || orrInterchangeEntries.length > 0)
+
+  useEffect(() => {
+    if (!onGbnrUsageAvailabilityChange) return
+    if (!isGbnrStation) {
+      onGbnrUsageAvailabilityChange(null)
+      return
+    }
+    if (
+      passUsageState.status === 'loading' ||
+      passUsageState.status === 'waiting_codes' ||
+      passUsageState.status === 'idle'
+    ) {
+      onGbnrUsageAvailabilityChange(null)
+      return
+    }
+    onGbnrUsageAvailabilityChange(hasGbnrPassUsageData)
+  }, [
+    isGbnrStation,
+    passUsageState.status,
+    hasGbnrPassUsageData,
+    onGbnrUsageAvailabilityChange,
+  ])
+
+  const orrUsageStationName =
+    passUsageState.status === 'ready'
+      ? passUsageState.doc.stationName || station.stationName
+      : station.stationName
+  const isCombinedUsageMetric = gbnrUsageMetric === 'combined'
+  const activeOrrEntries =
+    gbnrUsageMetric === 'interchanges' ? orrInterchangeEntries : orrEntryEntries
+  const activeOrrChartPoints =
+    gbnrUsageMetric === 'interchanges' ? orrInterchangeChartPoints : orrEntryChartPoints
+  const activeOrrChartName =
+    gbnrUsageMetric === 'interchanges'
+      ? `${orrUsageStationName} interchanges`
+      : orrUsageStationName
+  const showOrrUsageChart = isCombinedUsageMetric
+    ? orrEntryChartPoints.length >= 2 || orrInterchangeChartPoints.length >= 2
+    : activeOrrChartPoints.length >= 2
+  const hasLimitedOrrPassengerData = isCombinedUsageMetric
+    ? Math.max(orrEntryEntries.length, orrInterchangeEntries.length) < 5
+    : activeOrrEntries.length < 5
+  const activeOrrEmptyHint =
+    gbnrUsageMetric === 'interchanges'
+      ? 'No interchange figures for this station.'
+      : gbnrUsageMetric === 'combined'
+        ? 'No usage figures for this station.'
+        : 'No entries and exits figures for this station.'
+  const combinedOrrDataYears = (() => {
+    if (!isCombinedUsageMetric) return [] as Array<{
+      year: string
+      entriesExits?: string
+      interchanges?: string
+    }>
+    const byYear = new Map<string, { entriesExits?: string; interchanges?: string }>()
+    for (const entry of orrEntryEntries) {
+      byYear.set(entry.year, { ...byYear.get(entry.year), entriesExits: entry.value })
+    }
+    for (const entry of orrInterchangeEntries) {
+      byYear.set(entry.year, { ...byYear.get(entry.year), interchanges: entry.value })
+    }
+    return [...byYear.entries()]
+      .sort((a, b) => parseInt(b[0], 10) - parseInt(a[0], 10))
+      .map(([year, values]) => ({ year, ...values }))
+  })()
 
   const knowledgebaseOverviewSection =
     knowledgebaseSections.find((section) => section.key === KNOWLEDGEBASE_OVERVIEW_KEY) ?? null
@@ -963,7 +1095,114 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
         </>
       )}
 
-      {showUsage && (station.yearlyPassengers || additionalDoc?.yearlyPassengers) && (
+      {showUsage && isGbnrStation && hasGbnrPassUsageData && (
+        <div className="modal-section">
+          <KnowledgebaseSourceHint label={USAGE_SOURCE_HINT} />
+          <StationSectionTitle title="Station Usage" icon={getStationDetailsSectionIcon('usage')} pageHeading />
+          <>
+              {visibleGbnrUsageMetricOptions.length > 1 ? (
+                <div
+                  className="network-station-tab-group station-usage-metric-tabs"
+                  role="tablist"
+                  aria-label="Usage metric"
+                >
+                  {visibleGbnrUsageMetricOptions.map((option) => (
+                    <BUTTabButton
+                      key={option.id}
+                      type="button"
+                      width="hug"
+                      role="tab"
+                      pressed={gbnrUsageMetric === option.id}
+                      ariaSelected={gbnrUsageMetric === option.id}
+                      onClick={() => setGbnrUsageMetric(option.id)}
+                    >
+                      {option.label}
+                    </BUTTabButton>
+                  ))}
+                </div>
+              ) : null}
+              {showOrrUsageChart ? (
+                <StationDetailsSubsection title="Graph view">
+                  <StationUsageAreaChart
+                    data={
+                      isCombinedUsageMetric || gbnrUsageMetric === 'entriesExits'
+                        ? orrEntryChartPoints
+                        : orrInterchangeChartPoints
+                    }
+                    secondaryData={
+                      isCombinedUsageMetric ? orrInterchangeChartPoints : null
+                    }
+                    primarySeriesLabel="Entries & exits"
+                    secondarySeriesLabel="Interchanges"
+                    stationName={
+                      isCombinedUsageMetric ? orrUsageStationName : activeOrrChartName
+                    }
+                  />
+                </StationDetailsSubsection>
+              ) : null}
+              <StationDetailsSubsection title="Data view">
+                <div className="modal-details-grid modal-facilities-grid">
+                  {isCombinedUsageMetric ? (
+                    combinedOrrDataYears.length > 0 ? (
+                      combinedOrrDataYears.map((row) => (
+                        <div
+                          key={`orr-combined-${row.year}`}
+                          className="modal-detail-item station-usage-combined-year"
+                        >
+                          <div className="modal-detail-label-row">
+                            <span className="modal-detail-label">{row.year}</span>
+                          </div>
+                          <span className="modal-detail-value">
+                            {row.entriesExits ?? BLANK_DISPLAY}
+                          </span>
+                          {row.interchanges != null ? (
+                            <span className="station-usage-combined-year__interchanges">
+                              {row.interchanges}
+                            </span>
+                          ) : null}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="edit-hint">{activeOrrEmptyHint}</p>
+                    )
+                  ) : activeOrrEntries.length > 0 ? (
+                    activeOrrEntries.map((entry) => (
+                      <StationDetailField
+                        key={`orr-${gbnrUsageMetric}-${entry.year}`}
+                        label={entry.year}
+                        value={entry.value}
+                      />
+                    ))
+                  ) : (
+                    <p className="edit-hint">{activeOrrEmptyHint}</p>
+                  )}
+                </div>
+              </StationDetailsSubsection>
+              <p className="station-usage-data-notice">
+                {hasLimitedOrrPassengerData ? (
+                  <>* This is a new station, so usage data for it will be limited.</>
+                ) : (
+                  <>
+                    * New data added once a year, usually in November.
+                    <br />
+                    ** Please note we show usage data by the year it was released, as the data period ranges
+                    from April to March (for example, April 2024 to March 2025).
+                    <br />
+                    *** Please note that no data was released for 2003–2004, so those years are not shown.
+                  </>
+                )}
+              </p>
+          </>
+        </div>
+      )}
+
+      {showUsage && isGbnrStation && odmFlowsState.status === 'ready' && (
+        <StationOdmFlowsSection state={odmFlowsState} />
+      )}
+
+      {showUsage &&
+        !isGbnrStation &&
+        (station.yearlyPassengers || additionalDoc?.yearlyPassengers) && (
         <div className="modal-section">
           <KnowledgebaseSourceHint label={USAGE_SOURCE_HINT} />
           <StationSectionTitle title="Station Usage" icon={getStationDetailsSectionIcon('usage')} pageHeading />

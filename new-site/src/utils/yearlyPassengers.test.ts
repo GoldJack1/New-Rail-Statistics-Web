@@ -6,6 +6,7 @@ import {
   getLatestYearlyPassengerDisplay,
   getYearlyPassengerChartPoints,
   parseYearlyPassengerCount,
+  trimLeadingTrailingChartZeros,
 } from './yearlyPassengers'
 
 describe('yearlyPassengers', () => {
@@ -61,6 +62,31 @@ describe('yearlyPassengers', () => {
       { year: '2022', value: 1000 },
       { year: '2023', value: 2500 },
     ])
+  })
+
+  it('trims leading/trailing chart zeros but keeps the runway zero', () => {
+    expect(
+      trimLeadingTrailingChartZeros([
+        { year: '2020', value: 0 },
+        { year: '2021', value: 0 },
+        { year: '2022', value: 0 },
+        { year: '2023', value: 0 },
+        { year: '2024', value: 2_000_000 },
+        { year: '2025', value: 2_100_000 },
+      ])
+    ).toEqual([
+      { year: '2023', value: 0 },
+      { year: '2024', value: 2_000_000 },
+      { year: '2025', value: 2_100_000 },
+    ])
+
+    expect(
+      trimLeadingTrailingChartZeros([
+        { year: '2020', value: 0 },
+        { year: '2021', value: 0 },
+        { year: '2022', value: 0 },
+      ])
+    ).toEqual([])
   })
 
   it('formats compact passenger axis ticks', () => {
