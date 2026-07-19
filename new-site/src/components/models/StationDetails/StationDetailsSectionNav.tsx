@@ -2,21 +2,23 @@
 
 import React, { useEffect, useId, useState } from 'react'
 import type { Icon } from '@phosphor-icons/react'
-import { ChevronRightIcon } from '@/components/icons'
 import {
   MobileHeaderMenu,
   MobileHeaderPanel,
   MobileHeaderToggle,
 } from '@/components/misc/Header/MobileHeader'
+import { SidebarPanel, SidebarPanelNav, SidebarPanelNavItem } from '@/components/misc/SidebarPanel'
 import type { StationDetailsTab } from '@/utils/stationCollectionFieldSchema'
 import { getStationDetailsSectionIcon } from '@/utils/stationDetailFieldIcons'
-import '@/components/misc/SidebarDropdownSection/SidebarDropdownSection.css'
+import { stationDetailsSubsectionId } from '@/utils/stationDetailsTabSubheaders'
 
 export type StationDetailsSectionTab = {
   id: StationDetailsTab
   label: string
   knowledgebase?: boolean
   sectionKey?: string
+  /** Content subsection titles shown under this section in the left panel. */
+  subheaders?: string[]
 }
 
 type StationDetailsSectionNavProps = {
@@ -48,21 +50,39 @@ function DesktopSectionTabs({
   markFirebaseTabs,
   showIcons,
 }: StationDetailsSectionNavProps) {
+  const scrollToSubheader = (title: string) => {
+    const id = stationDetailsSubsectionId(title)
+    const run = () => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+    // Allow tab content to mount before scrolling.
+    requestAnimationFrame(() => {
+      window.setTimeout(run, 50)
+    })
+  }
+
   return (
     <aside className="station-details-sidebar">
-      <div className="station-details-sidebar-panel">
-        <nav className="station-details-tabs" aria-label={ariaLabel}>
+      <SidebarPanel className="station-details-sidebar-panel">
+        <SidebarPanelNav className="station-details-tabs" aria-label={ariaLabel}>
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id
             const TabIcon = tabIconFor(tab, showIcons ?? true)
             return (
-              <div
+              <SidebarPanelNavItem
                 key={tab.id}
+                label={tab.label}
+                selected={isActive}
+                onSelect={() => onSelect(tab.id)}
+                onSubheaderSelect={(title) => {
+                  onSelect(tab.id)
+                  scrollToSubheader(title)
+                }}
+                icon={TabIcon}
+                subheaders={tab.subheaders}
                 className={[
-                  'sidebar-dropdown',
                   'station-details-tab',
                   'rs-button--color-primary',
-                  isActive ? 'station-details-tab--active' : 'station-details-tab--idle',
                   tab.knowledgebase ? 'station-details-tab--knowledgebase' : '',
                   markFirebaseTabs && !tab.knowledgebase
                     ? 'station-details-tab--firebase'
@@ -70,33 +90,11 @@ function DesktopSectionTabs({
                 ]
                   .filter(Boolean)
                   .join(' ')}
-              >
-                <div className="sidebar-dropdown__header-row">
-                  <button
-                    type="button"
-                    className="sidebar-dropdown__header"
-                    aria-current={isActive ? 'page' : undefined}
-                    onClick={() => onSelect(tab.id)}
-                  >
-                    <span className="sidebar-dropdown__title">
-                      {TabIcon ? (
-                        <TabIcon
-                          className="station-details-tab__icon"
-                          size={16}
-                          weight="bold"
-                          aria-hidden
-                        />
-                      ) : null}
-                      {tab.label}
-                    </span>
-                    <ChevronRightIcon className="sidebar-dropdown__chevron" aria-hidden />
-                  </button>
-                </div>
-              </div>
+              />
             )
           })}
-        </nav>
-      </div>
+        </SidebarPanelNav>
+      </SidebarPanel>
     </aside>
   )
 }

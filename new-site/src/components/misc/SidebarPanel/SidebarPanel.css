@@ -1,0 +1,346 @@
+/*
+ * Shared left-panel shell + row chrome.
+ * Used stations-like (collapsibles), details-like (nav tabs), or combined (both).
+ */
+
+.sidebar-panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-width: 0;
+    width: 100%;
+    overflow: visible;
+    box-sizing: border-box;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 0;
+}
+
+/* Continuous safe-area fill to the viewport edge (details-style). */
+.sidebar-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -100vw;
+    width: 100vw;
+    background-color: var(--bg-secondary);
+    pointer-events: none;
+}
+
+.sidebar-panel .sidebar-dropdown {
+    border: 0;
+    border-radius: 0;
+    background-color: var(--bg-secondary);
+    isolation: auto;
+    overflow: visible;
+}
+
+.sidebar-panel .sidebar-dropdown + .sidebar-dropdown {
+    border-top: 0;
+    margin-top: 0;
+    padding-top: 0;
+}
+
+.sidebar-panel .sidebar-dropdown__header-row {
+    height: auto;
+    min-height: 64px;
+    flex-shrink: 0;
+    background-color: var(--bg-secondary);
+}
+
+.sidebar-panel .sidebar-dropdown__header {
+    height: auto;
+    min-height: 64px;
+    width: 100%;
+    padding: var(--space-lg) var(--space-md);
+    box-sizing: border-box;
+    background-color: transparent;
+    color: var(--text-primary);
+}
+
+/* Details nav: title shares the row with a sibling chevron button. */
+.sidebar-panel-nav-item .sidebar-dropdown__header {
+    width: auto;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.sidebar-panel .sidebar-dropdown__chevron {
+    color: var(--text-primary);
+}
+
+.sidebar-panel .sidebar-dropdown__panel-host,
+.sidebar-panel .sidebar-dropdown__panel,
+.sidebar-panel .sidebar-dropdown__panel-inner {
+    background-color: var(--bg-secondary);
+}
+
+.sidebar-panel .sidebar-dropdown__header-row,
+.sidebar-panel .sidebar-dropdown__panel-host,
+.sidebar-panel .sidebar-dropdown__panel {
+    background-color: transparent;
+}
+
+.sidebar-panel .sidebar-dropdown__header-row {
+    background-color: var(--bg-secondary);
+}
+
+/* Nav list */
+.sidebar-panel-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Nav rows with children: chevron rotates when open (same as SidebarDropdownSection). */
+.sidebar-panel-nav-item:not(.sidebar-panel-nav-item--has-children) .sidebar-dropdown__chevron {
+    transform: none;
+}
+
+.sidebar-panel-nav-item--has-children.sidebar-dropdown--open .sidebar-dropdown__chevron {
+    transform: rotate(90deg);
+}
+
+.sidebar-panel-nav-item .sidebar-dropdown__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
+.sidebar-panel-nav-item__icon {
+    flex-shrink: 0;
+}
+
+.sidebar-panel-nav-item__chevron-btn {
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    margin: 0;
+    padding: var(--space-sm);
+    border: 0;
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.sidebar-panel-nav-item__chevron-btn:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
+/*
+ * Collapse clips overflow for height animation. Expand the clip box into the
+ * left inset/safe area so subsection hover washes can bleed the same way as
+ * section rows.
+ */
+.sidebar-panel-nav-item .collapse-panel {
+    margin-left: calc(-1 * var(--stations-content-inset, 0px) - 100vw);
+    width: calc(100% + var(--stations-content-inset, 0px) + 100vw);
+    box-sizing: border-box;
+}
+
+.sidebar-panel-nav-item .collapse-panel__item {
+    padding-left: calc(var(--stations-content-inset, 0px) + 100vw);
+    box-sizing: border-box;
+}
+
+.sidebar-panel-nav-item__children {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.sidebar-panel-nav-item__children::before {
+    content: '';
+    position: absolute;
+    z-index: 0;
+    top: 0;
+    bottom: 0;
+    left: calc(var(--space-sm) + 0.2rem);
+    width: 1px;
+    background-color: var(--border-color);
+    pointer-events: none;
+}
+
+.sidebar-panel-nav-item__children > li {
+    position: relative;
+    margin: 0;
+}
+
+.sidebar-panel-nav-item__child {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    width: 100%;
+    margin: 0;
+    padding: var(--space-sm) var(--space-md) var(--space-sm) var(--space-lg);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    font-family: inherit;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    letter-spacing: normal;
+    text-transform: none;
+    text-align: left;
+    color: var(--text-secondary);
+    line-height: 1.3;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.sidebar-panel-nav-item__child-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
+.sidebar-panel-nav-item__child-icon {
+    flex-shrink: 0;
+}
+
+.sidebar-panel-nav-item__child-chevron {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    color: currentColor;
+}
+
+.sidebar-panel-nav-item__child:hover,
+.sidebar-panel-nav-item__child:focus-visible {
+    color: var(--text-primary);
+    background-color: transparent;
+}
+
+.sidebar-panel-nav-item__child:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: -2px;
+}
+
+.sidebar-panel .sidebar-dropdown--selected .sidebar-panel-nav-item__child {
+    color: var(--text-secondary);
+}
+
+.sidebar-panel .sidebar-dropdown--selected .sidebar-panel-nav-item__child:hover,
+.sidebar-panel .sidebar-dropdown--selected .sidebar-panel-nav-item__child:focus-visible {
+    color: var(--text-primary);
+}
+
+/* Selected section = tertiary surface + left bleed for header and children. */
+.sidebar-panel .sidebar-dropdown--selected {
+    background-color: var(--bg-tertiary);
+}
+
+.sidebar-panel .sidebar-dropdown--selected::before {
+    content: '';
+    position: absolute;
+    z-index: 0;
+    top: 0;
+    bottom: 0;
+    left: calc(-1 * var(--stations-content-inset, 0px) - 100vw);
+    right: 0;
+    background-color: var(--bg-tertiary);
+    pointer-events: none;
+}
+
+.sidebar-panel .sidebar-dropdown--selected .sidebar-dropdown__header-row {
+    border-bottom: 0;
+    background-color: transparent;
+}
+
+.sidebar-panel .sidebar-dropdown--selected .sidebar-dropdown__header-row::after {
+    display: none;
+}
+
+.sidebar-panel .sidebar-dropdown--selected .sidebar-dropdown__header {
+    position: relative;
+    z-index: 1;
+    border-radius: 0;
+    background-color: transparent;
+    color: var(--text-primary);
+    box-shadow: none;
+}
+
+.sidebar-panel .sidebar-dropdown--selected .sidebar-panel-nav-item__chevron-btn {
+    color: var(--text-primary);
+}
+
+.sidebar-panel .sidebar-dropdown--selected .sidebar-dropdown__chevron {
+    color: currentColor;
+}
+
+/* Idle + selected hover washes (fine pointer only). */
+@media (hover: hover) and (pointer: fine) {
+    .sidebar-panel .sidebar-dropdown:not(.sidebar-dropdown--selected)
+        .sidebar-dropdown__header-row:has(.sidebar-dropdown__header:hover)::after,
+    .sidebar-panel .sidebar-dropdown:not(.sidebar-dropdown--selected)
+        .sidebar-dropdown__header-row:has(.sidebar-panel-nav-item__chevron-btn:hover)::after {
+        content: '';
+        position: absolute;
+        z-index: 0;
+        top: 0;
+        bottom: 0;
+        left: calc(-1 * var(--stations-content-inset, 0px) - 100vw);
+        right: 0;
+        background-color: var(--bg-quinary);
+        pointer-events: none;
+    }
+
+    .sidebar-panel .sidebar-dropdown--selected:has(.sidebar-dropdown__header:hover)::before,
+    .sidebar-panel .sidebar-dropdown--selected:has(.sidebar-panel-nav-item__chevron-btn:hover)::before {
+        background-color: var(--bg-quinary);
+    }
+
+    /* Subsection buttons — same left bleed as section rows */
+    .sidebar-panel-nav-item__child:hover::after,
+    .sidebar-panel-nav-item__child:focus-visible::after {
+        content: '';
+        position: absolute;
+        z-index: -1;
+        top: 0;
+        bottom: 0;
+        left: calc(-1 * var(--stations-content-inset, 0px) - 100vw);
+        right: 0;
+        background-color: var(--bg-quinary);
+        pointer-events: none;
+    }
+
+    .sidebar-panel
+        .sidebar-dropdown--selected
+        .sidebar-panel-nav-item__child:hover::after,
+    .sidebar-panel
+        .sidebar-dropdown--selected
+        .sidebar-panel-nav-item__child:focus-visible::after {
+        background-color: var(--bg-quinary);
+    }
+
+    .sidebar-panel .sidebar-dropdown__header,
+    .sidebar-panel .sidebar-dropdown__header-action,
+    .sidebar-panel .sidebar-panel-nav-item__chevron-btn {
+        position: relative;
+        z-index: 1;
+    }
+
+    .sidebar-panel .sidebar-dropdown__header:hover {
+        color: var(--text-primary);
+        background-color: transparent;
+        border-radius: 0;
+    }
+}

@@ -18,6 +18,7 @@ import {
 } from '@/components/buttons'
 import PageTopHeader from '@/components/misc/PageTopHeader/PageTopHeader'
 import SidebarDropdownSection from '@/components/misc/SidebarDropdownSection/SidebarDropdownSection'
+import { SidebarPanel } from '@/components/misc/SidebarPanel'
 import StationCard from '@/components/cards/StationCard/StationCard'
 import LightRailStopCard from '@/components/cards/LightRailStopCard/LightRailStopCard'
 import StationsCardGridSkeleton from '@/components/cards/StationsCardGridSkeleton/StationsCardGridSkeleton'
@@ -647,7 +648,7 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
           aria-busy={showMainSkeleton}
           aria-disabled={showMainSkeleton}
         >
-          <div className="stations-sidebar-panel">
+          <SidebarPanel className="stations-sidebar-panel">
           <SidebarDropdownSection
             title="Search"
             expanded={sidebarSections.search}
@@ -758,7 +759,7 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
               />
             </SidebarDropdownSection>
           )}
-          </div>
+          </SidebarPanel>
         </aside>
 
         {/* Main Content */}

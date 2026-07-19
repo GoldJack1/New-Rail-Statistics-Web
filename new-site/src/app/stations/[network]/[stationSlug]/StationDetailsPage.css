@@ -307,81 +307,11 @@
   gap: 0;
 }
 
-.station-details-tab.sidebar-dropdown {
-  border: 0;
-  border-radius: 0;
-  background-color: var(--bg-secondary);
-  overflow: visible;
-}
-
+/* Nav title + chevron share the row; don't force the title to full width. */
 .station-details-tab .sidebar-dropdown__header {
-  width: 100%;
-}
-
-.station-details-tab .sidebar-dropdown__chevron {
-  transform: none;
-}
-
-/* Selected section = tertiary surface, flush to the content on the right. */
-.station-details-tab--active {
-  background-color: var(--bg-tertiary);
-}
-
-.station-details-tab--active .sidebar-dropdown__header-row {
-  border-bottom: 0;
-  background-color: var(--bg-tertiary);
-}
-
-.station-details-tab--active .sidebar-dropdown__header-row::after {
-  content: '';
-  position: absolute;
-  z-index: 0;
-  top: 0;
-  bottom: 0;
-  /* Bleed through content inset + panel ::before safe area (matches stations list). */
-  left: calc(-1 * var(--stations-content-inset, 0px) - 100vw);
-  right: 0;
-  background-color: var(--bg-tertiary);
-  pointer-events: none;
-}
-
-.station-details-tab--active .sidebar-dropdown__header {
-  position: relative;
-  z-index: 1;
-  border-radius: 0;
-  background-color: transparent;
-  color: var(--text-primary);
-  box-shadow: none;
-}
-
-.station-details-tab--active .sidebar-dropdown__chevron {
-  transform: none;
-  color: inherit;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .station-details-tab--idle .sidebar-dropdown__header-row:has(.sidebar-dropdown__header:hover)::after {
-    content: '';
-    position: absolute;
-    z-index: 0;
-    top: 0;
-    bottom: 0;
-    left: calc(-1 * var(--stations-content-inset, 0px) - 100vw);
-    right: 0;
-    background-color: var(--bg-hover);
-    pointer-events: none;
-  }
-
-  .station-details-tab--idle .sidebar-dropdown__header {
-    position: relative;
-    z-index: 1;
-  }
-
-  .station-details-tab--idle .sidebar-dropdown__header:hover {
-    color: var(--text-primary);
-    background-color: transparent;
-    border-radius: 0;
-  }
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 @media (max-width: 768px) {
@@ -490,38 +420,19 @@
     min-height: 100%;
   }
 
+  /* Page-specific: flush into main; shared chrome on .sidebar-panel */
   .station-details-sidebar-panel {
-    position: relative;
-    overflow: visible;
     flex: 1 1 auto;
     min-height: 100%;
     height: 100%;
-    width: 100%;
-    /* Do not inherit stations-list `padding-top: 25px` if that CSS chunk is still loaded. */
     padding-top: 0 !important;
     padding-left: var(--stations-content-inset);
     padding-right: 0;
     padding-bottom: 0;
     margin-top: 0;
-    box-sizing: border-box;
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-color);
     border-top: 0;
     border-right: 0;
     border-bottom: 0;
-    border-radius: 0;
-  }
-
-  .station-details-sidebar-panel::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: -100vw;
-    width: 100vw;
-    background-color: var(--bg-secondary);
-    border-top: 0;
-    pointer-events: none;
   }
 
   .station-details-sidebar-panel .station-details-tabs,
@@ -538,33 +449,14 @@
   }
 
   /* Selected row must run flush to the panel’s right edge so it blends into main. */
-  .station-details-sidebar-panel .station-details-tab--active .sidebar-dropdown__header {
+  .station-details-sidebar-panel .station-details-tab.sidebar-dropdown--selected .sidebar-dropdown__header {
     margin-right: 0;
-    width: 100%;
   }
 
   .station-details-main {
     padding: var(--stations-content-inset) 0 var(--stations-content-inset) var(--stations-content-inset);
     box-sizing: border-box;
   }
-}
-
-.station-details-sidebar-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  min-width: 0;
-  width: 100%;
-  padding-top: 0;
-  margin-top: 0;
-}
-
-.station-details-sidebar-panel .station-details-tabs {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  padding: 0;
-  box-sizing: border-box;
 }
 
 .station-details-sidebar-panel .station-details-tab .sidebar-dropdown__header {
@@ -583,10 +475,6 @@
 .station-details-sidebar-panel .station-details-tab .sidebar-dropdown__header {
   min-height: 64px;
   height: auto;
-}
-
-.station-details-sidebar-panel .station-details-tab .sidebar-dropdown__chevron {
-  color: var(--text-primary);
 }
 
 @media (max-width: 1023px) {
@@ -789,7 +677,8 @@
   min-width: 0;
 }
 
-.station-details-tab__icon {
+.station-details-tab__icon,
+.sidebar-panel-nav-item__icon {
   flex: 0 0 auto;
   opacity: 0.85;
 }
@@ -815,6 +704,7 @@
 
 .station-details-subsection {
   margin-bottom: var(--space-xl, 1.5rem);
+  scroll-margin-top: calc(var(--app-header-offset, 4.5rem) + var(--space-md, 0.75rem));
 }
 
 .station-details-subsection:has(.station-usage-area-chart),

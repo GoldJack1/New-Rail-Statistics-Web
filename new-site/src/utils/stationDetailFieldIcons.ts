@@ -8,15 +8,19 @@ import {
   Car,
   ChartBar,
   Coffee,
+  Compass,
+  Crosshair,
   CurrencyGbp,
   Database,
   Ear,
   Envelope,
   Gear,
   Headset,
+  House,
   IdentificationCard,
   ListBullets,
   MapPin,
+  MapTrifold,
   Monitor,
   Package,
   Phone,
@@ -117,6 +121,33 @@ const SECTION_ICON_BY_TAB: Record<string, Icon> = {
   stepFree: Wheelchair,
   facilities: Buildings,
   admin: Gear,
+}
+
+/** Icons for left-nav subsection rows (titles from getStationDetailsTabSubheaders). */
+const SUBSECTION_ICON_BY_TITLE: Record<string, Icon> = {
+  place: MapPin,
+  access: Wheelchair,
+  address: House,
+  coordinates: Crosshair,
+  map: MapTrifold,
+  identifiers: IdentificationCard,
+  service: Train,
+  connections: ArrowsLeftRight,
+  modes: Train,
+  status: Compass,
+  operations: Gear,
+  'graph view': ChartBar,
+  'data view': Database,
+  availability: Buildings,
+  facilities: Toilet,
+  amenities: Star,
+  display: Monitor,
+}
+
+export function getStationDetailsSubsectionIcon(title: string): Icon | null {
+  const key = title.trim().toLowerCase()
+  if (SUBSECTION_ICON_BY_TITLE[key]) return SUBSECTION_ICON_BY_TITLE[key]
+  return getStationDetailFieldIcon(title)
 }
 
 const KB_SECTION_ICON_BY_KEY: Record<string, Icon> = {

@@ -28,6 +28,7 @@ import {
   stationDetailsShowsAdditionalTab,
   type StationDetailsTab,
 } from '@/utils/stationCollectionFieldSchema'
+import { getStationDetailsTabSubheaders } from '@/utils/stationDetailsTabSubheaders'
 import StationDetailsView from '@/components/models/StationDetails/StationDetailsView'
 import StationDetailsSectionNav from '@/components/models/StationDetails/StationDetailsSectionNav'
 import { BUTWideButton } from '@/components/buttons'
@@ -157,18 +158,57 @@ function StationDetailsPage() {
   )
 
   const sectionTabs = useMemo(() => {
+    const showKnowledgebaseAddress =
+      fieldSchema.showKnowledgebaseTab &&
+      (knowledgebase.status === 'loading' ||
+        knowledgebase.status === 'idle' ||
+        (knowledgebase.status === 'ready' && Boolean(knowledgebase.postalAddress)))
+
+    const subheadersFor = (id: StationDetailsTab) =>
+      getStationDetailsTabSubheaders(id, fieldSchema, {
+        showKnowledgebaseAddress,
+        showSourceCompare: fieldSchema.showKnowledgebaseTab && canEdit,
+      })
+
     const tabs: Array<{
       id: StationDetailsTab
       label: string
       knowledgebase?: boolean
       sectionKey?: string
-    }> = [{ id: 'details', label: 'Details' }]
-    if (showAdditionalTab) tabs.push({ id: 'additional', label: 'Additional details' })
-    if (fieldSchema.showServiceTab) tabs.push({ id: 'service', label: 'Service & Connections' })
-    tabs.push({ id: 'location', label: 'Location' })
-    if (fieldSchema.showUsageTab) tabs.push({ id: 'usage', label: 'Station Usage' })
-    if (fieldSchema.showStepFreeTab) tabs.push({ id: 'stepFree', label: fieldSchema.stepFreeTabLabel })
-    if (fieldSchema.showFacilitiesTab) tabs.push({ id: 'facilities', label: 'Facilities' })
+      subheaders?: string[]
+    }> = [{ id: 'details', label: 'Details', subheaders: subheadersFor('details') }]
+    if (showAdditionalTab) {
+      tabs.push({
+        id: 'additional',
+        label: 'Additional details',
+        subheaders: subheadersFor('additional'),
+      })
+    }
+    if (fieldSchema.showServiceTab) {
+      tabs.push({
+        id: 'service',
+        label: 'Service & Connections',
+        subheaders: subheadersFor('service'),
+      })
+    }
+    tabs.push({ id: 'location', label: 'Location', subheaders: subheadersFor('location') })
+    if (fieldSchema.showUsageTab) {
+      tabs.push({ id: 'usage', label: 'Station Usage', subheaders: subheadersFor('usage') })
+    }
+    if (fieldSchema.showStepFreeTab) {
+      tabs.push({
+        id: 'stepFree',
+        label: fieldSchema.stepFreeTabLabel,
+        subheaders: subheadersFor('stepFree'),
+      })
+    }
+    if (fieldSchema.showFacilitiesTab) {
+      tabs.push({
+        id: 'facilities',
+        label: 'Facilities',
+        subheaders: subheadersFor('facilities'),
+      })
+    }
     if (fieldSchema.showKnowledgebaseTab && knowledgebase.status === 'ready') {
       for (const section of knowledgebase.sections) {
         if (section.key === KNOWLEDGEBASE_OVERVIEW_KEY) continue
@@ -177,6 +217,7 @@ function StationDetailsPage() {
           label: section.label,
           knowledgebase: true,
           sectionKey: section.key,
+          subheaders: [],
         })
       }
     } else if (fieldSchema.showKnowledgebaseTab) {
@@ -186,20 +227,18 @@ function StationDetailsPage() {
         label: knowledgebase.status === 'error' ? 'KB (error)' : 'KB (loading…)',
         knowledgebase: true,
         sectionKey: '__loading__',
+        subheaders: [],
       })
     }
-    if (fieldSchema.showAdminTab) tabs.push({ id: 'admin', label: 'Admin' })
+    if (fieldSchema.showAdminTab) {
+      tabs.push({ id: 'admin', label: 'Admin', subheaders: subheadersFor('admin') })
+    }
     return tabs
   }, [
     showAdditionalTab,
-    fieldSchema.showServiceTab,
-    fieldSchema.showUsageTab,
-    fieldSchema.showStepFreeTab,
-    fieldSchema.stepFreeTabLabel,
-    fieldSchema.showFacilitiesTab,
-    fieldSchema.showKnowledgebaseTab,
-    fieldSchema.showAdminTab,
+    fieldSchema,
     knowledgebase,
+    canEdit,
   ])
 
   const activeKnowledgebaseSection = useMemo(() => {
