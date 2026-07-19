@@ -1,17 +1,14 @@
+/* Match MobileHeader panel: grid 0fr ↔ 1fr, clip for the whole transition. */
 .collapse-panel {
     display: grid;
     grid-template-rows: 0fr;
     min-width: 0;
     overflow: hidden;
-    transition: grid-template-rows 300ms ease-in-out;
+    transition: grid-template-rows 0.22s ease;
 }
 
 .collapse-panel--open {
     grid-template-rows: 1fr;
-}
-
-.collapse-panel--open.collapse-panel--settled {
-    overflow: visible;
 }
 
 .collapse-panel__item {
@@ -20,22 +17,8 @@
     overflow: hidden;
 }
 
-.collapse-panel__item--concealed {
-    visibility: hidden;
-    pointer-events: none;
-}
-
-.collapse-panel--open.collapse-panel--settled .collapse-panel__item {
-    overflow: visible;
-}
-
 @media (prefers-reduced-motion: reduce) {
     .collapse-panel {
-        transition: none;
-    }
-
-    .collapse-panel--open,
-    .collapse-panel--open .collapse-panel__item {
-        overflow: visible;
+        transition-duration: 0.01ms;
     }
 }

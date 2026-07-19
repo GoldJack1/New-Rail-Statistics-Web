@@ -10,6 +10,7 @@ import {
 } from '@/utils/knowledgebaseStationFetch'
 import {
   extractKnowledgebaseStationSections,
+  formatKnowledgebaseDetailsSourceHint,
   formatKnowledgebaseLastUpdatedLabel,
   formatKnowledgebasePostalAddress,
   formatKnowledgebaseStationAlert,
@@ -32,6 +33,7 @@ export type KnowledgebaseStationState =
       nlc: string | null
       stationAlert: string | null
       lastUpdatedLabel: string | null
+      detailsSourceHint: string | null
     }
 
 /**
@@ -90,6 +92,7 @@ export function useKnowledgebaseStation(
       nlc: readKnowledgebaseNlc(result.data),
       stationAlert: formatKnowledgebaseStationAlert(result.data),
       lastUpdatedLabel: formatKnowledgebaseLastUpdatedLabel(result.data),
+      detailsSourceHint: formatKnowledgebaseDetailsSourceHint(result.data),
     }
   }, [result])
 }

@@ -25,7 +25,19 @@ import {
 import { getYearlyPassengerChartPoints } from '../../../utils/yearlyPassengers'
 import './StationPendingChangesBanner.css'
 import './StationUsageDataNotice.css'
+import './StationKnowledgebasePanel.css'
 import dynamic from 'next/dynamic'
+
+function KnowledgebaseSourceHint({ label }: { label?: string | null }) {
+  const text = label?.trim()
+  if (!text) return null
+  return <p className="edit-hint kb-source-hint">{text}</p>
+}
+
+const LOCATION_SOURCE_HINT =
+  'This data was sourced and is currently being reviewed by Rail Statistics.'
+const USAGE_SOURCE_HINT =
+  'Data on this page is sourced from the Office for Rail and Road (ORR)'
 
 const StationResponsiveLocationMap = dynamic(() => import('./StationResponsiveLocationMap'), {
   ssr: false,
@@ -153,8 +165,8 @@ interface StationDetailsViewProps {
   knowledgebaseFetchedAt?: string
   /** NRE ChangeHistory last-updated line for KB source hint. */
   knowledgebaseLastUpdatedLabel?: string | null
-  /** When true (admin), show the last-updated hint on every KB section. */
-  knowledgebaseShowSourceHintForAdmin?: boolean
+  /** Details-tab source hint (Firebase + KB mix). */
+  knowledgebaseDetailsSourceHint?: string | null
   /** When showAll (modal), render every KB section. */
   knowledgebaseSections?: Array<{ key: string; label: string; value: KbJson }>
   /** KB StationOperator for Details (replaces Firebase operator code on GBNR). */
@@ -184,7 +196,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
   knowledgebaseCrs,
   knowledgebaseFetchedAt,
   knowledgebaseLastUpdatedLabel = null,
-  knowledgebaseShowSourceHintForAdmin = false,
+  knowledgebaseDetailsSourceHint = null,
   knowledgebaseSections = [],
   knowledgebaseStationOperator = null,
   knowledgebaseNlc = null,
@@ -232,6 +244,10 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
   const knowledgebaseSidebarSections = knowledgebaseSections.filter(
     (section) => section.key !== KNOWLEDGEBASE_OVERVIEW_KEY
   )
+  /** Shown on every section except Details, Location and Station Usage when KB is enabled. */
+  const kbSourceHint = fieldSchema.showKnowledgebaseTab ? knowledgebaseLastUpdatedLabel : null
+  /** Details uses a mixed Firebase + KB attribution line. */
+  const detailsSourceHint = fieldSchema.showKnowledgebaseTab ? knowledgebaseDetailsSourceHint : null
 
   const stationUrlValue = readStationUrl(
     additionalDoc ?? ({ url: station.stationUrl, urlSlug: station.urlSlug } as Partial<SandboxStationDoc>)
@@ -253,6 +269,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
       {showDetails && (
         <>
         <div className="modal-section">
+          <KnowledgebaseSourceHint label={detailsSourceHint} />
           <StationSectionTitle title="Details" icon={getStationDetailsSectionIcon('details')} pageHeading />
           {!fieldSchema.isLightRail && (
             <div className="station-details-code-chips" role="list" aria-label="Station codes">
@@ -448,6 +465,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
 
       {showLocationTab && showLocation && (
         <div className="modal-section modal-section--location">
+          <KnowledgebaseSourceHint label={LOCATION_SOURCE_HINT} />
           <StationSectionTitle title="Location" icon={getStationDetailsSectionIcon('location')} pageHeading />
           {(() => {
             const showKbAddress =
@@ -563,6 +581,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
 
       {showAdditional && additionalDoc && (
         <div className="modal-section">
+          <KnowledgebaseSourceHint label={kbSourceHint} />
           <StationSectionTitle title="Additional details" icon={getStationDetailsSectionIcon('additional')} pageHeading />
           <StationDetailsSubsection title="Identifiers">
             <div className="modal-details-grid modal-facilities-grid">
@@ -601,6 +620,9 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
 
       {showFacilities && fieldSchema.showToiletsSection && additionalDoc?.toilets && (
         <div className="modal-section">
+          {!(fieldSchema.facilityKeys.length > 0 && additionalDoc?.facilities) ? (
+            <KnowledgebaseSourceHint label={kbSourceHint} />
+          ) : null}
           <StationSectionTitle title="Toilets" icon={getStationDetailsSectionIcon('facilities', { label: 'Toilets' })} />
           <StationDetailsSubsection title="Facilities">
             <div className="modal-details-grid modal-facilities-grid">
@@ -634,6 +656,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
         <>
           {fieldSchema.showStepFreeSection && !fieldSchema.stepFreeInDetails && (
             <div className="modal-section">
+              <KnowledgebaseSourceHint label={kbSourceHint} />
               <StationSectionTitle
                 title={STEP_FREE_SECTION_LABEL}
                 icon={getStationDetailsSectionIcon('stepFree', { label: STEP_FREE_SECTION_LABEL })}
@@ -665,6 +688,9 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
           )}
           {fieldSchema.showLiftSection && (
         <div className="modal-section">
+          {!(fieldSchema.showStepFreeSection && !fieldSchema.stepFreeInDetails) ? (
+            <KnowledgebaseSourceHint label={kbSourceHint} />
+          ) : null}
           <StationSectionTitle title="Lift" icon={getStationDetailsSectionIcon('stepFree', { label: 'Lift' })} />
           <StationDetailsSubsection title="Availability">
             <div className="modal-details-grid modal-facilities-grid">
@@ -706,6 +732,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
 
       {showService && fieldSchema.isLightRail && (
         <div className="modal-section">
+          <KnowledgebaseSourceHint label={kbSourceHint} />
           <StationSectionTitle title="Service & Connections" icon={getStationDetailsSectionIcon('service')} pageHeading />
           <StationDetailsSubsection title="Service">
             <div className="modal-details-grid modal-facilities-grid">
@@ -768,6 +795,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
           fieldSchema.showConnectionTaxi ||
           fieldSchema.showConnectionUnderground) && (
         <div className="modal-section">
+          <KnowledgebaseSourceHint label={kbSourceHint} />
           <StationSectionTitle title="Connections" icon={getStationDetailsSectionIcon('service', { label: 'Connections' })} />
           <StationDetailsSubsection title="Modes">
             <div className="modal-details-grid modal-facilities-grid">
@@ -810,6 +838,14 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
           fieldSchema.showRequestStop ||
           fieldSchema.showLimitedService) && (
         <div className="modal-section">
+          {!(
+            additionalDoc?.connections &&
+            (fieldSchema.showConnectionBus ||
+              fieldSchema.showConnectionTaxi ||
+              fieldSchema.showConnectionUnderground)
+          ) ? (
+            <KnowledgebaseSourceHint label={kbSourceHint} />
+          ) : null}
           <StationSectionTitle title="Service" icon={getStationDetailsSectionIcon('service')} />
           {fieldSchema.showStationStatusSection && (
             <StationDetailsSubsection title="Status">
@@ -863,6 +899,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
 
       {showFacilities && fieldSchema.facilityKeys.length > 0 && additionalDoc?.facilities && (
         <div className="modal-section">
+          <KnowledgebaseSourceHint label={kbSourceHint} />
           <StationSectionTitle title="Facilities" icon={getStationDetailsSectionIcon('facilities')} pageHeading />
           <StationDetailsSubsection title="Amenities">
             <div className="modal-details-grid modal-facilities-grid">
@@ -893,7 +930,6 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
                   crs={knowledgebaseCrs}
                   fetchedAt={knowledgebaseFetchedAt}
                   lastUpdatedLabel={knowledgebaseLastUpdatedLabel}
-                  showSourceHint={knowledgebaseShowSourceHintForAdmin}
                   status={knowledgebaseStatus}
                   errorMessage={knowledgebaseError}
                 />
@@ -907,7 +943,6 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
                   crs={knowledgebaseCrs}
                   fetchedAt={knowledgebaseFetchedAt}
                   lastUpdatedLabel={knowledgebaseLastUpdatedLabel}
-                  showSourceHint={knowledgebaseShowSourceHintForAdmin}
                   status={knowledgebaseStatus}
                   errorMessage={knowledgebaseError}
                 />
@@ -930,6 +965,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
 
       {showUsage && (station.yearlyPassengers || additionalDoc?.yearlyPassengers) && (
         <div className="modal-section">
+          <KnowledgebaseSourceHint label={USAGE_SOURCE_HINT} />
           <StationSectionTitle title="Station Usage" icon={getStationDetailsSectionIcon('usage')} pageHeading />
           {yearlyPassengerChartPoints.length >= 2 ? (
             <StationDetailsSubsection title="Graph view">
@@ -953,17 +989,15 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
           </StationDetailsSubsection>
           <p className="station-usage-data-notice">
             {hasLimitedPassengerData ? (
-              <>This is a new station, so usage data for it will be limited.</>
+              <>* This is a new station, so usage data for it will be limited.</>
             ) : (
               <>
-                Data is supplied by the Office of Rail and Road (ORR).
+                * New data added once a year, usually in November.
                 <br />
-                New data added once a year, usually in November.
-                <br />
-                Please note we show usage data by the year it was released, as the data period ranges
+                ** Please note we show usage data by the year it was released, as the data period ranges
                 from April to March (for example, April 2024 to March 2025).
                 <br />
-                Please note that no data was released for 2003–2004, so those years are not shown.
+                *** Please note that no data was released for 2003–2004, so those years are not shown.
               </>
             )}
           </p>
@@ -973,6 +1007,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
       {showAdmin && (
         <>
           <div className="modal-section">
+            <KnowledgebaseSourceHint label={kbSourceHint} />
             <StationSectionTitle title="Admin" icon={getStationDetailsSectionIcon('admin')} pageHeading />
             <StationDetailsSubsection title="Identifiers">
               <div className="modal-details-grid modal-facilities-grid">
@@ -1018,7 +1053,6 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
               crs={knowledgebaseCrs}
               fetchedAt={knowledgebaseFetchedAt}
               lastUpdatedLabel={knowledgebaseLastUpdatedLabel}
-              showSourceHint
               status={knowledgebaseStatus}
               errorMessage={knowledgebaseError}
             />

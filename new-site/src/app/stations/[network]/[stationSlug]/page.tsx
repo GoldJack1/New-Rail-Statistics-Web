@@ -218,6 +218,8 @@ function StationDetailsPage() {
     knowledgebase.status === 'ready' ? knowledgebase.stationAlert : null
   const knowledgebaseLastUpdatedLabel =
     knowledgebase.status === 'ready' ? knowledgebase.lastUpdatedLabel : null
+  const knowledgebaseDetailsSourceHint =
+    knowledgebase.status === 'ready' ? knowledgebase.detailsSourceHint : null
 
   const headerDisplayStation = displayStation ?? station
   const headerIsLightRail = Boolean(headerDisplayStation && isLightRailStop(headerDisplayStation))
@@ -518,7 +520,7 @@ function StationDetailsPage() {
                     knowledgebase.status === 'ready' ? knowledgebase.fetchedAt : undefined
                   }
                   knowledgebaseLastUpdatedLabel={knowledgebaseLastUpdatedLabel}
-                  knowledgebaseShowSourceHintForAdmin={canEdit}
+                  knowledgebaseDetailsSourceHint={knowledgebaseDetailsSourceHint}
                   knowledgebaseStationOperator={knowledgebaseStationOperator}
                   knowledgebaseNlc={knowledgebaseNlc}
                   knowledgebasePostalAddress={knowledgebasePostalAddress}

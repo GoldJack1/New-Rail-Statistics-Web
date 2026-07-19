@@ -716,7 +716,7 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
             expanded={sidebarSections.sort}
             onExpandedChange={(expanded) => setSectionExpanded('sort', expanded)}
           >
-            {sidebarSections.sort ? sortControls : null}
+            {sortControls}
           </SidebarDropdownSection>
 
           <SidebarDropdownSection
@@ -724,7 +724,7 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
             expanded={sidebarSections.filters}
             onExpandedChange={(expanded) => setSectionExpanded('filters', expanded)}
           >
-            {sidebarSections.filters ? filterControls : null}
+            {filterControls}
           </SidebarDropdownSection>
 
           {isAdminPanelVisible && (

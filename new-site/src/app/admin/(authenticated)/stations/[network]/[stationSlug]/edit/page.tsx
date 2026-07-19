@@ -391,7 +391,6 @@ function AdminStationEditPage() {
                       lastUpdatedLabel={
                         knowledgebase.status === 'ready' ? knowledgebase.lastUpdatedLabel : null
                       }
-                      showSourceHint
                       status={knowledgebase.status}
                       errorMessage={
                         knowledgebase.status === 'error' ? knowledgebase.message : undefined

@@ -169,9 +169,9 @@ function dayOrdinal(day: number): string {
 }
 
 /**
- * ChangeHistory/LastChangedDate → "Last updated by NRE on 16th July 2026 at 09:46" (24h, UTC).
+ * ChangeHistory/LastChangedDate → "16th July 2026 at 09:46" (24h, UTC).
  */
-export function formatKnowledgebaseLastUpdatedLabel(data: KbJson): string | null {
+function formatKnowledgebaseLastChangedStamp(data: KbJson): string | null {
   const root = unwrapKnowledgebaseStationRoot(data)
   if (!root) return null
   const history = root.ChangeHistory
@@ -186,7 +186,27 @@ export function formatKnowledgebaseLastUpdatedLabel(data: KbJson): string | null
   const year = date.getUTCFullYear()
   const hours = String(date.getUTCHours()).padStart(2, '0')
   const minutes = String(date.getUTCMinutes()).padStart(2, '0')
-  return `Last updated by NRE on ${dayOrdinal(day)} ${month} ${year} at ${hours}:${minutes}`
+  return `${dayOrdinal(day)} ${month} ${year} at ${hours}:${minutes}`
+}
+
+/**
+ * ChangeHistory/LastChangedDate →
+ * "Data shown on this page was last updated by National Rail Enquiries on 16th July 2026 at 09:46." (24h, UTC).
+ */
+export function formatKnowledgebaseLastUpdatedLabel(data: KbJson): string | null {
+  const stamp = formatKnowledgebaseLastChangedStamp(data)
+  if (!stamp) return null
+  return `Data shown on this page was last updated by National Rail Enquiries on ${stamp}.`
+}
+
+/**
+ * Details tab source line (Firebase + KB mix).
+ * "Some data shown on this page was last updated by National Rail Enquiries on 16th July 2026 at 09:46. With a large majority of data being added by Rail Statistics."
+ */
+export function formatKnowledgebaseDetailsSourceHint(data: KbJson): string | null {
+  const stamp = formatKnowledgebaseLastChangedStamp(data)
+  if (!stamp) return null
+  return `Some data shown on this page was last updated by National Rail Enquiries on ${stamp}. With a large majority of data being added by Rail Statistics.`
 }
 
 /**

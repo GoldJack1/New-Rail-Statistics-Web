@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   extractKnowledgebaseStationSections,
+  formatKnowledgebaseDetailsSourceHint,
   formatKnowledgebaseLastUpdatedLabel,
   formatKnowledgebasePostalAddress,
   formatKnowledgebaseStationAlert,
@@ -179,7 +180,10 @@ describe('knowledgebaseStationSections', () => {
       },
     })
     expect(formatKnowledgebaseLastUpdatedLabel(data)).toBe(
-      'Last updated by NRE on 16th July 2026 at 09:46'
+      'Data shown on this page was last updated by National Rail Enquiries on 16th July 2026 at 09:46.'
+    )
+    expect(formatKnowledgebaseDetailsSourceHint(data)).toBe(
+      'Some data shown on this page was last updated by National Rail Enquiries on 16th July 2026 at 09:46. With a large majority of data being added by Rail Statistics.'
     )
   })
 })

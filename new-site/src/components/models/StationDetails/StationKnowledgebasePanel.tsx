@@ -549,7 +549,17 @@ function detailsRowsFromObject(value: KbJson): FacilityRow[] {
     })
 }
 
-function KbNode({ label, value, depth = 0 }: { label?: string; value: KbJson; depth?: number }) {
+function KbNode({
+  label,
+  value,
+  depth = 0,
+  sourceHint,
+}: {
+  label?: string
+  value: KbJson
+  depth?: number
+  sourceHint?: string | null
+}) {
   if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
     return (
       <div className="kb-field">
@@ -578,6 +588,7 @@ function KbNode({ label, value, depth = 0 }: { label?: string; value: KbJson; de
 
   return (
     <div className={useSection ? 'modal-section kb-section' : 'kb-group'}>
+      {useSection && sourceHint ? <p className="edit-hint kb-source-hint">{sourceHint}</p> : null}
       {label ? (
         useSection ? (
           <StationSectionTitle
@@ -631,7 +642,13 @@ function KbNode({ label, value, depth = 0 }: { label?: string; value: KbJson; de
   )
 }
 
-function FacilitiesAndStaffingDetailsLayout({ value }: { value: KbJson }) {
+function FacilitiesAndStaffingDetailsLayout({
+  value,
+  sourceHint,
+}: {
+  value: KbJson
+  sourceHint?: string | null
+}) {
   if (!isPlainObject(value)) return null
 
   const groups: Array<{ title: string; rows: FacilityRow[] }> = []
@@ -653,8 +670,9 @@ function FacilitiesAndStaffingDetailsLayout({ value }: { value: KbJson }) {
 
   return (
     <>
-      {groups.map((group) => (
+      {groups.map((group, index) => (
         <div key={group.title} className="modal-section">
+          {index === 0 && sourceHint ? <p className="edit-hint kb-source-hint">{sourceHint}</p> : null}
           <StationSectionTitle
             title={group.title}
             icon={getKnowledgebaseSectionIcon(group.title === 'Station facilities' ? 'StationFacilities' : group.title, group.title)}
@@ -678,10 +696,21 @@ function FacilitiesAndStaffingDetailsLayout({ value }: { value: KbJson }) {
 }
 
 /** Single Details-style section: flat label/value grid (Accessibility, etc.). */
-function FlatDetailsLayout({ title, value, sectionKey }: { title: string; value: KbJson; sectionKey?: string }) {
+function FlatDetailsLayout({
+  title,
+  value,
+  sectionKey,
+  sourceHint,
+}: {
+  title: string
+  value: KbJson
+  sectionKey?: string
+  sourceHint?: string | null
+}) {
   const rows = detailsRowsFromObject(value)
   return (
     <div className="modal-section">
+      {sourceHint ? <p className="edit-hint kb-source-hint">{sourceHint}</p> : null}
       <StationSectionTitle title={title} icon={getKnowledgebaseSectionIcon(sectionKey ?? title, title)} pageHeading />
       <div className="kb-facility-list">
         {rows.map((row) => (
@@ -717,13 +746,8 @@ interface StationKnowledgebasePanelProps {
   sectionKey?: string
   crs?: string
   fetchedAt?: string
-  /** NRE ChangeHistory line, e.g. "Last updated by NRE on 16th July 2026 at 09:46". */
+  /** NRE ChangeHistory line, e.g. "Data shown on this page was last updated by National Rail Enquiries on 16th July 2026 at 09:46.". */
   lastUpdatedLabel?: string | null
-  /**
-   * Show the last-updated hint. Intended for KB not-used and admin viewers;
-   * other public KB sections hide it.
-   */
-  showSourceHint?: boolean
   /** Loading / error states when the parent is still fetching. */
   status?: 'ready' | 'loading' | 'error' | 'idle'
   errorMessage?: string
@@ -739,7 +763,6 @@ const StationKnowledgebasePanel: React.FC<StationKnowledgebasePanelProps> = ({
   value,
   sectionKey,
   lastUpdatedLabel,
-  showSourceHint = false,
   status = 'ready',
   errorMessage,
   readOnly = false,
@@ -774,17 +797,12 @@ const StationKnowledgebasePanel: React.FC<StationKnowledgebasePanelProps> = ({
   return (
     <div className={panelClass} aria-readonly={readOnly || undefined}>
       {readOnly ? <p className="kb-panel__readonly-banner">Knowledgebase reference — not editable</p> : null}
-      {showSourceHint && hintText ? (
-        <div className="modal-section">
-          <p className="edit-hint kb-source-hint">{hintText}</p>
-        </div>
-      ) : null}
       {useDetailsLayout && sectionKey === FACILITIES_STAFFING_KEY ? (
-        <FacilitiesAndStaffingDetailsLayout value={value} />
+        <FacilitiesAndStaffingDetailsLayout value={value} sourceHint={hintText} />
       ) : useDetailsLayout ? (
-        <FlatDetailsLayout title={label} value={value} sectionKey={sectionKey} />
+        <FlatDetailsLayout title={label} value={value} sectionKey={sectionKey} sourceHint={hintText} />
       ) : (
-        <KbNode label={label} value={value} depth={0} />
+        <KbNode label={label} value={value} depth={0} sourceHint={hintText} />
       )}
     </div>
   )
