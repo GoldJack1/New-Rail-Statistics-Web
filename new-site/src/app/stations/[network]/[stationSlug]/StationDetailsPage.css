@@ -15,6 +15,8 @@
   --stations-card-gap: var(--space-lg);
   --stations-content-inset: var(--stations-card-gap);
   --stations-panel-text-inset: var(--stations-content-inset);
+  /* Same bleed token the stations-page network tabs use */
+  --network-tab-toolbar-bleed: var(--stations-panel-text-inset);
 }
 
 @media (max-width: 1023px) {
@@ -54,6 +56,13 @@
   align-items: center;
   justify-content: flex-start;
   flex-wrap: wrap;
+}
+
+.station-details-header-actions__controls {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+  flex: 0 0 auto;
 }
 
 .station-details-header-line-chips {
@@ -348,7 +357,7 @@
     width: 100%;
     max-width: 100%;
     min-width: 0;
-    overflow-x: clip;
+    overflow-x: visible;
   }
 
   .station-details-main .modal-body {
@@ -357,7 +366,7 @@
     min-width: 0;
     padding-left: 0;
     padding-right: 0px;
-    overflow-x: clip;
+    overflow-x: visible;
   }
 
   .station-details-main .modal-section {
@@ -454,7 +463,7 @@
   }
 
   .station-details-main {
-    padding: var(--stations-content-inset) 0 var(--stations-content-inset) var(--stations-content-inset);
+    padding: calc(var(--stations-content-inset) / 4);
     box-sizing: border-box;
   }
 }
@@ -564,20 +573,65 @@
     width: 100%;
     min-width: 0;
     max-width: 100%;
-    padding: var(--stations-content-inset) var(--stations-panel-text-inset);
+    /* Same inset on all sides as the horizontal page margins */
+    padding: var(--stations-panel-text-inset);
     box-sizing: border-box;
-    overflow-x: clip;
+    overflow-x: visible;
   }
 
-  /* Avoid double-inset vs header / section bar (StationModal adds space-xl by default). */
+  /* Avoid double-inset vs main (StationModal adds space-xl/lg by default). */
   .station-details-main .modal-body {
-    padding-left: 0;
-    padding-right: 0;
+    padding: 0;
   }
 
-  /* Section menu bar already shows the selected page title */
-  .station-details-main .station-section-title--page-heading {
+  /*
+   * Edge-bleed scroll wrap (same idea as stations-page network tabs).
+   * Negative margin alone is not enough: width must grow by 2× inset or the
+   * right edge stays short and tabs clip against the card instead of scrolling.
+   */
+  .station-details-network-tabs-wrap {
+    --station-details-tabs-bleed: var(--stations-panel-text-inset, var(--space-lg));
+    width: calc(100% + (2 * var(--station-details-tabs-bleed)));
+    max-width: none;
+    margin-inline: calc(-1 * var(--station-details-tabs-bleed));
+    min-width: 0;
+    overflow: visible;
+  }
+
+  .station-details-network-tabs-wrap .network-station-tab-group {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: var(--space-sm);
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    /* Cancel the global ≤1023px toolbar pad by matching the bleed we added back */
+    --network-tab-group-inline-pad: var(--station-details-tabs-bleed);
+    scroll-padding-inline: var(--station-details-tabs-bleed);
+    padding-inline: var(--station-details-tabs-bleed);
+  }
+
+  .station-details-network-tabs-wrap .network-station-tab-group::-webkit-scrollbar {
     display: none;
+    width: 0;
+    height: 0;
+  }
+
+  .station-details-network-tabs-wrap .network-station-tab-group .rs-button--tab {
+    flex: 0 0 auto;
+    flex-shrink: 0;
+    white-space: nowrap;
+    min-width: max-content;
   }
 }
 
@@ -605,8 +659,7 @@
   }
 
   .station-details-main {
-    padding-left: var(--stations-panel-text-inset);
-    padding-right: var(--stations-panel-text-inset);
+    padding: var(--stations-panel-text-inset);
   }
 }
 
@@ -683,9 +736,9 @@
   opacity: 0.85;
 }
 
-/* KB last-updated line above section titles (matches KB panel sections) */
+/* Source attribution at the bottom of each section */
 .station-details-main .kb-source-hint {
-  margin: 0 0 20px;
+  margin: var(--space-xl, 1.5rem) 0 0;
   line-height: 1.4;
 }
 

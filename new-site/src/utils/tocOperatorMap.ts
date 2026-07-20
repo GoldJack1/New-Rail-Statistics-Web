@@ -1,5 +1,7 @@
 /** Pure TOC operator mapping/helpers (safe for Cloud Functions export — no client Firebase). */
 
+import { lookupNreTocCodeName } from './nreTocCodes'
+
 export const TOC_OPERATORS_COLLECTION = 'toc_operators'
 
 export interface TocOperator {
@@ -61,13 +63,21 @@ export function getContrastingTextColor(backgroundHex: string): string {
   return relativeLuminance(backgroundHex) > 0.45 ? '#1a1a1a' : '#ffffff'
 }
 
+function normalizeTocLookupKey(value: string): string {
+  return value.trim().toLowerCase().replace(/[_\s-]+/g, ' ')
+}
+
 export function findTocOperator(
   operators: TocOperator[],
   tocName: string
 ): TocOperator | undefined {
-  const needle = tocName.trim().toLowerCase()
+  const needle = normalizeTocLookupKey(tocName)
   if (!needle) return undefined
-  return operators.find((op) => op.name.toLowerCase() === needle)
+  return operators.find((op) => {
+    const name = normalizeTocLookupKey(op.name)
+    const id = normalizeTocLookupKey(op.id)
+    return name === needle || id === needle
+  })
 }
 
 export function getTocOperatorChipColors(
@@ -85,6 +95,23 @@ export function resolveTocOperatorDisplayName(
   tocName: string
 ): string {
   return findTocOperator(operators, tocName)?.name ?? tocName.trim()
+}
+
+/** Resolve NRE two-letter TOC codes (e.g. SE) to a full operator name. */
+export function resolveNreTocCodeDisplayName(
+  operators: TocOperator[],
+  code: string
+): string {
+  const trimmed = code.trim()
+  if (!trimmed) return trimmed
+
+  const byCatalog = findTocOperator(operators, trimmed)
+  if (byCatalog) return byCatalog.name
+
+  const mapped = lookupNreTocCodeName(trimmed)
+  if (mapped) return resolveTocOperatorDisplayName(operators, mapped)
+
+  return trimmed
 }
 
 export function isTocOperatorRecord(value: unknown): value is TocOperator {

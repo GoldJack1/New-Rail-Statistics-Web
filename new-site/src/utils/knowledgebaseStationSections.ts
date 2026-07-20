@@ -1,4 +1,5 @@
 import type { KbJson } from './knowledgebaseStationXml'
+import { sanitizeKbDisplayText } from './knowledgebaseDisplayText'
 
 export type KnowledgebaseStationSection = {
   key: string
@@ -70,6 +71,7 @@ export function humanizeKnowledgebaseKey(key: string): string {
   if (key === OVERVIEW_KEY) return OVERVIEW_LABEL
   if (key === FACILITIES_STAFFING_KEY) return FACILITIES_STAFFING_LABEL
   if (key === 'PassengerServices') return 'Customer Services'
+  if (key === 'CCTV' || key === 'Cctv' || key === 'ClosedCircuitTelevision') return 'CCTV'
   return key
     .replace(/([a-z])([A-Z])/g, '$1 $2')
     .replace(/_/g, ' ')
@@ -108,20 +110,22 @@ export function readKnowledgebaseNlc(data: KbJson): string | null {
 }
 
 function stripHtmlToText(input: string): string {
-  return input
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .replace(/[ \t]{2,}/g, ' ')
-    .trim()
+  return sanitizeKbDisplayText(
+    input
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>/gi, '\n')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .replace(/[ \t]{2,}/g, ' ')
+      .trim()
+  )
 }
 
 function collectAlertTexts(value: KbJson): string[] {
@@ -191,12 +195,12 @@ function formatKnowledgebaseLastChangedStamp(data: KbJson): string | null {
 
 /**
  * ChangeHistory/LastChangedDate →
- * "Data shown on this page was last updated by National Rail Enquiries on 16th July 2026 at 09:46." (24h, UTC).
+ * "The data shown on this page was last updated by National Rail Enquiries on 16th July 2026 at 09:46." (24h, UTC).
  */
 export function formatKnowledgebaseLastUpdatedLabel(data: KbJson): string | null {
   const stamp = formatKnowledgebaseLastChangedStamp(data)
   if (!stamp) return null
-  return `Data shown on this page was last updated by National Rail Enquiries on ${stamp}.`
+  return `The data shown on this page was last updated by National Rail Enquiries on ${stamp}.`
 }
 
 /**
@@ -262,40 +266,46 @@ function relocateCctvIntoFacilities(merged: Record<string, KbJson>): Record<stri
   return next
 }
 
-/** Keys under InformationSystems that belong in KB not-used. */
-const INFO_SYSTEMS_TO_OVERVIEW = new Set(['CIS', 'InformationAvailableFromStaff'])
-
 /**
- * Peel InformationSystems: CIS + InformationAvailableFromStaff → overview,
- * remaining fields (CustomerHelpPoints, InformationServicesOpen, …) → PassengerServices.
+ * Fold InformationSystems into PassengerServices (Customer Services tab).
  */
-function redistributeInformationSystems(
-  root: Record<string, KbJson>,
-  overview: Record<string, KbJson>
-): Record<string, KbJson> {
+function redistributeInformationSystems(root: Record<string, KbJson>): Record<string, KbJson> {
   const next: Record<string, KbJson> = { ...root }
   const infoRaw = next.InformationSystems
   if (!isPlainObject(infoRaw)) return next
 
-  const info = { ...infoRaw }
-  for (const key of INFO_SYSTEMS_TO_OVERVIEW) {
-    if (key in info) {
-      overview[key] = info[key]
-      delete info[key]
-    }
+  const passengerRaw = next.PassengerServices
+  const passenger = isPlainObject(passengerRaw) ? { ...passengerRaw } : {}
+  for (const [key, value] of Object.entries(infoRaw)) {
+    if (passenger[key] === undefined) passenger[key] = value
   }
-
-  if (Object.keys(info).length > 0) {
-    const passengerRaw = next.PassengerServices
-    const passenger = isPlainObject(passengerRaw) ? { ...passengerRaw } : {}
-    for (const [key, value] of Object.entries(info)) {
-      if (passenger[key] === undefined) passenger[key] = value
-    }
-    next.PassengerServices = passenger
-  }
+  next.PassengerServices = passenger
 
   delete next.InformationSystems
   return next
+}
+
+/** Internal Fares/CMS fields shown under Admin → KB not-used, not the Fares tab. */
+const FARES_TO_OVERVIEW_KEYS = new Set(['AlwaysShowOysterCardFields', 'PenaltyFares'])
+
+function relocateFaresAdminFields(
+  root: Record<string, KbJson>,
+  overview: Record<string, KbJson>
+): Record<string, KbJson> {
+  const faresRaw = root.Fares
+  if (!isPlainObject(faresRaw)) return root
+
+  const fares = { ...faresRaw }
+  let changed = false
+  for (const key of FARES_TO_OVERVIEW_KEYS) {
+    if (key in fares) {
+      overview[key] = fares[key]
+      delete fares[key]
+      changed = true
+    }
+  }
+  if (!changed) return root
+  return { ...root, Fares: fares }
 }
 
 /**
@@ -305,9 +315,10 @@ function redistributeInformationSystems(
  * shown on Details / Location / alert banner instead.
  * Staffing + StationFacilities are merged into one "Facilities & Staffing" tab.
  * CCTV (ClosedCircuitTelevision) is shown under StationFacilities, not Staffing.
- * CIS / InformationAvailableFromStaff → KB not-used;
- * remaining InformationSystems (CustomerHelpPoints, InformationServicesOpen, …) → PassengerServices.
+ * CIS, InformationAvailableFromStaff, DepartureScreens, Announcements, and other
+ * InformationSystems fields → PassengerServices (Customer Services).
  * TrainOperatingCompanies / ChangeHistory → KB not-used.
+ * AlwaysShowOysterCardFields / PenaltyFares → KB not-used (Admin tab), not Fares.
  */
 export function extractKnowledgebaseStationSections(data: KbJson): KnowledgebaseStationSection[] {
   const root = unwrapKnowledgebaseStationRoot(data)
@@ -316,7 +327,7 @@ export function extractKnowledgebaseStationSections(data: KbJson): Knowledgebase
   const overview: Record<string, KbJson> = {}
   const sections: KnowledgebaseStationSection[] = []
   const facilitiesAndStaffing: Record<string, KbJson> = {}
-  const redistributed = redistributeInformationSystems(root, overview)
+  const redistributed = relocateFaresAdminFields(redistributeInformationSystems(root), overview)
 
   for (const [key, value] of Object.entries(redistributed)) {
     if (OMIT_FROM_SECTIONS.has(key)) continue

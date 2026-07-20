@@ -6,6 +6,7 @@ import {
   formatKnowledgebaseLastUpdatedLabel,
   formatKnowledgebasePostalAddress,
   formatKnowledgebaseStationAlert,
+  humanizeKnowledgebaseKey,
   isKnowledgebaseTabId,
   parseKnowledgebaseTabId,
   readKnowledgebaseNlc,
@@ -95,13 +96,19 @@ describe('knowledgebaseStationSections', () => {
     ).toBe('848700')
   })
 
-  it('moves CIS and InformationAvailableFromStaff to KB not-used; rest of InformationSystems to PassengerServices', () => {
+  it('moves InformationSystems fields into PassengerServices (Customer Services)', () => {
     const sections = extractKnowledgebaseStationSections({
       StationV4: {
         CrsCode: 'LDS',
         InformationSystems: {
-          CIS: 'departureScreens',
-          InformationAvailableFromStaff: 'yes',
+          CIS: {
+            DepartureScreens: { Available: true },
+            Announcements: { Available: true },
+          },
+          InformationAvailableFromStaff: {
+            Available: true,
+            Annotation: { Note: 'Yes - from help point\nYes - from ticket office' },
+          },
           CustomerHelpPoints: { Available: true },
           InformationServicesOpen: { Annotation: { Note: 'Desk' } },
         },
@@ -112,15 +119,19 @@ describe('knowledgebaseStationSections', () => {
     })
 
     const overview = sections.find((s) => s.key === '__overview__')
-    expect(overview?.value).toMatchObject({
-      CrsCode: 'LDS',
-      CIS: 'departureScreens',
-      InformationAvailableFromStaff: 'yes',
-    })
+    expect(overview?.value).toEqual({ CrsCode: 'LDS' })
 
     const passenger = sections.find((s) => s.key === 'PassengerServices')
     expect(passenger?.value).toEqual({
       LeftLuggage: { Available: true },
+      CIS: {
+        DepartureScreens: { Available: true },
+        Announcements: { Available: true },
+      },
+      InformationAvailableFromStaff: {
+        Available: true,
+        Annotation: { Note: 'Yes - from help point\nYes - from ticket office' },
+      },
       CustomerHelpPoints: { Available: true },
       InformationServicesOpen: { Annotation: { Note: 'Desk' } },
     })
@@ -180,10 +191,52 @@ describe('knowledgebaseStationSections', () => {
       },
     })
     expect(formatKnowledgebaseLastUpdatedLabel(data)).toBe(
-      'Data shown on this page was last updated by National Rail Enquiries on 16th July 2026 at 09:46.'
+      'The data shown on this page was last updated by National Rail Enquiries on 16th July 2026 at 09:46.'
     )
     expect(formatKnowledgebaseDetailsSourceHint(data)).toBe(
       'Some data shown on this page was last updated by National Rail Enquiries on 16th July 2026 at 09:46. With a large majority of data being added by Rail Statistics.'
     )
+  })
+
+  it('moves AlwaysShowOysterCardFields and PenaltyFares from Fares to KB not-used for the Admin tab', () => {
+    const sections = extractKnowledgebaseStationSections({
+      StationV4: {
+        CrsCode: 'ABW',
+        Fares: {
+          UseOystercard: true,
+          AlwaysShowOysterCardFields: true,
+          PenaltyFares: { Available: true },
+          TicketOffice: { Available: true },
+        },
+        Accessibility: { InductionLoop: true },
+      },
+    })
+
+    const fares = sections.find((s) => s.key === 'Fares')
+    expect(fares?.value).toEqual({
+      UseOystercard: true,
+      TicketOffice: { Available: true },
+    })
+    expect(fares?.value).not.toHaveProperty('AlwaysShowOysterCardFields')
+    expect(fares?.value).not.toHaveProperty('PenaltyFares')
+
+    const overview = sections.find((s) => s.key === '__overview__')
+    expect(overview?.value).toMatchObject({
+      CrsCode: 'ABW',
+      AlwaysShowOysterCardFields: true,
+      PenaltyFares: { Available: true },
+    })
+  })
+
+  it('humanizes CCTV-related keys as CCTV', () => {
+    expect(humanizeKnowledgebaseKey('Cctv')).toBe('CCTV')
+    expect(humanizeKnowledgebaseKey('CCTV')).toBe('CCTV')
+    expect(humanizeKnowledgebaseKey('ClosedCircuitTelevision')).toBe('CCTV')
+  })
+
+  it('humanizes PascalCase CIS values with spaces', () => {
+    expect(humanizeKnowledgebaseKey('DepartureScreens')).toBe('Departure Screens')
+    expect(humanizeKnowledgebaseKey('ArrivalScreens')).toBe('Arrival Screens')
+    expect(humanizeKnowledgebaseKey('Announcements')).toBe('Announcements')
   })
 })

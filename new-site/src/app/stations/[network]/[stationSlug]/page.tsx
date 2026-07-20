@@ -506,25 +506,27 @@ function StationDetailsPage() {
         })}
         actionContent={
           <div className="station-details-header-actions">
-            <BUTWideButton
-              type="button"
-              width="hug"
-              icon={<BackIcon />}
-              onClick={() => router.push(backPath)}
-            >
-              Back
-            </BUTWideButton>
-            {canEdit && (
-              <BUTCircleButton
+            <div className="station-details-header-actions__controls">
+              <BUTWideButton
                 type="button"
-                ariaLabel="Edit station"
-                onClick={() => {
-                  setStationDetailsNavigationState(navigationState)
-                  router.push(`/admin/stations/${buildStationPath(station, collectionId)}/edit`)
-                }}
-                icon={<PencilSimple size={16} aria-hidden />}
-              />
-            )}
+                width="hug"
+                icon={<BackIcon />}
+                onClick={() => router.push(backPath)}
+              >
+                Back
+              </BUTWideButton>
+              {canEdit && (
+                <BUTCircleButton
+                  type="button"
+                  ariaLabel="Edit station"
+                  onClick={() => {
+                    setStationDetailsNavigationState(navigationState)
+                    router.push(`/admin/stations/${buildStationPath(station, collectionId)}/edit`)
+                  }}
+                  icon={<PencilSimple size={16} aria-hidden />}
+                />
+              )}
+            </div>
           </div>
         }
       />

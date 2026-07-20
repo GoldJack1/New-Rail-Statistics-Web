@@ -21,6 +21,7 @@ export {
   getTocOperatorChipColors,
   mapTocOperatorDoc,
   resolveTocOperatorDisplayName,
+  resolveNreTocCodeDisplayName,
   type TocOperator,
 } from '@/utils/tocOperatorMap'
 

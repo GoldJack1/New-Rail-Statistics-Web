@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useId, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { createPortal, flushSync } from 'react-dom'
 import {
   Area,
   AreaChart,
@@ -28,6 +28,7 @@ import {
   formatStationUsageChartAttribution,
   formatStationUsageChartTitle,
   formatStationUsageExportFileName,
+  getExportCapturePlotSize,
   STATION_USAGE_OVERLAY_ANCHOR_ATTR,
   type ChartExportFormat,
   type ChartExportTheme,
@@ -42,6 +43,7 @@ const SCROLL_YEAR_WIDTH = 72
 const COARSE_POINTER_MEDIA = '(pointer: coarse)'
 /** Desktop starts at 1024px — matches site tablet/mobile breakpoint (max-width: 1023px). */
 const DESKTOP_CHART_MEDIA = '(min-width: 1024px)'
+const NARROW_CHART_MEDIA = '(max-width: 1023px)'
 
 type ChartMode = 'line' | 'bars' | 'combined' | 'yoy' | 'yoyValue'
 type DensityMode = 'compact' | 'expanded'
@@ -64,6 +66,11 @@ const CHART_MODE_OPTIONS: Array<{ id: ChartMode; label: string }> = [
   { id: 'yoyValue', label: 'YoY' },
   { id: 'yoy', label: 'YoY %' },
 ]
+
+const EXPORT_STEP_LABELS: Record<1 | 2, string> = {
+  1: 'Options',
+  2: 'Agreement',
+}
 
 function getDefaultChartMode(): ChartMode {
   if (typeof window === 'undefined') return 'line'
@@ -150,26 +157,6 @@ function usesLineCursor(mode: ChartMode): boolean {
   return mode === 'line'
 }
 
-function dualOverlayValue(point: DualChartSeriesPoint): number | null {
-  if (point.primary != null && Number.isFinite(point.primary)) return point.primary
-  if (point.secondary != null && Number.isFinite(point.secondary)) return point.secondary
-  return null
-}
-
-/** Theme-aware colours — resolve against CSS variables so dark mode works. */
-const CHART_LINE = 'var(--text-primary)'
-const CHART_MUTED = 'var(--text-secondary)'
-const CHART_CURSOR = 'color-mix(in srgb, var(--text-primary) 35%, transparent)'
-const CHART_GRID = 'color-mix(in srgb, var(--text-primary) 12%, transparent)'
-const CHART_BASELINE = 'color-mix(in srgb, var(--text-primary) 45%, transparent)'
-const CHART_DOT_FILL = 'var(--bg-primary)'
-const CHART_BAR_FILL = 'color-mix(in srgb, var(--text-primary) 72%, transparent)'
-const CHART_OVERLAY_LINE = 'color-mix(in srgb, var(--text-primary) 35%, transparent)'
-const CHART_SERIES_SECONDARY = 'var(--accent-base)'
-const CHART_SERIES_SECONDARY_BAR = 'color-mix(in srgb, var(--accent-base) 72%, transparent)'
-const OVERLAY_NONE = ''
-const OVERLAY_NONE_LABEL = 'None'
-
 type ActiveTooltip = {
   year: string
   value: number
@@ -178,6 +165,111 @@ type ActiveTooltip = {
   x: number
   y: number
 }
+
+function dualOverlayValue(point: DualChartSeriesPoint): number | null {
+  if (point.primary != null && Number.isFinite(point.primary)) return point.primary
+  if (point.secondary != null && Number.isFinite(point.secondary)) return point.secondary
+  return null
+}
+
+/** Map a local X position on the plot to the nearest year callout (mobile tap/drag). */
+function resolveTouchTooltip(args: {
+  localX: number
+  plotWidth: number
+  plotHeight: number
+  margin: { top: number; right: number; left: number; bottom: number }
+  yAxisWidth: number
+  xAxisHeight: number
+  series: ChartSeriesPoint[] | DualChartSeriesPoint[]
+  isDual: boolean
+  mode: ChartMode
+}): ActiveTooltip | null {
+  const { localX, plotWidth, plotHeight, margin, yAxisWidth, xAxisHeight, series, isDual, mode } =
+    args
+  const n = series.length
+  if (n === 0) return null
+
+  const left = margin.left + yAxisWidth
+  const right = plotWidth - margin.right
+  const innerW = right - left
+  if (innerW <= 0) return null
+
+  const t = Math.min(1, Math.max(0, (localX - left) / innerW))
+  const index =
+    mode === 'line' && n > 1
+      ? Math.min(n - 1, Math.max(0, Math.round(t * (n - 1))))
+      : Math.min(n - 1, Math.max(0, Math.floor(t * n - 1e-6)))
+
+  const point = series[index]
+  const x =
+    mode === 'line' && n > 1
+      ? left + (index / (n - 1)) * innerW
+      : left + ((index + 0.5) / n) * innerW
+
+  let value: number
+  let primaryValue: number | null = null
+  let secondaryValue: number | null = null
+
+  if (isDual) {
+    const dual = point as DualChartSeriesPoint
+    primaryValue = dual.primary
+    secondaryValue = dual.secondary
+    const overlay = dualOverlayValue(dual)
+    if (overlay == null) return null
+    value = overlay
+  } else {
+    value = (point as ChartSeriesPoint).value
+  }
+
+  let yMin = 0
+  let yMax = 1
+  if (isYoyMode(mode)) {
+    const values = isDual
+      ? (series as DualChartSeriesPoint[]).flatMap((entry) => [entry.primary, entry.secondary])
+      : (series as ChartSeriesPoint[]).map((entry) => entry.value)
+    const finite = values.filter((entry): entry is number => entry != null && Number.isFinite(entry))
+    const extent = Math.max(...finite.map(Math.abs), 5)
+    yMin = -extent * 1.15
+    yMax = extent * 1.15
+  } else {
+    const values = isDual
+      ? (series as DualChartSeriesPoint[]).flatMap((entry) => [entry.primary, entry.secondary])
+      : (series as ChartSeriesPoint[]).map((entry) => entry.value)
+    const finite = values.filter((entry): entry is number => entry != null && Number.isFinite(entry))
+    yMax = padPassengerYDomainMax(Math.max(0, ...finite))
+  }
+
+  const top = margin.top
+  const bottom = plotHeight - margin.bottom - xAxisHeight
+  const plotH = Math.max(1, bottom - top)
+  const y = bottom - ((value - yMin) / (yMax - yMin)) * plotH
+
+  return {
+    year: point.year,
+    value,
+    primaryValue,
+    secondaryValue,
+    x,
+    y,
+  }
+}
+
+
+/** Theme-aware colours — resolve against CSS variables so dark mode works.
+ * Primary series uses full-opacity `--text-primary` (black in light / 100% white in dark).
+ */
+const CHART_LINE = 'var(--text-primary)'
+const CHART_MUTED = 'var(--text-secondary)'
+const CHART_CURSOR = 'color-mix(in srgb, var(--text-primary) 35%, transparent)'
+const CHART_GRID = 'color-mix(in srgb, var(--text-primary) 12%, transparent)'
+const CHART_BASELINE = 'color-mix(in srgb, var(--text-primary) 45%, transparent)'
+const CHART_DOT_FILL = 'var(--bg-primary)'
+const CHART_BAR_FILL = 'var(--text-primary)'
+const CHART_OVERLAY_LINE = 'color-mix(in srgb, var(--text-primary) 35%, transparent)'
+const CHART_SERIES_SECONDARY = 'var(--accent-base)'
+const CHART_SERIES_SECONDARY_BAR = 'color-mix(in srgb, var(--accent-base) 72%, transparent)'
+const OVERLAY_NONE = ''
+const OVERLAY_NONE_LABEL = 'None'
 
 export type StationUsageAreaChartProps = {
   data: YearlyPassengerChartPoint[]
@@ -195,6 +287,7 @@ function YAxisTick(props: {
   y?: string | number
   payload?: { value?: number | string }
   mode: ChartMode
+  fontSize?: number
 }) {
   const x = typeof props.x === 'number' ? props.x : Number(props.x)
   const y = typeof props.y === 'number' ? props.y : Number(props.y)
@@ -203,7 +296,14 @@ function YAxisTick(props: {
     return null
   }
   return (
-    <text x={x - 8} y={y} dy={3} textAnchor="end" fill={CHART_MUTED} fontSize={12}>
+    <text
+      x={x - 8}
+      y={y}
+      dy={3}
+      textAnchor="end"
+      fill={CHART_MUTED}
+      fontSize={props.fontSize ?? 12}
+    >
       {formatChartAxisTick(Number(value), props.mode)}
     </text>
   )
@@ -223,6 +323,20 @@ function useCoarsePointer(): boolean {
   return coarse
 }
 
+function useNarrowChartViewport(): boolean {
+  const [narrow, setNarrow] = useState(false)
+
+  useEffect(() => {
+    const media = window.matchMedia(NARROW_CHART_MEDIA)
+    const sync = () => setNarrow(media.matches)
+    sync()
+    media.addEventListener('change', sync)
+    return () => media.removeEventListener('change', sync)
+  }, [])
+
+  return narrow
+}
+
 export function StationUsageAreaChart({
   data,
   secondaryData = null,
@@ -237,6 +351,7 @@ export function StationUsageAreaChart({
   const plotRef = useRef<HTMLDivElement>(null)
   const chartModeTouchedRef = useRef(false)
   const coarsePointer = useCoarsePointer()
+  const narrowViewport = useNarrowChartViewport()
   const [mode, setMode] = useState<ChartMode>(getDefaultChartMode)
   const [density, setDensity] = useState<DensityMode>('compact')
   const [activeTooltip, setActiveTooltip] = useState<ActiveTooltip | null>(null)
@@ -246,6 +361,10 @@ export function StationUsageAreaChart({
   const [exportTheme, setExportTheme] = useState<ChartExportTheme>('light')
   const [exportBackground, setExportBackground] = useState(true)
   const [exportShowTitle, setExportShowTitle] = useState(true)
+  const [exportCaptureSize, setExportCaptureSize] = useState<{
+    width: number
+    height: number
+  } | null>(null)
   const [overlayYear, setOverlayYear] = useState(OVERLAY_NONE)
   const [overlayAnchor, setOverlayAnchor] = useState<{ x: number; y: number } | null>(null)
   const [exporting, setExporting] = useState(false)
@@ -253,6 +372,12 @@ export function StationUsageAreaChart({
   const [exportAgreed, setExportAgreed] = useState(false)
   const [exportCopyrightAgreed, setExportCopyrightAgreed] = useState(false)
   const [chartEpoch, setChartEpoch] = useState(0)
+  const touchGestureRef = useRef<{
+    pointerId: number
+    startX: number
+    startY: number
+    mode: 'pending' | 'scrub' | 'scroll'
+  } | null>(null)
 
   const isDualSeries = (secondaryData?.length ?? 0) > 0
   const expanded = density === 'expanded'
@@ -262,10 +387,16 @@ export function StationUsageAreaChart({
         ...(secondaryData ?? []).map((point) => point.year),
       ]).size
     : data.length
-  const denseYears = !expanded && yearCount > 14
-  const tooltipTrigger = coarsePointer ? 'click' : 'hover'
+  /** Crowded year labels — independent of compact/expand so axis height stays stable. */
+  const denseYears = yearCount > 14
+  /** Tilted labels use a fixed axis band in both density modes. */
+  const tiltedXAxis = denseYears || expanded || narrowViewport
+  // Hover (not click) so Recharts touchmove updates the axis tooltip while dragging.
+  const tooltipTrigger = 'hover'
   const dotRadius = coarsePointer || expanded ? 6.5 : 4.5
   const activeDotRadius = coarsePointer || expanded ? 8.5 : 6.5
+  const xAxisHeight = tiltedXAxis ? 52 : 28
+  const yAxisWidthForScrub = Y_AXIS_WIDTH
   const firstYear = isDualSeries
     ? [...data, ...(secondaryData ?? [])].map((point) => point.year).sort()[0] ?? ''
     : data[0]?.year ?? ''
@@ -336,6 +467,9 @@ export function StationUsageAreaChart({
         setExportAgreed(false)
         setExportCopyrightAgreed(false)
         setExportError(null)
+        setActiveTooltip(null)
+        setOverlayAnchor(null)
+        setOverlayYear(OVERLAY_NONE)
       }
     }
     const previousOverflow = document.body.style.overflow
@@ -350,10 +484,10 @@ export function StationUsageAreaChart({
   if (data.length < MIN_POINTS && (secondaryData?.length ?? 0) < MIN_POINTS) return null
 
   const chartMargin = {
-    top: expanded || overlayPoint ? 56 : 12,
+    top: overlayPoint ? 56 : 12,
     right: expanded || overlayPoint ? 28 : 12,
     left: expanded ? 8 : 0,
-    bottom: denseYears || expanded ? 8 : 4,
+    bottom: tiltedXAxis ? 8 : 4,
   }
 
   const syncTooltip = ({ active, payload, label, coordinate }: TooltipContentProps) => {
@@ -383,7 +517,11 @@ export function StationUsageAreaChart({
 
     queueMicrotask(() => {
       setActiveTooltip((prev) => {
-        if (next == null) return prev == null ? prev : null
+        if (next == null) {
+          // Keep the last readout sticky on touch — Recharts clears hover on stray events.
+          if (coarsePointer) return prev
+          return prev == null ? prev : null
+        }
         if (
           prev &&
           prev.x === next.x &&
@@ -406,6 +544,7 @@ export function StationUsageAreaChart({
   const clearChartInteraction = () => {
     setActiveTooltip(null)
     setOverlayAnchor(null)
+    setOverlayYear(OVERLAY_NONE)
     setChartEpoch((epoch) => epoch + 1)
   }
 
@@ -435,24 +574,38 @@ export function StationUsageAreaChart({
       return
     }
 
-    const svg = plotRef.current?.querySelector('svg.recharts-surface')
-    if (!(svg instanceof SVGSVGElement)) {
-      setExportError('Chart is not ready to export yet.')
-      return
-    }
-
     setExporting(true)
     setExportError(null)
     clearTooltip()
     setOverlayAnchor(null)
 
+    const captureSize = getExportCapturePlotSize('16:9', 'landscape')
+    flushSync(() => {
+      setExportCaptureSize(captureSize)
+      setChartEpoch((epoch) => epoch + 1)
+    })
+
     try {
-      // Let tooltip clear from the DOM before capture.
-      await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)))
+      // Wait for Recharts to layout at the capture size, then grab the SVG.
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+      await new Promise((resolve) => window.setTimeout(resolve, 100))
+
+      const svg = plotRef.current?.querySelector('svg.recharts-surface')
+      if (!(svg instanceof SVGSVGElement)) {
+        setExportError('Chart is not ready to export yet.')
+        return
+      }
+
       await exportChartSvgAsImage(svg, {
         format: exportFormat,
         theme: exportTheme,
         background: exportFormat === 'jpeg' ? true : exportBackground,
+        aspectRatio: '16:9',
+        orientation: 'landscape',
         branding: {
           title: exportShowTitle ? brandingTitle : '',
           attribution: brandingAttribution,
@@ -471,10 +624,14 @@ export function StationUsageAreaChart({
     } catch (error) {
       setExportError(error instanceof Error ? error.message : 'Export failed.')
     } finally {
+      setExportCaptureSize(null)
       setExporting(false)
     }
   }
 
+  const isExportCapture = Boolean(exportCaptureSize)
+  const exportAxisFontSize = 15
+  const exportYAxisWidth = 58
   const xAxis = (
     <XAxis
       dataKey="year"
@@ -482,15 +639,21 @@ export function StationUsageAreaChart({
       tickLine={{ stroke: CHART_BASELINE, strokeWidth: 1 }}
       tick={{
         fill: CHART_MUTED,
-        fontSize: expanded ? 12 : denseYears ? 10 : 12,
+        fontSize: isExportCapture
+          ? exportAxisFontSize
+          : tiltedXAxis
+            ? expanded
+              ? 12
+              : 10
+            : 12,
       }}
-      interval={0}
-      angle={expanded ? -40 : denseYears ? -45 : 0}
-      textAnchor={expanded || denseYears ? 'end' : 'middle'}
-      height={expanded || denseYears ? 58 : 28}
-      dy={expanded || denseYears ? 4 : 6}
+      interval={isExportCapture ? 0 : narrowViewport && !expanded ? 1 : 0}
+      angle={isExportCapture ? -32 : tiltedXAxis ? (expanded ? -40 : -45) : 0}
+      textAnchor={isExportCapture || tiltedXAxis ? 'end' : 'middle'}
+      height={isExportCapture ? 64 : tiltedXAxis ? 52 : 28}
+      dy={isExportCapture || tiltedXAxis ? 2 : 6}
       minTickGap={0}
-      padding={{ left: expanded ? 8 : 0, right: expanded ? 20 : 16 }}
+      padding={{ left: expanded || isExportCapture ? 8 : 0, right: expanded || isExportCapture ? 20 : 16 }}
     />
   )
 
@@ -498,9 +661,15 @@ export function StationUsageAreaChart({
     <YAxis
       axisLine={false}
       tickLine={false}
-      width={Y_AXIS_WIDTH}
+      width={isExportCapture ? exportYAxisWidth : Y_AXIS_WIDTH}
       tickMargin={0}
-      tick={(props) => <YAxisTick {...props} mode={mode} />}
+      tick={(props) => (
+        <YAxisTick
+          {...props}
+          mode={mode}
+          fontSize={isExportCapture ? exportAxisFontSize : 12}
+        />
+      )}
       tickCount={8}
       domain={
         isYoy
@@ -519,6 +688,7 @@ export function StationUsageAreaChart({
   const tooltip = (
     <Tooltip
       trigger={tooltipTrigger}
+      shared
       content={syncTooltip}
       wrapperStyle={{ outline: 'none' }}
       cursor={
@@ -537,9 +707,92 @@ export function StationUsageAreaChart({
     />
   )
 
+  const applyTouchScrub = (clientX: number) => {
+    const plot = plotRef.current
+    if (!plot) return
+    const rect = plot.getBoundingClientRect()
+    const next = resolveTouchTooltip({
+      localX: clientX - rect.left,
+      plotWidth: rect.width,
+      plotHeight: rect.height,
+      margin: chartMargin,
+      yAxisWidth: yAxisWidthForScrub,
+      xAxisHeight: isExportCapture ? 64 : xAxisHeight,
+      series: chartSeries,
+      isDual: isDualSeries,
+      mode,
+    })
+    if (!next) return
+    setActiveTooltip((prev) => {
+      if (
+        prev &&
+        prev.year === next.year &&
+        prev.value === next.value &&
+        prev.x === next.x &&
+        prev.y === next.y &&
+        prev.primaryValue === next.primaryValue &&
+        prev.secondaryValue === next.secondaryValue
+      ) {
+        return prev
+      }
+      return next
+    })
+  }
+
+  const onPlotPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!coarsePointer || exportCaptureSize) return
+    if (event.pointerType === 'mouse') return
+    touchGestureRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      mode: expanded ? 'pending' : 'scrub',
+    }
+    if (!expanded) {
+      event.currentTarget.setPointerCapture(event.pointerId)
+      applyTouchScrub(event.clientX)
+    }
+  }
+
+  const onPlotPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const gesture = touchGestureRef.current
+    if (!gesture || gesture.pointerId !== event.pointerId) return
+
+    if (gesture.mode === 'pending') {
+      const dx = event.clientX - gesture.startX
+      const dy = event.clientY - gesture.startY
+      if (Math.hypot(dx, dy) < 8) return
+      // Expand: horizontal pans scroll years; vertical / short taps scrub.
+      if (Math.abs(dx) > Math.abs(dy)) {
+        gesture.mode = 'scroll'
+        return
+      }
+      gesture.mode = 'scrub'
+      event.currentTarget.setPointerCapture(event.pointerId)
+      applyTouchScrub(event.clientX)
+      return
+    }
+
+    if (gesture.mode === 'scrub') {
+      applyTouchScrub(event.clientX)
+    }
+  }
+
+  const onPlotPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    const gesture = touchGestureRef.current
+    if (!gesture || gesture.pointerId !== event.pointerId) return
+    if (gesture.mode === 'pending' || gesture.mode === 'scrub') {
+      applyTouchScrub(event.clientX)
+    }
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+    touchGestureRef.current = null
+  }
+
   const chartInteractionProps = {
-    // Keep tap tooltips sticky on touch; only clear on leave for hover desktop.
-    onMouseLeave: tooltipTrigger === 'hover' ? clearTooltip : undefined,
+    // Desktop hover clears on leave; touch keeps the last year sticky.
+    onMouseLeave: coarsePointer ? undefined : clearTooltip,
   }
 
   const lineStrokeWidth = expanded || coarsePointer ? 2.5 : 2
@@ -642,6 +895,8 @@ export function StationUsageAreaChart({
   const dualBarMaxSize = expanded || coarsePointer ? 28 : 20
   const singleBarMaxSize = expanded || coarsePointer ? 40 : 28
   const combinedBarMaxSize = expanded || coarsePointer ? 36 : 24
+  /** Large enough that Recharts clamps to half bar width → semicircle tops. */
+  const barTopRadius: [number, number, number, number] = [999, 999, 0, 0]
 
   let chart: React.ReactElement
   if (isDualSeries) {
@@ -658,7 +913,7 @@ export function StationUsageAreaChart({
             dataKey="primary"
             name={primarySeriesLabel}
             fill={CHART_BAR_FILL}
-            radius={[3, 3, 0, 0]}
+            radius={barTopRadius}
             maxBarSize={dualBarMaxSize}
             isAnimationActive={false}
           />
@@ -666,7 +921,7 @@ export function StationUsageAreaChart({
             dataKey="secondary"
             name={secondarySeriesLabel}
             fill={CHART_SERIES_SECONDARY_BAR}
-            radius={[3, 3, 0, 0]}
+            radius={barTopRadius}
             maxBarSize={dualBarMaxSize}
             isAnimationActive={false}
           />
@@ -685,7 +940,7 @@ export function StationUsageAreaChart({
             dataKey="primary"
             name={primarySeriesLabel}
             fill={CHART_BAR_FILL}
-            radius={[3, 3, 0, 0]}
+            radius={barTopRadius}
             maxBarSize={combinedBarMaxSize}
             isAnimationActive={false}
           />
@@ -750,7 +1005,7 @@ export function StationUsageAreaChart({
         <Bar
           dataKey="value"
           fill={CHART_BAR_FILL}
-          radius={[3, 3, 0, 0]}
+          radius={barTopRadius}
           maxBarSize={singleBarMaxSize}
           isAnimationActive={false}
         />
@@ -769,7 +1024,7 @@ export function StationUsageAreaChart({
         <Bar
           dataKey="value"
           fill={CHART_BAR_FILL}
-          radius={[3, 3, 0, 0]}
+          radius={barTopRadius}
           maxBarSize={combinedBarMaxSize}
           isAnimationActive={false}
         />
@@ -808,9 +1063,11 @@ export function StationUsageAreaChart({
     )
   }
 
-  const plotWidth = expanded
-    ? Math.max(yearCount * SCROLL_YEAR_WIDTH + Y_AXIS_WIDTH + 40, 480)
-    : undefined
+  const plotWidth = exportCaptureSize
+    ? exportCaptureSize.width
+    : expanded
+      ? Math.max(yearCount * SCROLL_YEAR_WIDTH + Y_AXIS_WIDTH + 40, 480)
+      : undefined
 
   return (
     <div
@@ -818,31 +1075,41 @@ export function StationUsageAreaChart({
         'station-usage-area-chart',
         expanded ? 'station-usage-area-chart--expanded' : '',
         coarsePointer ? 'station-usage-area-chart--touch' : '',
+        exportCaptureSize ? 'station-usage-area-chart--export-capture' : '',
         className,
       ]
         .filter(Boolean)
         .join(' ')}
+      style={
+        exportCaptureSize
+          ? ({
+              '--station-usage-plot-height': `${exportCaptureSize.height}px`,
+            } as React.CSSProperties)
+          : undefined
+      }
     >
       <div className="station-usage-area-chart__header">
         {title ? <div className="station-usage-area-chart__title">{title}</div> : null}
-        <div
-          className="network-station-tab-group station-usage-area-chart__mode-tabs"
-          role="tablist"
-          aria-label="Chart type"
-        >
-          {CHART_MODE_OPTIONS.map((option) => (
-            <BUTTabButton
-              key={option.id}
-              type="button"
-              width="hug"
-              role="tab"
-              pressed={mode === option.id}
-              ariaSelected={mode === option.id}
-              onClick={() => selectMode(option.id)}
-            >
-              {option.label}
-            </BUTTabButton>
-          ))}
+        <div className="station-details-network-tabs-wrap">
+          <div
+            className="network-station-tab-group station-usage-area-chart__mode-tabs"
+            role="tablist"
+            aria-label="Chart type"
+          >
+            {CHART_MODE_OPTIONS.map((option) => (
+              <BUTTabButton
+                key={option.id}
+                type="button"
+                width="hug"
+                role="tab"
+                pressed={mode === option.id}
+                ariaSelected={mode === option.id}
+                onClick={() => selectMode(option.id)}
+              >
+                {option.label}
+              </BUTTabButton>
+            ))}
+          </div>
         </div>
       </div>
       <div className="station-usage-area-chart__plot">
@@ -850,7 +1117,22 @@ export function StationUsageAreaChart({
           <div
             ref={plotRef}
             className="station-usage-area-chart__plot-inner"
-            style={plotWidth ? { width: plotWidth } : undefined}
+            onPointerDown={onPlotPointerDown}
+            onPointerMove={onPlotPointerMove}
+            onPointerUp={onPlotPointerUp}
+            onPointerCancel={onPlotPointerUp}
+            style={
+              exportCaptureSize
+                ? {
+                    width: exportCaptureSize.width,
+                    height: exportCaptureSize.height,
+                    minHeight: exportCaptureSize.height,
+                    maxHeight: exportCaptureSize.height,
+                  }
+                : plotWidth
+                  ? { width: plotWidth }
+                  : undefined
+            }
           >
             <ResponsiveContainer key={chartEpoch} width="100%" height="100%">
               {chart}
@@ -931,38 +1213,38 @@ export function StationUsageAreaChart({
         </div>
       ) : null}
       <div className="station-usage-area-chart__footer">
-        <div
-          className="network-station-tab-group station-usage-area-chart__density-tabs"
-          role="tablist"
-          aria-label="Chart density"
-        >
-          <BUTTabButton
-            type="button"
-            width="hug"
-            role="tab"
-            pressed={density === 'compact'}
-            ariaSelected={density === 'compact'}
-            onClick={() => selectDensity('compact')}
+        <p className="station-usage-area-chart__scroll-hint">
+          {coarsePointer
+            ? 'Tap or drag for details. In Expand, swipe sideways to explore years.'
+            : 'Scroll or swipe sideways to explore years'}
+        </p>
+        <div className="station-usage-area-chart__footer-controls">
+          <div
+            className="network-station-tab-group station-usage-area-chart__density-tabs"
+            role="tablist"
+            aria-label="Chart density"
           >
-            Compact
-          </BUTTabButton>
-          <BUTTabButton
-            type="button"
-            width="hug"
-            role="tab"
-            pressed={density === 'expanded'}
-            ariaSelected={density === 'expanded'}
-            onClick={() => selectDensity('expanded')}
-          >
-            Expand
-          </BUTTabButton>
-        </div>
-        <div className="station-usage-area-chart__footer-end">
-          <p className="station-usage-area-chart__scroll-hint">
-            {coarsePointer
-              ? 'Tap a point for details. In Expand, swipe sideways to explore years.'
-              : 'Scroll or swipe sideways to explore years'}
-          </p>
+            <BUTTabButton
+              type="button"
+              width="hug"
+              role="tab"
+              pressed={density === 'compact'}
+              ariaSelected={density === 'compact'}
+              onClick={() => selectDensity('compact')}
+            >
+              Compact
+            </BUTTabButton>
+            <BUTTabButton
+              type="button"
+              width="hug"
+              role="tab"
+              pressed={density === 'expanded'}
+              ariaSelected={density === 'expanded'}
+              onClick={() => selectDensity('expanded')}
+            >
+              Expand
+            </BUTTabButton>
+          </div>
           <BUTWideButton
             type="button"
             width="hug"
@@ -997,7 +1279,7 @@ export function StationUsageAreaChart({
                       Export chart
                     </h2>
                     <p className="station-usage-area-chart__export-step">
-                      Step {exportStep} of 2 · {exportStep === 1 ? 'Options' : 'Agreement'}
+                      Step {exportStep} of 2 · {EXPORT_STEP_LABELS[exportStep]}
                     </p>
                   </div>
                   <BUTCircleButton

@@ -1,101 +1,122 @@
-.station-odm-flows-meta {
+.station-odm-flows > .modal-section-title {
+  margin-bottom: var(--space-md, 0.75rem);
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.station-odm-flows > .kb-source-hint {
+  margin-top: var(--space-xl, 1.5rem);
+  margin-bottom: 0;
+}
+
+.station-odm-flows-control {
   margin: 0 0 var(--space-lg, 1rem);
+}
+
+.station-odm-flows-control__caption {
+  margin: 0 0 var(--space-sm, 0.5rem);
   font-size: var(--text-sm, 0.875rem);
-  line-height: 1.45;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--text-secondary, #666);
 }
 
-.station-odm-flows-table-panel {
+.network-station-tab-group.station-odm-flows-year-tabs {
+  /* Keep room for `--button-drop-shadow` (overflow-y: hidden clips without this).
+   * Overrides `.station-usage-metric-tabs` padding-block / former padding-bottom: 0. */
+  padding-block: 4px var(--network-tab-group-shadow-pad, 8px);
+}
+
+.station-odm-flows-range-tabs {
+  width: 100%;
+  max-width: 22rem;
+}
+
+@media (max-width: 1023px) {
+  .station-odm-flows-range-tabs.rs-button-bar {
+    display: flex;
+    width: 100%;
+    max-width: none;
+  }
+
+  .station-odm-flows-range-tabs .rs-button-bar__item {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .station-odm-flows-range-tabs .rs-button-bar__button {
+    width: 100%;
+  }
+}
+
+.station-odm-flows-list {
+  list-style: none;
   margin: 0;
-}
-
-/* Shared fixed layout so top/bottom tables stay column-aligned */
-.station-odm-flows-table.stations-table {
-  table-layout: fixed;
-  width: 100%;
-  min-width: 100%;
-}
-
-.station-odm-flows-table__col-rank {
-  width: 4.25rem;
-}
-
-.station-odm-flows-table__col-dest {
-  width: auto;
-}
-
-.station-odm-flows-table__col-journeys {
-  width: 9rem;
-}
-
-.station-odm-flows-table__header {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  padding: var(--space-sm) var(--space-md);
-}
-
-.station-odm-flows-table__row {
-  cursor: default;
-}
-
-/* Beat `.stations-table th/td { text-align: left }` */
-.station-odm-flows-table.stations-table th.station-odm-flows-table__rank-col,
-.station-odm-flows-table.stations-table td.station-odm-flows-table__rank-col {
-  width: 4.25rem;
-  text-align: right;
-  white-space: nowrap;
-}
-
-.station-odm-flows-table.stations-table th.station-odm-flows-table__rank-col {
   padding: 0;
 }
 
-.station-odm-flows-table.stations-table td.station-odm-flows-table__rank-col {
-  padding-inline: var(--space-sm, 0.5rem) var(--space-md, 0.75rem);
+.station-odm-flows-list__item {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  gap: var(--space-sm, 0.5rem);
+  align-items: start;
+  padding: var(--space-sm, 0.5rem) 0;
+  border-bottom: 1px solid var(--border-color, #ddd);
+}
+
+.station-odm-flows-list__item:last-child {
+  border-bottom: none;
+}
+
+.station-odm-flows-list__rank {
   font-size: var(--text-xs, 0.75rem);
   font-weight: 600;
-}
-
-.station-odm-flows-table.stations-table
-  th.station-odm-flows-table__rank-col
-  .station-odm-flows-table__header {
-  padding-inline: var(--space-sm, 0.5rem) var(--space-md, 0.75rem);
-  text-align: right;
-}
-
-.station-odm-flows-table.stations-table th.station-odm-flows-table__journeys-col,
-.station-odm-flows-table.stations-table td.station-odm-flows-table__journeys-col {
-  width: 9rem;
-  text-align: left;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text-secondary, #888);
+  padding-top: 0.1rem;
 }
 
-.station-odm-flows-table.stations-table th.station-odm-flows-table__journeys-col {
-  padding: 0;
+.station-odm-flows-list__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
 }
 
-.station-odm-flows-table.stations-table
-  th.station-odm-flows-table__journeys-col
-  .station-odm-flows-table__header {
-  text-align: left;
-}
-
-.station-odm-flows-table__dest {
+.station-odm-flows-list__dest {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.35rem;
   min-width: 0;
-  font-weight: inherit;
+  line-height: 1.35;
 }
 
-.station-odm-flows-table__crs {
+.station-odm-flows-list__crs {
   flex: 0 0 auto;
   color: var(--text-secondary, #888);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+.station-odm-flows-list__name {
+  min-width: 0;
+  font-weight: 500;
+  color: var(--text-primary, #111);
+}
+
+.station-odm-flows-list__journeys {
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+  color: var(--text-primary, #111);
+}
+
+.station-odm-flows-list__journeys-label {
+  font-weight: 400;
+  color: var(--text-secondary, #888);
 }

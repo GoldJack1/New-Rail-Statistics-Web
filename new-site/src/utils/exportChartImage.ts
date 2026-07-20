@@ -1,5 +1,25 @@
 export type ChartExportFormat = 'png' | 'jpeg'
 export type ChartExportTheme = 'light' | 'dark'
+/** Outer frame ratio for the exported image (chart is letterboxed to fit). */
+export type ChartExportAspectRatio = '1:1' | '4:3' | '16:9'
+export type ChartExportOrientation = 'landscape' | 'portrait'
+
+const TITLE_SIZE = 34
+const TITLE_LINE = 40
+const TITLE_BAND = 96
+const EXPORT_MARGIN = 40
+const FOOTER_PAD = 14
+const FOOTER_SIZE = 15
+const FOOTER_LINE = 20
+const FOOTER_GAP = 8
+const COPYRIGHT_SIZE = 14
+const COPYRIGHT_LINE = 19
+const FOOTER_RESERVE = 120
+const MAX_ATTRIBUTION_LINES = 2
+const MAX_COPYRIGHT_LINES = 4
+const OVERLAY_CALLOUT_GAP = 14
+const EXPORT_FONT_FAMILY = 'GeologicaExport'
+const EXPORT_FONT_URL = '/fonts/Geologica_Cursive-Regular.ttf'
 
 export type ChartExportOverlayCallout = {
   year: string
@@ -19,11 +39,83 @@ export type ChartExportOptions = {
   theme: ChartExportTheme
   /** Ignored for JPEG (always drawn with a solid background). */
   background: boolean
+  /** Outer canvas aspect ratio. Defaults to fitting the chart content. */
+  aspectRatio?: ChartExportAspectRatio
+  /** Landscape keeps the ratio; portrait flips it (16:9 → 9:16). Ignored for 1:1. */
+  orientation?: ChartExportOrientation
   branding?: ChartExportBranding
   /** Optional year callout drawn above the chart point (matches on-screen tooltip). */
   overlayCallout?: ChartExportOverlayCallout
   fileName?: string
   scale?: number
+}
+
+export const CHART_EXPORT_ASPECT_RATIOS: Record<ChartExportAspectRatio, number> = {
+  '1:1': 1,
+  '4:3': 4 / 3,
+  '16:9': 16 / 9,
+}
+
+/** Width÷height for the chosen size + orientation. */
+export function resolveExportAspectValue(
+  aspectRatio: ChartExportAspectRatio,
+  orientation: ChartExportOrientation = 'landscape'
+): number {
+  const base = CHART_EXPORT_ASPECT_RATIOS[aspectRatio]
+  if (aspectRatio === '1:1' || orientation === 'landscape') return base
+  return 1 / base
+}
+
+/** Fixed output canvas size for a size + orientation (long edge = 1920). */
+export function getExportCanvasSize(
+  aspectRatio: ChartExportAspectRatio,
+  orientation: ChartExportOrientation = 'landscape',
+  longEdge = 1920
+): { width: number; height: number } {
+  const ratio = resolveExportAspectValue(aspectRatio, orientation)
+  if (ratio >= 1) {
+    return { width: longEdge, height: Math.max(1, Math.round(longEdge / ratio)) }
+  }
+  return { width: Math.max(1, Math.round(longEdge * ratio)), height: longEdge }
+}
+
+/**
+ * Plot size used while capturing a 16:9 landscape export.
+ * Slightly smaller than the final chart slot so we can scale the whole SVG up
+ * together (axes + series) to fill the frame with readable type.
+ */
+export function getExportCapturePlotSize(
+  aspectRatio: ChartExportAspectRatio = '16:9',
+  orientation: ChartExportOrientation = 'landscape'
+): { width: number; height: number } {
+  const canvas = getExportCanvasSize(aspectRatio, orientation)
+  // Design-size capture; drawn scaled up into the 16:9 frame
+  const contentW = Math.round((canvas.width - EXPORT_MARGIN * 2) * 0.92)
+  const reservedY = TITLE_BAND + FOOTER_RESERVE
+  const availableH = canvas.height - EXPORT_MARGIN * 2 - reservedY
+  const plotH = Math.round(Math.max(520, availableH * 0.92))
+  return { width: contentW, height: plotH }
+}
+
+/** Grow a content box to fill a target aspect ratio (letterbox / pillarbox). */
+export function frameSizeForAspectRatio(
+  contentWidth: number,
+  contentHeight: number,
+  aspectRatio: ChartExportAspectRatio,
+  orientation: ChartExportOrientation = 'landscape'
+): { width: number; height: number } {
+  const target = resolveExportAspectValue(aspectRatio, orientation)
+  const contentAspect = contentWidth / Math.max(1, contentHeight)
+  if (contentAspect > target) {
+    return {
+      width: Math.max(1, Math.round(contentWidth)),
+      height: Math.max(1, Math.round(contentWidth / target)),
+    }
+  }
+  return {
+    width: Math.max(1, Math.round(contentHeight * target)),
+    height: Math.max(1, Math.round(contentHeight)),
+  }
 }
 
 type ExportPalette = {
@@ -39,44 +131,34 @@ type ExportPalette = {
   tooltipBorder: string
 }
 
+/** Light = white canvas + black marks; dark = black canvas + white marks. */
 const EXPORT_PALETTES: Record<ChartExportTheme, ExportPalette> = {
   light: {
-    line: '#111111',
-    muted: '#666666',
+    line: '#000000',
+    muted: '#444444',
     bg: '#ffffff',
-    bar: '#3a3a3a',
-    grid: '#d4d4d4',
-    baseline: '#8a8a8a',
+    bar: '#000000',
+    grid: '#d0d0d0',
+    baseline: '#666666',
     dotFill: '#ffffff',
-    accent: '#b20016',
-    tooltipBg: '#f4f4f4',
-    tooltipBorder: '#d4d4d4',
+    // Secondary series stays monochrome but distinct from primary
+    accent: '#555555',
+    tooltipBg: '#ffffff',
+    tooltipBorder: '#000000',
   },
   dark: {
     line: '#ffffff',
-    muted: '#b0b0b0',
-    bg: '#383838',
-    bar: '#cfcfcf',
-    grid: '#555555',
-    baseline: '#8a8a8a',
-    dotFill: '#383838',
-    accent: '#ff8a95',
-    tooltipBg: '#2c2c2c',
-    tooltipBorder: '#555555',
+    muted: '#c0c0c0',
+    bg: '#000000',
+    bar: '#ffffff',
+    grid: '#333333',
+    baseline: '#888888',
+    dotFill: '#000000',
+    accent: '#b0b0b0',
+    tooltipBg: '#000000',
+    tooltipBorder: '#ffffff',
   },
 }
-
-const TITLE_BAND = 72
-const EXPORT_MARGIN = 28
-const FOOTER_PAD = 10
-const FOOTER_LINE = 14
-const FOOTER_GAP = 6
-const COPYRIGHT_LINE = 15
-const MAX_ATTRIBUTION_LINES = 2
-const MAX_COPYRIGHT_LINES = 4
-const OVERLAY_CALLOUT_GAP = 12
-const EXPORT_FONT_FAMILY = 'GeologicaExport'
-const EXPORT_FONT_URL = '/fonts/Geologica_Cursive-Regular.ttf'
 
 /** Marker attribute on the SVG overlay point used when painting the export callout. */
 export const STATION_USAGE_OVERLAY_ANCHOR_ATTR = 'data-station-usage-overlay-anchor'
@@ -187,40 +269,44 @@ function drawOverlayCallout(
   pointY: number,
   year: string,
   value: number,
-  valueLabel?: string
+  valueLabel?: string,
+  scale = 1
 ) {
+  const s = Math.max(0.75, scale)
   const valueText = valueLabel ?? value.toLocaleString()
+  const yearSize = Math.round(12 * s)
+  const valueSize = Math.round(17 * s)
   applyExportFontVariation(ctx)
   ctx.textAlign = 'center'
   ctx.textBaseline = 'top'
-  ctx.font = exportCanvasFont(500, 11)
+  ctx.font = exportCanvasFont(500, yearSize)
   const yearWidth = ctx.measureText(year).width
-  ctx.font = exportCanvasFont(700, 16)
+  ctx.font = exportCanvasFont(700, valueSize)
   const valueWidth = ctx.measureText(valueText).width
 
-  const padX = 12
-  const padTop = 8
-  const padBottom = 9
-  const gap = 3
-  const boxW = Math.max(yearWidth, valueWidth, 44) + padX * 2
-  const boxH = padTop + 11 + gap + 16 + padBottom
+  const padX = 12 * s
+  const padTop = 8 * s
+  const padBottom = 9 * s
+  const gap = 3 * s
+  const boxW = Math.max(yearWidth, valueWidth, 44 * s) + padX * 2
+  const boxH = padTop + yearSize + gap + valueSize + padBottom
   const boxX = pointX - boxW / 2
-  const boxY = pointY - OVERLAY_CALLOUT_GAP - boxH
+  const boxY = pointY - OVERLAY_CALLOUT_GAP * s - boxH
 
-  roundRectPath(ctx, boxX, boxY, boxW, boxH, 8)
+  roundRectPath(ctx, boxX, boxY, boxW, boxH, 8 * s)
   ctx.fillStyle = palette.tooltipBg
   ctx.fill()
   ctx.strokeStyle = palette.tooltipBorder
-  ctx.lineWidth = 1
+  ctx.lineWidth = Math.max(1, s)
   ctx.stroke()
 
   ctx.fillStyle = palette.muted
-  ctx.font = exportCanvasFont(500, 11)
+  ctx.font = exportCanvasFont(500, yearSize)
   ctx.fillText(year, pointX, boxY + padTop)
 
   ctx.fillStyle = palette.line
-  ctx.font = exportCanvasFont(700, 16)
-  ctx.fillText(valueText, pointX, boxY + padTop + 11 + gap)
+  ctx.font = exportCanvasFont(700, valueSize)
+  ctx.fillText(valueText, pointX, boxY + padTop + yearSize + gap)
 }
 
 function mapExportColor(value: string, palette: ExportPalette): string {
@@ -228,7 +314,6 @@ function mapExportColor(value: string, palette: ExportPalette): string {
   if (!v || v === 'none' || v === 'transparent') return v
 
   if (v.includes('color-mix') && v.includes('--text-primary')) {
-    if (v.includes('72%')) return palette.bar
     if (v.includes('12%') || v.includes('8%')) return palette.grid
     if (v.includes('45%') || v.includes('35%')) return palette.baseline
     return palette.line
@@ -316,9 +401,11 @@ export async function exportChartSvgAsImage(
   sourceSvg: SVGSVGElement,
   options: ChartExportOptions
 ): Promise<void> {
-  const { format, theme, fileName, scale = 2, branding, overlayCallout } = options
+  const { format, theme, fileName, scale = 2, branding, overlayCallout, aspectRatio, orientation } =
+    options
   const background = format === 'jpeg' ? true : options.background
   const palette = EXPORT_PALETTES[theme]
+  const exportOrientation = orientation ?? 'landscape'
 
   const rect = sourceSvg.getBoundingClientRect()
   const width = Math.max(1, Math.round(rect.width || Number(sourceSvg.getAttribute('width')) || 800))
@@ -364,24 +451,28 @@ export async function exportChartSvgAsImage(
     })
 
     const titleBand = branding?.title ? TITLE_BAND : 0
-    // Measure footer height after fonts are set; start with a provisional canvas.
     const canvas = document.createElement('canvas')
     const measureCtx = canvas.getContext('2d')
     if (!measureCtx) throw new Error('Canvas is not available for chart export')
 
+    const frame = aspectRatio
+      ? getExportCanvasSize(aspectRatio, exportOrientation)
+      : null
+    const contentWidth = frame ? frame.width - EXPORT_MARGIN * 2 : width
+    const textWidth = Math.max(1, contentWidth)
+
     applyExportFontVariation(measureCtx)
-    const textWidth = Math.max(1, width)
     let attributionLineCount = 0
     let copyrightLineCount = 0
     if (branding?.attribution) {
-      measureCtx.font = exportCanvasFont(400, 11)
+      measureCtx.font = exportCanvasFont(400, FOOTER_SIZE)
       attributionLineCount = Math.min(
         wrapCanvasText(measureCtx, branding.attribution, textWidth).length,
         MAX_ATTRIBUTION_LINES
       )
     }
     if (branding?.copyright) {
-      measureCtx.font = exportCanvasFont(500, 11)
+      measureCtx.font = exportCanvasFont(500, COPYRIGHT_SIZE)
       copyrightLineCount = Math.min(
         wrapCanvasText(measureCtx, branding.copyright, textWidth).length,
         MAX_COPYRIGHT_LINES
@@ -396,11 +487,20 @@ export async function exportChartSvgAsImage(
         (copyrightLineCount > 0 ? copyrightLineCount * COPYRIGHT_LINE : 0) +
         FOOTER_PAD
       : 0
-    const contentHeight = height + titleBand + footerBand
-    const totalWidth = width + EXPORT_MARGIN * 2
-    const totalHeight = contentHeight + EXPORT_MARGIN * 2
+
+    const totalWidth = frame ? frame.width : width + EXPORT_MARGIN * 2
+    const naturalContentHeight = height + titleBand + footerBand + EXPORT_MARGIN * 2
+    const totalHeight = frame ? frame.height : naturalContentHeight
     const originX = EXPORT_MARGIN
     const originY = EXPORT_MARGIN
+    const chartAreaWidth = totalWidth - EXPORT_MARGIN * 2
+    const chartAreaHeight = Math.max(1, totalHeight - EXPORT_MARGIN * 2 - titleBand - footerBand)
+    // Scale the chart to fill the frame (up or down) so type and plot stay balanced
+    const fit = Math.min(chartAreaWidth / width, chartAreaHeight / height)
+    const drawWidth = width * fit
+    const drawHeight = height * fit
+    const drawX = originX + (chartAreaWidth - drawWidth) / 2
+    const drawY = originY + titleBand + (chartAreaHeight - drawHeight) / 2
 
     canvas.width = Math.round(totalWidth * scale)
     canvas.height = Math.round(totalHeight * scale)
@@ -416,16 +516,16 @@ export async function exportChartSvgAsImage(
 
     if (branding?.title) {
       ctx.fillStyle = palette.line
-      ctx.font = exportCanvasFont(700, 22)
+      ctx.font = exportCanvasFont(700, TITLE_SIZE)
       ctx.textAlign = 'left'
       ctx.textBaseline = 'top'
       const titleLines = wrapCanvasText(ctx, branding.title, textWidth)
       titleLines.slice(0, 2).forEach((line, index) => {
-        ctx.fillText(line, originX, originY + 14 + index * 26)
+        ctx.fillText(line, originX, originY + 8 + index * TITLE_LINE)
       })
     }
 
-    ctx.drawImage(image, originX, originY + titleBand, width, height)
+    ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight)
 
     if (overlayCallout) {
       const anchor = sourceSvg.querySelector(`[${STATION_USAGE_OVERLAY_ANCHOR_ATTR}]`)
@@ -435,21 +535,22 @@ export async function exportChartSvgAsImage(
         drawOverlayCallout(
           ctx,
           palette,
-          originX + cx,
-          originY + titleBand + cy,
+          drawX + cx * fit,
+          drawY + cy * fit,
           overlayCallout.year,
           overlayCallout.value,
-          overlayCallout.valueLabel
+          overlayCallout.valueLabel,
+          fit
         )
       }
     }
 
     if (hasFooter) {
-      let y = originY + titleBand + height + FOOTER_PAD
+      let y = originY + titleBand + chartAreaHeight + FOOTER_PAD
 
       if (branding?.attribution && attributionLineCount > 0) {
         ctx.fillStyle = palette.muted
-        ctx.font = exportCanvasFont(400, 11)
+        ctx.font = exportCanvasFont(400, FOOTER_SIZE)
         ctx.textAlign = 'left'
         ctx.textBaseline = 'top'
         const attributionLines = wrapCanvasText(ctx, branding.attribution, textWidth)
@@ -461,7 +562,7 @@ export async function exportChartSvgAsImage(
 
       if (branding?.copyright && copyrightLineCount > 0) {
         ctx.fillStyle = palette.muted
-        ctx.font = exportCanvasFont(500, 11)
+        ctx.font = exportCanvasFont(500, COPYRIGHT_SIZE)
         ctx.textAlign = 'left'
         ctx.textBaseline = 'top'
         const copyrightLines = wrapCanvasText(ctx, branding.copyright, textWidth)

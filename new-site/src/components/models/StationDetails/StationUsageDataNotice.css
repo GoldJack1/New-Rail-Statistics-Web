@@ -6,16 +6,13 @@
   color: var(--text-secondary, #666);
 }
 
-/* Entries / Interchanges / Combined — match chart tab chrome, with section spacing */
+/* Entries / Interchanges / Combined — scroll/bleed via .station-details-network-tabs-wrap */
 .station-usage-metric-tabs {
-  --network-tab-group-shadow-pad: 0px;
-  --network-tab-group-inline-pad: 0px;
   width: 100%;
   max-width: 100%;
+  min-width: 0;
   margin: 0;
-  padding: var(--space-sm, 0.5rem) 0 var(--space-xl, 1.5rem);
-  scroll-padding-inline: 0;
-  overflow: visible;
+  padding-block: var(--space-sm, 0.5rem) var(--space-xl, 1.5rem);
 }
 
 .station-usage-combined-year {
@@ -28,4 +25,13 @@
   line-height: 1.3;
   color: var(--accent-base);
   font-variant-numeric: tabular-nums;
+}
+
+/* Year / value cells under the usage graph — 2 columns on tablet/mobile */
+@media (max-width: 1023px) {
+  .station-details-main .station-usage-data-grid.modal-details-grid,
+  .station-details-main .station-usage-data-grid.modal-facilities-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-md, 0.75rem) var(--space-lg, 1rem);
+  }
 }

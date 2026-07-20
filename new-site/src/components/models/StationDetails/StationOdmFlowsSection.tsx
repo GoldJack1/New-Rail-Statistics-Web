@@ -1,19 +1,20 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { BUTTabButton } from '../../buttons'
-import { StationDetailsSubsection } from './StationDetailsSubsection'
+import { BUTTabButton, BUTTwoButtonBar } from '../../buttons'
 import { StationSectionTitle } from './StationSectionTitle'
 import { getStationDetailsSectionIcon } from '../../../utils/stationDetailFieldIcons'
+import { stationDetailsSubsectionId } from '@/utils/stationDetailsTabSubheaders'
 import type { GbnrOdmDestination, GbnrOdmFlowsDoc } from '../../../services/gbnrOdmFlows'
 import type { GbnrOdmFlowsState } from '../../../hooks/useGbnrOdmFlows'
 import '../../cards/NetworkStationTabGroup/NetworkStationTabGroup.css'
-import '../../cards/StationsTableView/StationsTableView.css'
 import './StationUsageDataNotice.css'
 import './StationOdmFlowsSection.css'
 
 const ODM_SOURCE_HINT =
   'View the top and bottom 50 destinations by estimated journeys from this origin, using ORR Origin–Destination Matrix data.'
+
+type OdmRangeId = 'top' | 'bottom'
 
 function KnowledgebaseSourceHint({ label }: { label?: string | null }) {
   const text = label?.trim()
@@ -25,7 +26,7 @@ function formatJourneys(value: number): string {
   return value.toLocaleString()
 }
 
-function OdmDestinationTable({
+function OdmDestinationRows({
   rows,
   emptyLabel,
 }: {
@@ -37,57 +38,27 @@ function OdmDestinationTable({
   }
 
   return (
-    <div className="stations-table-panel station-odm-flows-table-panel">
-      <div className="stations-table-wrap">
-        <table className="stations-table station-odm-flows-table">
-          <colgroup>
-            <col className="station-odm-flows-table__col-rank" />
-            <col className="station-odm-flows-table__col-dest" />
-            <col className="station-odm-flows-table__col-journeys" />
-          </colgroup>
-          <thead>
-            <tr>
-              <th scope="col" className="station-odm-flows-table__rank-col">
-                <span className="station-odm-flows-table__header">Rank</span>
-              </th>
-              <th scope="col">
-                <span className="station-odm-flows-table__header">Destination</span>
-              </th>
-              <th scope="col" className="station-odm-flows-table__journeys-col">
-                <span className="station-odm-flows-table__header">Journeys</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, index) => (
-              <tr
-                key={`${row.rank}-${row.nlc}`}
-                className={[
-                  'stations-table__row',
-                  'station-odm-flows-table__row',
-                  index % 2 === 1 ? 'stations-table__row--striped' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-              >
-                <td className="stations-table__id station-odm-flows-table__rank-col">{row.rank}</td>
-                <td className="stations-table__name">
-                  <span className="station-odm-flows-table__dest">
-                    {row.crsCode ? (
-                      <span className="station-odm-flows-table__crs">({row.crsCode})</span>
-                    ) : null}
-                    <span>{row.stationName || '—'}</span>
-                  </span>
-                </td>
-                <td className="station-odm-flows-table__journeys-col">
-                  {formatJourneys(row.journeys)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <ol className="station-odm-flows-list" aria-label="Destinations">
+      {rows.map((row) => (
+        <li key={`${row.rank}-${row.nlc}`} className="station-odm-flows-list__item">
+          <span className="station-odm-flows-list__rank" aria-label={`Rank ${row.rank}`}>
+            {row.rank}
+          </span>
+          <div className="station-odm-flows-list__body">
+            <span className="station-odm-flows-list__dest">
+              {row.crsCode ? (
+                <span className="station-odm-flows-list__crs">({row.crsCode})</span>
+              ) : null}
+              <span className="station-odm-flows-list__name">{row.stationName || '—'}</span>
+            </span>
+            <span className="station-odm-flows-list__journeys">
+              {formatJourneys(row.journeys)}
+              <span className="station-odm-flows-list__journeys-label"> journeys</span>
+            </span>
+          </div>
+        </li>
+      ))}
+    </ol>
   )
 }
 
@@ -102,6 +73,7 @@ export function StationOdmFlowsSection({ state }: StationOdmFlowsSectionProps) {
     [doc]
   )
   const [selectedYear, setSelectedYear] = useState<string>('')
+  const [selectedRange, setSelectedRange] = useState<OdmRangeId>('top')
 
   useEffect(() => {
     if (years.length === 0) {
@@ -112,15 +84,26 @@ export function StationOdmFlowsSection({ state }: StationOdmFlowsSectionProps) {
   }, [years])
 
   const yearBucket = doc && selectedYear ? doc.years[selectedYear] : null
+  const rangeRows =
+    yearBucket == null
+      ? []
+      : selectedRange === 'top'
+        ? yearBucket.topDestinations
+        : yearBucket.bottomDestinations
+  const rangeEmptyLabel =
+    selectedRange === 'top'
+      ? 'No top destinations for this year.'
+      : 'No bottom destinations for this year.'
+  const rangeSubsectionTitle =
+    selectedRange === 'top' ? 'Top 50 destinations' : 'Bottom 50 destinations'
 
   return (
-    <div className="modal-section">
+    <div className="modal-section station-odm-flows">
       <StationSectionTitle
-        title="Popular destinations from this station"
+        title="Most & Least Popular destinations from this station"
         icon={getStationDetailsSectionIcon('usage')}
         pageHeading
       />
-      <KnowledgebaseSourceHint label={ODM_SOURCE_HINT} />
 
       {state.status === 'waiting_nlc' && (
         <p className="edit-hint">Waiting for NLC to match ODM destination flows…</p>
@@ -136,24 +119,29 @@ export function StationOdmFlowsSection({ state }: StationOdmFlowsSectionProps) {
       {state.status === 'ready' && doc && (
         <>
           {years.length > 0 ? (
-            <div
-              className="network-station-tab-group station-usage-metric-tabs"
-              role="tablist"
-              aria-label="ODM financial year"
-            >
-              {years.map((year) => (
-                <BUTTabButton
-                  key={year}
-                  type="button"
-                  width="hug"
-                  role="tab"
-                  pressed={selectedYear === year}
-                  ariaSelected={selectedYear === year}
-                  onClick={() => setSelectedYear(year)}
+            <div className="station-odm-flows-control">
+              <p className="station-odm-flows-control__caption">Financial year</p>
+              <div className="station-details-network-tabs-wrap">
+                <div
+                  className="network-station-tab-group station-usage-metric-tabs station-odm-flows-year-tabs"
+                  role="tablist"
+                  aria-label="ODM financial year"
                 >
-                  {year}
-                </BUTTabButton>
-              ))}
+                  {years.map((year) => (
+                    <BUTTabButton
+                      key={year}
+                      type="button"
+                      width="hug"
+                      role="tab"
+                      pressed={selectedYear === year}
+                      ariaSelected={selectedYear === year}
+                      onClick={() => setSelectedYear(year)}
+                    >
+                      {year}
+                    </BUTTabButton>
+                  ))}
+                </div>
+              </div>
             </div>
           ) : (
             <p className="edit-hint">No yearly ODM data for this station.</p>
@@ -161,27 +149,29 @@ export function StationOdmFlowsSection({ state }: StationOdmFlowsSectionProps) {
 
           {yearBucket && (
             <>
-              <p className="station-odm-flows-meta">
-                {yearBucket.financialYearLabel || `Year ending ${selectedYear}`}
-                {yearBucket.destinationCount != null
-                  ? ` · ${yearBucket.destinationCount.toLocaleString()} destinations in full matrix`
-                  : null}
-                {doc.nlc ? ` · origin NLC ${doc.nlc}` : null}
-              </p>
-
-              <StationDetailsSubsection title="Top 50 destinations">
-                <OdmDestinationTable
-                  rows={yearBucket.topDestinations}
-                  emptyLabel="No top destinations for this year."
+              <div className="station-odm-flows-control">
+                <p className="station-odm-flows-control__caption">Destinations</p>
+                <BUTTwoButtonBar
+                  className="station-odm-flows-range-tabs"
+                  colorVariant="primary"
+                  selectedIndex={selectedRange === 'top' ? 0 : 1}
+                  buttons={[
+                    { label: 'Top 50', value: 'top' },
+                    { label: 'Bottom 50', value: 'bottom' },
+                  ]}
+                  onChange={(index) => {
+                    if (index === 0) setSelectedRange('top')
+                    if (index === 1) setSelectedRange('bottom')
+                  }}
                 />
-              </StationDetailsSubsection>
+              </div>
 
-              <StationDetailsSubsection title="Bottom 50 destinations">
-                <OdmDestinationTable
-                  rows={yearBucket.bottomDestinations}
-                  emptyLabel="No bottom destinations for this year."
-                />
-              </StationDetailsSubsection>
+              <div
+                className="station-details-subsection station-odm-flows-range-panel"
+                id={stationDetailsSubsectionId(rangeSubsectionTitle)}
+              >
+                <OdmDestinationRows rows={rangeRows} emptyLabel={rangeEmptyLabel} />
+              </div>
 
               <p className="station-usage-data-notice">
                 * ODM journey counts are estimates from ticket origin–destination pairs and will not
@@ -196,6 +186,7 @@ export function StationOdmFlowsSection({ state }: StationOdmFlowsSectionProps) {
           )}
         </>
       )}
+      <KnowledgebaseSourceHint label={ODM_SOURCE_HINT} />
     </div>
   )
 }

@@ -3,6 +3,7 @@ import {
   getContrastingTextColor,
   getTocOperatorChipColors,
   mapTocOperatorDoc,
+  resolveNreTocCodeDisplayName,
   resolveTocOperatorDisplayName,
 } from '@/utils/tocOperatorMap'
 
@@ -63,6 +64,30 @@ describe('resolveTocOperatorDisplayName', () => {
     expect(resolveTocOperatorDisplayName(operators, 'avanti west coast')).toBe(
       'Avanti West Coast'
     )
+  })
+
+  it('matches by Firestore document id', () => {
+    expect(resolveTocOperatorDisplayName(operators, 'avanti')).toBe('Avanti West Coast')
+  })
+})
+
+describe('resolveNreTocCodeDisplayName', () => {
+  const operators = [
+    {
+      id: 'Southeastern',
+      name: 'Southeastern',
+      colorHex: '#389cff',
+      operatorRegion: null,
+      operatorType: null,
+    },
+  ]
+
+  it('resolves NRE two-letter codes to catalog names', () => {
+    expect(resolveNreTocCodeDisplayName(operators, 'SE')).toBe('Southeastern')
+  })
+
+  it('returns the code when unknown', () => {
+    expect(resolveNreTocCodeDisplayName(operators, 'ZZ')).toBe('ZZ')
   })
 })
 

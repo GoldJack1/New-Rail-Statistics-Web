@@ -1,7 +1,32 @@
 .station-usage-area-chart {
+  --station-usage-plot-height: 440px;
   margin: 0 0 var(--space-xl, 1.5rem);
   color: var(--text-primary);
   overflow: visible;
+}
+
+/* Off-screen landscape/portrait render used only while capturing an export */
+.station-usage-area-chart--export-capture {
+  position: fixed;
+  left: -14000px;
+  top: 0;
+  width: max-content;
+  margin: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.station-usage-area-chart--export-capture .station-usage-area-chart__header,
+.station-usage-area-chart--export-capture .station-usage-area-chart__legend,
+.station-usage-area-chart--export-capture .station-usage-area-chart__footer {
+  display: none;
+}
+
+.station-usage-area-chart--export-capture .station-usage-area-chart__plot,
+.station-usage-area-chart--export-capture .station-usage-area-chart__scroll {
+  overflow: visible;
+  width: auto;
+  max-width: none;
 }
 
 .station-usage-area-chart__header {
@@ -9,7 +34,7 @@
   flex-direction: column;
   align-items: stretch;
   gap: var(--space-sm, 0.5rem);
-  margin-bottom: var(--space-md, 0.75rem);
+  margin-bottom: var(--space-lg, 1rem);
   min-width: 0;
   overflow: visible;
 }
@@ -50,23 +75,38 @@
   box-shadow: 0 0 0 1px rgb(255 255 255 / 0.2);
 }
 
+/* Scroll/bleed is owned by .station-details-network-tabs-wrap on ≤1023px. */
 .station-usage-area-chart__mode-tabs,
-.station-usage-area-chart__density-tabs,
 .station-usage-area-chart__export-mode-tabs {
-  --network-tab-group-shadow-pad: 0px;
-  --network-tab-group-inline-pad: 0px;
   width: 100%;
   max-width: 100%;
+  min-width: 0;
   margin: 0;
-  padding: 0;
+}
+
+/*
+ * Export dialog chart-type row uses network-station-tab-group, which on ≤1023px
+ * gets page toolbar bleed padding. Cancel it so pills align with section labels.
+ */
+.station-usage-area-chart__export-dialog
+  .station-usage-area-chart__export-mode-tabs.network-station-tab-group {
+  --network-tab-group-inline-pad: 0px;
+  padding-inline: 0;
   scroll-padding-inline: 0;
-  overflow: visible;
+  margin-inline: 0;
+  width: 100%;
+  max-width: 100%;
 }
 
 .station-usage-area-chart__density-tabs.network-station-tab-group {
+  --network-tab-group-shadow-pad: 0px;
+  --network-tab-group-inline-pad: 0px;
   width: max-content;
   max-width: 100%;
   flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
 }
 
 .station-usage-area-chart__tabs {
@@ -91,7 +131,7 @@
   outline: none;
   box-shadow: none;
   background: transparent;
-  padding-bottom: var(--space-sm, 0.5rem);
+  padding-bottom: 0;
 }
 
 .station-usage-area-chart__scroll {
@@ -106,25 +146,38 @@
 .station-usage-area-chart__plot-inner {
   position: relative;
   width: 100%;
-  height: 440px;
-  min-height: 360px;
-  overflow: visible;
+  height: var(--station-usage-plot-height);
+  min-height: var(--station-usage-plot-height);
+  max-height: var(--station-usage-plot-height);
+  overflow: hidden;
   border: none;
   outline: none;
   box-shadow: none;
   background: transparent;
-  /* Prefer taps / clicks over accidental browser gestures on the chart surface */
-  touch-action: manipulation;
+  /* Prefer vertical page scroll; horizontal drags scrub the year callout */
+  touch-action: pan-y;
   -webkit-tap-highlight-color: transparent;
 }
 
 .station-usage-area-chart__plot-inner .recharts-responsive-container,
 .station-usage-area-chart__plot-inner .recharts-wrapper,
 .station-usage-area-chart__plot-inner .recharts-surface {
-  overflow: visible !important;
+  overflow: hidden !important;
   border: none;
   outline: none;
-  touch-action: manipulation;
+  touch-action: pan-y;
+}
+
+/* Recharts 3 accessibilityLayer focuses the chart on click — hide mouse focus ring */
+.station-usage-area-chart__plot-inner .recharts-wrapper:focus,
+.station-usage-area-chart__plot-inner .recharts-wrapper *:focus {
+  outline: none;
+}
+
+.station-usage-area-chart__plot-inner .recharts-wrapper:focus-visible,
+.station-usage-area-chart__plot-inner .recharts-wrapper *:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--text-primary) 40%, transparent);
+  outline-offset: 2px;
 }
 
 .station-usage-area-chart__tooltip {
@@ -190,13 +243,21 @@
 
 .station-usage-area-chart__footer {
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-md, 0.75rem);
+  margin-top: var(--space-sm, 0.5rem);
+  min-width: 0;
+  overflow: visible;
+}
+
+.station-usage-area-chart__footer-controls {
+  display: flex;
   flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md, 0.75rem);
-  margin-top: var(--space-lg, 1rem);
   min-width: 0;
-  overflow: visible;
 }
 
 .station-usage-area-chart__footer .station-usage-area-chart__density-tabs {
@@ -205,23 +266,15 @@
   min-width: 0;
 }
 
-.station-usage-area-chart__footer-end {
-  display: inline-flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-md, 0.75rem);
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
 .station-usage-area-chart__scroll-hint {
   margin: 0;
   font-size: var(--text-xs, 0.75rem);
   color: var(--text-secondary);
-  text-align: right;
+  text-align: left;
   line-height: 1.35;
-  white-space: nowrap;
+  padding-bottom: var(--space-xs, 0.35rem);
+  /* Keep footer height stable when Expand shows this hint */
+  min-height: calc(1.35em + var(--space-xs, 0.35rem));
 }
 
 .station-usage-area-chart__export-overlay {
@@ -397,6 +450,89 @@
   scrollbar-width: thin;
 }
 
+.station-usage-area-chart__export-size-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-sm, 0.5rem);
+}
+
+.station-usage-area-chart__export-size-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm, 0.5rem);
+  margin: 0;
+  padding: var(--space-md, 0.75rem) var(--space-sm, 0.5rem);
+  border: 1px solid color-mix(in srgb, var(--text-primary) 16%, transparent);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: center;
+}
+
+.station-usage-area-chart__export-size-option:hover {
+  border-color: color-mix(in srgb, var(--text-primary) 32%, transparent);
+}
+
+.station-usage-area-chart__export-size-option--selected {
+  border-color: var(--accent-base, #b20016);
+  box-shadow: inset 0 0 0 1px var(--accent-base, #b20016);
+}
+
+.station-usage-area-chart__export-size-preview {
+  display: block;
+  width: 3.25rem;
+  height: 3.25rem;
+  border: 1.5px solid color-mix(in srgb, var(--text-primary) 45%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
+}
+
+.station-usage-area-chart__export-size-preview[data-ratio='1:1'] {
+  width: 2.4rem;
+  height: 2.4rem;
+}
+
+.station-usage-area-chart__export-size-preview[data-ratio='4:3'][data-orientation='landscape'] {
+  width: 2.8rem;
+  height: 2.1rem;
+}
+
+.station-usage-area-chart__export-size-preview[data-ratio='4:3'][data-orientation='portrait'] {
+  width: 2.1rem;
+  height: 2.8rem;
+}
+
+.station-usage-area-chart__export-size-preview[data-ratio='16:9'][data-orientation='landscape'] {
+  width: 3.2rem;
+  height: 1.8rem;
+}
+
+.station-usage-area-chart__export-size-preview[data-ratio='16:9'][data-orientation='portrait'] {
+  width: 1.8rem;
+  height: 3.2rem;
+}
+
+.station-usage-area-chart__export-size-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.station-usage-area-chart__export-size-label {
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.station-usage-area-chart__export-size-hint {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--text-secondary);
+  line-height: 1.25;
+}
+
 .station-usage-area-chart__export-note,
 .station-usage-area-chart__export-error {
   margin: 0;
@@ -459,21 +595,28 @@
 
 .station-usage-area-chart--expanded .station-usage-area-chart__scroll {
   overflow-x: auto;
-  overflow-y: visible;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
   /* Allow horizontal swipes to scroll the years; vertical page scroll still works outside */
   touch-action: pan-x;
-  padding: 12px 0 1rem;
-  /* Keep top bleed for overlay dots; leave bottom space so the scrollbar clears the footer */
-  margin: -12px 0 0;
-  scrollbar-width: thin;
+  padding: 0;
+  margin: 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.station-usage-area-chart--expanded .station-usage-area-chart__scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .station-usage-area-chart--expanded .station-usage-area-chart__plot-inner {
-  height: 460px;
-  min-height: 380px;
-  overflow: visible;
+  height: var(--station-usage-plot-height);
+  min-height: var(--station-usage-plot-height);
+  max-height: var(--station-usage-plot-height);
+  overflow: hidden;
   /* Let the parent scroller own horizontal pans */
   touch-action: pan-x;
 }
@@ -484,19 +627,11 @@
   touch-action: pan-x;
 }
 
-/* Recharts clips series to the plot box by default — turn that off in expanded mode */
+/* Keep series inside the fixed plot band (Expand only changes width / scroll). */
 .station-usage-area-chart--expanded .recharts-surface,
 .station-usage-area-chart--expanded .recharts-wrapper,
 .station-usage-area-chart--expanded .recharts-responsive-container {
-  overflow: visible !important;
-}
-
-.station-usage-area-chart--expanded .recharts-surface [clip-path],
-.station-usage-area-chart--expanded .recharts-layer[clip-path],
-.station-usage-area-chart--expanded .recharts-area,
-.station-usage-area-chart--expanded .recharts-bar,
-.station-usage-area-chart--expanded .recharts-line {
-  clip-path: none !important;
+  overflow: hidden !important;
 }
 
 .station-usage-area-chart--touch .station-usage-area-chart__tooltip {
@@ -505,19 +640,9 @@
   min-width: 5rem;
 }
 
-.station-usage-area-chart:not(.station-usage-area-chart--expanded) .station-usage-area-chart__scroll-hint {
-  display: none;
-}
-
 @media (max-width: 1023px) {
-  .station-usage-area-chart__plot-inner {
-    height: 480px;
-    min-height: 400px;
-  }
-
-  .station-usage-area-chart--expanded .station-usage-area-chart__plot-inner {
-    height: 500px;
-    min-height: 420px;
+  .station-usage-area-chart {
+    --station-usage-plot-height: 480px;
   }
 
   .station-usage-area-chart__export-overlay {
@@ -582,22 +707,6 @@
 }
 
 @media (max-width: 640px) {
-  .station-usage-area-chart__footer {
-    flex-wrap: nowrap;
-    align-items: center;
-  }
-
-  .station-usage-area-chart__footer-end {
-    width: auto;
-    justify-content: flex-end;
-  }
-
-  .station-usage-area-chart__scroll-hint {
-    text-align: right;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
   .station-usage-area-chart__export-fields {
     grid-template-columns: 1fr;
   }
@@ -610,13 +719,7 @@
     max-width: none;
   }
 
-  .station-usage-area-chart__plot-inner {
-    height: 420px;
-    min-height: 360px;
-  }
-
-  .station-usage-area-chart--expanded .station-usage-area-chart__plot-inner {
-    height: 440px;
-    min-height: 380px;
+  .station-usage-area-chart {
+    --station-usage-plot-height: 420px;
   }
 }
