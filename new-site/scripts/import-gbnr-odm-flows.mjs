@@ -2,7 +2,7 @@
  * Import ORR Origin–Destination Matrix (ODM) CSVs into GBNR-ODM-FLOWS.
  *
  * For each origin NLC and financial year: keep the top N and bottom N destinations
- * by journeys (default N=25). Document id = origin NLC (e.g. "5131").
+ * by journeys (default N=50). Document id = origin NLC (e.g. "5131").
  *
  * Usage:
  *   node scripts/import-gbnr-odm-flows.mjs \
@@ -11,7 +11,8 @@
  */
 
 import { execFileSync } from 'node:child_process'
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { initializeApp, cert, getApps } from 'firebase-admin/app'
@@ -21,8 +22,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = resolve(__dirname, '../..')
 const COLLECTION = 'GBNR-ODM-FLOWS'
 /** Docs are large (multi-year top+bottom); keep batches small for the 10MB commit limit. */
-const BATCH_SIZE = 20
-const TOP_N = 25
+const BATCH_SIZE = 15
+const TOP_N = 50
 
 const DEFAULT_CREDENTIALS = resolve(
   REPO_ROOT,
@@ -52,7 +53,7 @@ function parseArgs(argv) {
   --credentials, -c   Admin SDK JSON path
   --csv               ODM CSV path (repeatable)
   --dir               Directory containing ODM*.csv (default with no --csv: ignore/)
-  --top               Top/bottom destinations per origin (default 25)
+  --top               Top/bottom destinations per origin (default 50)
   --merge-years       Preserve existing year keys not present in this import
   --dry-run           Aggregate only; no Firestore writes`)
       process.exit(0)
@@ -76,7 +77,8 @@ import csv, json, sys
 from collections import defaultdict
 
 top_n = int(sys.argv[1])
-paths = sys.argv[2:]
+out_path = sys.argv[2]
+paths = sys.argv[3:]
 
 def norm_nlc(raw):
     if raw is None:
@@ -215,15 +217,21 @@ for origin, years_map in agg.items():
     })
 
 docs.sort(key=lambda d: (len(d["nlc"]), d["nlc"]))
-print(json.dumps({"topN": top_n, "stationCount": len(docs), "stations": docs}, separators=(",", ":")))
+with open(out_path, "w", encoding="utf-8") as out_f:
+    json.dump({"topN": top_n, "stationCount": len(docs), "stations": docs}, out_f, separators=(",", ":"))
 `
 
 function aggregateOdm(csvPaths, topN) {
-  const result = execFileSync('python3', ['-c', AGGREGATE_PY, String(topN), ...csvPaths], {
-    encoding: 'utf8',
-    maxBuffer: 200 * 1024 * 1024,
-  })
-  return JSON.parse(result)
+  const tempDir = mkdtempSync(join(tmpdir(), 'gbnr-odm-import-'))
+  const outPath = join(tempDir, 'aggregated.json')
+  try {
+    execFileSync('python3', ['-c', AGGREGATE_PY, String(topN), outPath, ...csvPaths], {
+      stdio: ['ignore', 'inherit', 'inherit'],
+    })
+    return JSON.parse(readFileSync(outPath, 'utf8'))
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true })
+  }
 }
 
 async function upload(stations, credentialsPath, { mergeYears, sourceFiles, topN }) {

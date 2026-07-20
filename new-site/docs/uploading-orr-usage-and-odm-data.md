@@ -5,9 +5,17 @@ Runbook for refreshing Firestore when the Office of Rail and Road (ORR) publishe
 | Collection | Source | Script |
 |---|---|---|
 | `GBNR-PASS-USAGE-DATA` | Table 1415 `.ods` (entries/exits + interchanges time series) | [`scripts/import-gbnr-pass-usage-data.mjs`](../scripts/import-gbnr-pass-usage-data.mjs) |
-| `GBNR-ODM-FLOWS` | ODM `.csv` files (top/bottom 25 destinations per origin NLC) | [`scripts/import-gbnr-odm-flows.mjs`](../scripts/import-gbnr-odm-flows.mjs) |
+| `GBNR-ODM-FLOWS` | ODM `.csv` files (top/bottom 50 destinations per origin NLC) | [`scripts/import-gbnr-odm-flows.mjs`](../scripts/import-gbnr-odm-flows.mjs) |
 
 Both scripts use the Firebase Admin SDK. Credentials live in the gitignored `ignore/` folder at the repo root (never commit the service account JSON).
+
+### Source file archive (Firebase Storage)
+
+Canonical copies of the ORR Table 1415 and ODM matrix files are stored in Firebase Storage:
+
+`gs://rail-statistics.firebasestorage.app/ORR-Usage-and-ODM-Matrix`
+
+Download files from there (or keep local copies under `ignore/` when running the import scripts). The app reads live data from Firestore collections, not from Storage.
 
 ---
 
@@ -91,8 +99,8 @@ Keep previous year CSVs there too if you want a full rebuild of all years in one
 
 - Doc ID: origin **NLC** only (e.g. `5131`).
 - Per year key (ending year, e.g. `2025`):
-  - `topDestinations` — top 25 by journeys
-  - `bottomDestinations` — bottom 25 by journeys
+  - `topDestinations` — top 50 by journeys
+  - `bottomDestinations` — bottom 50 by journeys
   - `destinationCount`, `financialYearLabel`
 
 ### Option A — Full rebuild (recommended when adding a year)
@@ -101,12 +109,12 @@ Process every `ODM*.csv` in `ignore/` and rewrite all station docs:
 
 ```bash
 # Optional dry run
-node scripts/import-gbnr-odm-flows.mjs --dry-run --dir "../ignore" --top 25
+node scripts/import-gbnr-odm-flows.mjs --dry-run --dir "../ignore" --top 50
 
 node scripts/import-gbnr-odm-flows.mjs \
   --credentials "../ignore/rail-statistics-firebase-adminsdk-fbsvc-3a33025fa6.json" \
   --dir "../ignore" \
-  --top 25
+  --top 50
 ```
 
 Expect several minutes: aggregation walks multi‑million-row CSVs, then uploads ~2.5k docs in small batches.
@@ -119,7 +127,7 @@ If you only pass the new CSV(s) and want to keep existing year keys on each doc:
 node scripts/import-gbnr-odm-flows.mjs \
   --credentials "../ignore/rail-statistics-firebase-adminsdk-fbsvc-3a33025fa6.json" \
   --csv "../ignore/ODM_for_rdm_2025-26.csv" \
-  --top 25 \
+  --top 50 \
   --merge-years
 ```
 

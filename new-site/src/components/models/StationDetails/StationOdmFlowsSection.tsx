@@ -13,7 +13,7 @@ import './StationUsageDataNotice.css'
 import './StationOdmFlowsSection.css'
 
 const ODM_SOURCE_HINT =
-  'View the top and bottom 25 stations by estimated journeys from this origin, using ORR Origin–Destination Matrix data.'
+  'View the top and bottom 50 destinations by estimated journeys from this origin, using ORR Origin–Destination Matrix data.'
 
 function KnowledgebaseSourceHint({ label }: { label?: string | null }) {
   const text = label?.trim()
@@ -169,14 +169,14 @@ export function StationOdmFlowsSection({ state }: StationOdmFlowsSectionProps) {
                 {doc.nlc ? ` · origin NLC ${doc.nlc}` : null}
               </p>
 
-              <StationDetailsSubsection title="Top 25 destinations">
+              <StationDetailsSubsection title="Top 50 destinations">
                 <OdmDestinationTable
                   rows={yearBucket.topDestinations}
                   emptyLabel="No top destinations for this year."
                 />
               </StationDetailsSubsection>
 
-              <StationDetailsSubsection title="Bottom 25 destinations">
+              <StationDetailsSubsection title="Bottom 50 destinations">
                 <OdmDestinationTable
                   rows={yearBucket.bottomDestinations}
                   emptyLabel="No bottom destinations for this year."
