@@ -520,7 +520,7 @@ function summarizeNationalKeyToiletsValue(value: KbJson): FacilityDisplay {
   const merged = buildNationalKeyToiletsDisplay({
     value: generic.value,
     notes: uniqueNotes([...generic.notes, ...openNotes]),
-    location: generic.location,
+    location: generic.location ?? null,
   })
 
   return { ...generic, ...merged }
