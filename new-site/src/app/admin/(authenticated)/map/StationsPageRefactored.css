@@ -463,10 +463,6 @@
         display: none;
     }
 
-    .stations-network-tabs-wrap--toolbar {
-        display: none;
-    }
-
     .stations-network-tabs-wrap--mobile {
         display: block;
         max-width: none;

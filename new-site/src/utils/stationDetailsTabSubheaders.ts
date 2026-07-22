@@ -83,8 +83,10 @@ export function getStationDetailsTabSubheaders(
       const headers: string[] = []
       if (fieldSchema.showStepFreeSection && !fieldSchema.stepFreeInDetails) {
         headers.push('Access')
+      } else if (fieldSchema.showLiftSection && fieldSchema.isLightRail) {
+        headers.push('Access')
       }
-      if (fieldSchema.showLiftSection) headers.push('Availability')
+      if (fieldSchema.showLiftSection && !fieldSchema.isLightRail) headers.push('Availability')
       return headers
     }
     case 'facilities': {

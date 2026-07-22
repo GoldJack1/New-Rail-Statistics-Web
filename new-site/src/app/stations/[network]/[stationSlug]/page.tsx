@@ -15,6 +15,7 @@ import { isStationCollectionId } from '@/constants/stationCollections'
 import { useStationCollection } from '@/contexts/StationCollectionContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePendingStationChanges } from '@/hooks/usePendingStationChanges'
+import { useStationAdminMode } from '@/hooks/useStationAdminMode'
 import {
   getPendingFieldChangesForEntry,
   mergeAdditionalDocWithPendingUpdate,
@@ -35,7 +36,6 @@ import { BUTWideButton } from '@/components/buttons'
 import { BUTCircleButton } from '@/components/buttons'
 import { BackIcon } from '@/components/icons'
 import PageTopHeader from '@/components/misc/PageTopHeader/PageTopHeader'
-import { LightRailLineChips } from '@/components/chips/LightRailLineChips'
 import '@/components/models/StationModal/StationModal.css'
 import { PencilSimple } from '@phosphor-icons/react'
 import { paramAsString } from '@/utils/nextParams'
@@ -67,6 +67,10 @@ function getStationDetailsReturnPath(state: unknown): string {
   return '/stations'
 }
 
+/** Desktop left-nav floor: 11 section rows × 64px (matches StationDetailsPage.css). */
+const DESKTOP_SECTION_NAV_MIN_HEIGHT_PX = 11 * 64
+const DESKTOP_CHART_MEDIA = '(min-width: 1024px)'
+
 function StationDetailsPage() {
   const router = useRouter()
   const backPath = getStationDetailsReturnPath(readStationDetailsNavigationState())
@@ -77,6 +81,7 @@ function StationDetailsPage() {
   const { collectionId } = useStationCollection()
   const { user, loading: authLoading } = useAuth()
   const canEdit = !authLoading && Boolean(user)
+  const isAdminMode = useStationAdminMode()
   const { station, loading, error, routeCollectionId } = useStationDetailsRoute(network, stationSlug)
   const [additionalDoc, setAdditionalDoc] = useState<SandboxStationDoc | null>(null)
   const [additionalLoading, setAdditionalLoading] = useState(false)
@@ -149,7 +154,14 @@ function StationDetailsPage() {
     return mergeStationCollectionFieldSchemas(base, fromStationDoc)
   }, [catalogFieldSchema, sampledFieldSchema, additionalDoc, schemaCollectionId])
   const showAdditionalTab = stationDetailsShowsAdditionalTab(fieldSchema)
-  const visibleTabs = useMemo(() => getVisibleStationDetailsTabs(fieldSchema), [fieldSchema])
+  const showAdminSection = fieldSchema.showAdminTab && isAdminMode
+  const visibleTabs = useMemo(
+    () =>
+      getVisibleStationDetailsTabs(fieldSchema).filter(
+        (tab) => tab !== 'admin' || showAdminSection
+      ),
+    [fieldSchema, showAdminSection]
+  )
 
   const knowledgebase = useKnowledgebaseStation(
     station?.crsCode,
@@ -239,7 +251,7 @@ function StationDetailsPage() {
         subheaders: [],
       })
     }
-    if (fieldSchema.showAdminTab) {
+    if (showAdminSection) {
       tabs.push({ id: 'admin', label: 'Admin', subheaders: subheadersFor('admin') })
     }
     return tabs
@@ -248,6 +260,7 @@ function StationDetailsPage() {
     fieldSchema,
     knowledgebase,
     canEdit,
+    showAdminSection,
     gbnrUsageAvailable,
   ])
 
@@ -299,18 +312,8 @@ function StationDetailsPage() {
   const headerEyebrow = useMemo(() => {
     if (!headerDisplayStation) return undefined
     if (headerIsLightRail) {
-      const toc = headerTocRaw
-      if (!toc && !headerDisplayStation.linesServed) return undefined
-      return (
-        <>
-          {toc ? <span className="station-details-header-toc">{toc}</span> : null}
-          <LightRailLineChips
-            linesServed={headerDisplayStation.linesServed}
-            className="station-details-header-line-chips"
-            labelSuffix=" Route"
-          />
-        </>
-      )
+      if (!headerTocRaw) return undefined
+      return <span className="station-details-header-toc">{headerTocRaw}</span>
     }
     if (!headerManagedByToc) return undefined
     return (
@@ -339,7 +342,7 @@ function StationDetailsPage() {
       isKnowledgebaseTabId(activeTab) &&
       parseKnowledgebaseTabId(activeTab) === KNOWLEDGEBASE_OVERVIEW_KEY
     ) {
-      setActiveTab(fieldSchema.showAdminTab ? 'admin' : 'details')
+      setActiveTab(showAdminSection ? 'admin' : 'details')
     }
     if (
       isKnowledgebaseTabId(activeTab) &&
@@ -350,7 +353,7 @@ function StationDetailsPage() {
     ) {
       setActiveTab('details')
     }
-    if (activeTab === 'admin' && !fieldSchema.showAdminTab) setActiveTab('details')
+    if (activeTab === 'admin' && !showAdminSection) setActiveTab('details')
   }, [
     activeTab,
     showAdditionalTab,
@@ -359,7 +362,7 @@ function StationDetailsPage() {
     fieldSchema.showStepFreeTab,
     fieldSchema.showFacilitiesTab,
     fieldSchema.showKnowledgebaseTab,
-    fieldSchema.showAdminTab,
+    showAdminSection,
     knowledgebase.status,
     activeKnowledgebaseSection,
     gbnrUsageAvailable,
@@ -408,7 +411,10 @@ function StationDetailsPage() {
         .filter((height) => height > 0)
 
       const visibleHeight = Math.ceil(visibleBodyRef.current?.getBoundingClientRect().height ?? 0)
-      const nextMax = Math.max(visibleHeight, ...(heights.length > 0 ? heights : [0]))
+      const desktopFloor = window.matchMedia(DESKTOP_CHART_MEDIA).matches
+        ? DESKTOP_SECTION_NAV_MIN_HEIGHT_PX
+        : 0
+      const nextMax = Math.max(desktopFloor, visibleHeight, ...(heights.length > 0 ? heights : [0]))
       if (nextMax <= 0) return
       setMaxTabContentHeight((current) => (current === nextMax ? current : nextMax))
     }

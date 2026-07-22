@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Note } from '@phosphor-icons/react'
 import type { KbJson } from '../../../utils/knowledgebaseStationXml'
 import {
@@ -808,6 +809,8 @@ function KbNoteOverlay({
   notes: string[]
   onClose: () => void
 }) {
+  const titleId = 'kb-note-overlay-title'
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose()
@@ -821,22 +824,25 @@ function KbNoteOverlay({
     }
   }, [onClose])
 
-  return (
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
     <div
       className="kb-note-overlay__backdrop"
       role="dialog"
       aria-modal="true"
-      aria-label={`${title} notes`}
+      aria-labelledby={titleId}
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose()
       }}
     >
       <div className="kb-note-overlay">
         <header className="kb-note-overlay__header">
-          <h2 className="kb-note-overlay__title">{title}</h2>
-          <button type="button" className="kb-note-overlay__close" aria-label="Close" onClick={onClose}>
-            ×
-          </button>
+          <div className="kb-note-overlay__header-text">
+            <h2 id={titleId} className="kb-note-overlay__title">
+              {title}
+            </h2>
+          </div>
         </header>
         <div className="kb-note-overlay__body">
           {notes.map((note, index) => (
@@ -850,8 +856,14 @@ function KbNoteOverlay({
             </section>
           ))}
         </div>
+        <footer className="kb-note-overlay__footer">
+          <BUTWideButton type="button" width="hug" onClick={onClose}>
+            Close
+          </BUTWideButton>
+        </footer>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

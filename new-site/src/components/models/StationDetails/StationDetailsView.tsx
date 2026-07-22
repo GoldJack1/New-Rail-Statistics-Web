@@ -157,9 +157,12 @@ import StationKnowledgebasePanel from './StationKnowledgebasePanel'
 import type { KbJson } from '../../../utils/knowledgebaseStationXml'
 import { isKnowledgebaseTabId, KNOWLEDGEBASE_OVERVIEW_KEY } from '../../../utils/knowledgebaseStationSections'
 import {
-  STATION_DETAILS_LOCATION_SOURCE_HINT,
+  getStationDetailsNetworkSourceHint,
   STATION_DETAILS_USAGE_SOURCE_HINT,
 } from '../../../utils/stationDetailsSourceHint'
+import { getStationNetworkCollectionId } from '../../../utils/stationAreaSlug'
+import { isNetworkCollection } from '../../../constants/stationCollections'
+import { useStationCollection } from '../../../contexts/StationCollectionContext'
 
 interface StationDetailsViewProps {
   station: Station
@@ -227,6 +230,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
   onGbnrUsageAvailabilityChange,
 }) => {
   const { fieldSchema } = useStationFieldSchema(station, fieldSchemaProp)
+  const { collectionId: contextCollectionId } = useStationCollection()
   const [gbnrUsageMetric, setGbnrUsageMetric] = useState<GbnrUsageMetric>('entriesExits')
   const showAdditionalFields = stationDetailsShowsAdditionalTab(fieldSchema)
   const hasCoordinates = station.latitude !== 0 && station.longitude !== 0
@@ -375,13 +379,39 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
   const knowledgebaseSidebarSections = knowledgebaseSections.filter(
     (section) => section.key !== KNOWLEDGEBASE_OVERVIEW_KEY
   )
-  /** Shown on every section except Details, Location and Station Usage when KB is enabled. */
-  const kbSourceHint = fieldSchema.showKnowledgebaseTab ? knowledgebaseLastUpdatedLabel : null
-  /** Details uses a mixed Firebase + KB attribution line. */
-  const detailsSourceHint = fieldSchema.showKnowledgebaseTab ? knowledgebaseDetailsSourceHint : null
-  const locationSourceHint = STATION_DETAILS_LOCATION_SOURCE_HINT
+  const resolvedCollectionId =
+    getStationNetworkCollectionId(station, contextCollectionId) ?? contextCollectionId
+  const networkCollectionId = isNetworkCollection(resolvedCollectionId) ? resolvedCollectionId : null
+  const networkSourceHint = getStationDetailsNetworkSourceHint(networkCollectionId)
+  /**
+   * Shown on every section except Details, Location and Station Usage when KB is enabled.
+   * Non-KB networks use the network-specific Rail Statistics attribution line instead.
+   */
+  const kbSourceHint = fieldSchema.showKnowledgebaseTab
+    ? knowledgebaseLastUpdatedLabel
+    : networkSourceHint
+  /** Details: mixed Firebase + KB line on GBNR; otherwise network attribution. */
+  const detailsSourceHint = fieldSchema.showKnowledgebaseTab
+    ? knowledgebaseDetailsSourceHint
+    : networkSourceHint
+  const locationSourceHint = networkSourceHint
   const usageSourceHint = STATION_DETAILS_USAGE_SOURCE_HINT
   const panelLastUpdatedLabel = knowledgebaseLastUpdatedLabel
+  /** Heritage / Irish / NI: omit empty CRS·TIPLOC·NLC chips instead of showing ---. */
+  const hideEmptyStationCodeChips =
+    networkCollectionId === 'stations_gbheritage' ||
+    networkCollectionId === 'stations_nitranslink' ||
+    networkCollectionId === 'stations_roiirerail'
+  const crsCodePresent = !isBlankValue(station.crsCode)
+  const tiplocPresent = !isBlankValue(station.tiploc)
+  const firebaseNlcPresent = !isBlankValue(additionalDoc?.nlc)
+  const showCrsCodeChip = !hideEmptyStationCodeChips || crsCodePresent
+  const showTiplocCodeChip = fieldSchema.showTiploc && (!hideEmptyStationCodeChips || tiplocPresent)
+  const showNlcCodeChip = fieldSchema.showKnowledgebaseTab
+    ? true
+    : fieldSchema.showNlc && (!hideEmptyStationCodeChips || firebaseNlcPresent)
+  const showStationCodeChips =
+    !fieldSchema.isLightRail && (showCrsCodeChip || showTiplocCodeChip || showNlcCodeChip)
 
   const stationUrlValue = readStationUrl(
     additionalDoc ?? ({ url: station.stationUrl, urlSlug: station.urlSlug } as Partial<SandboxStationDoc>)
@@ -404,18 +434,20 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
         <>
         <div className="modal-section">
           <StationSectionTitle title="Details" icon={getStationDetailsSectionIcon('details')} pageHeading />
-          {!fieldSchema.isLightRail && (
+          {showStationCodeChips && (
             <div className="station-details-code-chips" role="list" aria-label="Station codes">
-              <BUTOperatorChip
-                instantAction
-                colorVariant="primary"
-                width="hug"
-                className="station-details-code-chip"
-                ariaLabel={`CRS: ${formatOptionalText(station.crsCode)}`}
-              >
-                {`CRS: ${formatOptionalText(station.crsCode)}`}
-              </BUTOperatorChip>
-              {fieldSchema.showTiploc && (
+              {showCrsCodeChip && (
+                <BUTOperatorChip
+                  instantAction
+                  colorVariant="primary"
+                  width="hug"
+                  className="station-details-code-chip"
+                  ariaLabel={`CRS: ${formatOptionalText(station.crsCode)}`}
+                >
+                  {`CRS: ${formatOptionalText(station.crsCode)}`}
+                </BUTOperatorChip>
+              )}
+              {showTiplocCodeChip && (
                 <BUTOperatorChip
                   instantAction
                   colorVariant="primary"
@@ -444,7 +476,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
                       : formatOptionalText(knowledgebaseNlc)
                   }`}
                 </BUTOperatorChip>
-              ) : fieldSchema.showNlc ? (
+              ) : showNlcCodeChip ? (
                 <BUTOperatorChip
                   instantAction
                   colorVariant="primary"
@@ -487,7 +519,6 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
             fieldSchema.showLinesServed ||
             fieldSchema.showPlatforms ||
             fieldSchema.showGauge ||
-            fieldSchema.showUrl ||
             (fieldSchema.foldAdditionalIntoDetails && fieldSchema.showOperatorCode) ||
             (fieldSchema.foldAdditionalIntoDetails && fieldSchema.showMinConnectionTime) ||
             (fieldSchema.foldAdditionalIntoDetails && fieldSchema.showProvince) ||
@@ -510,13 +541,6 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
                 )}
                 {fieldSchema.showGauge && (
                   <StationDetailField label="Gauge" value={formatValue(additionalDoc?.guage)} pendingFieldChanges={pendingFieldChanges} />
-                )}
-                {fieldSchema.showUrl && (
-                  <StationDetailField
-                    label={fieldSchema.urlFieldLabel}
-                    value={formatOptionalText(stationUrlValue)}
-                    pendingFieldChanges={pendingFieldChanges}
-                  />
                 )}
                 {fieldSchema.foldAdditionalIntoDetails && fieldSchema.showOperatorCode && (
                   <StationDetailField
@@ -550,18 +574,22 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
             </div>
           ) : null}
           {fieldSchema.showUrl && stationUrlHref && (
-            <Button
-              type="button"
-              variant="wide"
-              width="hug"
-              className="modal-map-link"
-              onClick={() => window.open(stationUrlHref, '_blank', 'noopener,noreferrer')}
-              icon={<ArrowSquareOut size={16} aria-hidden />}
-            >
-              Open link
-            </Button>
+            <StationDetailsSubsection title="Station information" className="station-details-subsection--station-url">
+              <Button
+                type="button"
+                variant="wide"
+                width="hug"
+                className="modal-map-link"
+                onClick={() => window.open(stationUrlHref, '_blank', 'noopener,noreferrer')}
+                icon={<ArrowSquareOut size={16} aria-hidden />}
+              >
+                View Station Information
+              </Button>
+            </StationDetailsSubsection>
           )}
-          <KnowledgebaseSourceHint label={detailsSourceHint} />
+          {!(fieldSchema.showStepFreeSection && fieldSchema.stepFreeInDetails) ? (
+            <KnowledgebaseSourceHint label={detailsSourceHint} />
+          ) : null}
         </div>
 
         {fieldSchema.showStepFreeSection && fieldSchema.stepFreeInDetails && (
@@ -592,6 +620,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
                 )}
               </div>
             </StationDetailsSubsection>
+            <KnowledgebaseSourceHint label={detailsSourceHint} />
           </div>
         )}
         </>
@@ -786,46 +815,76 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
         </div>
       )}
 
-      {showStepFree && (
-        <>
-          {fieldSchema.showStepFreeSection && !fieldSchema.stepFreeInDetails && (
-            <div className="modal-section">
-              <StationSectionTitle
-                title={STEP_FREE_SECTION_LABEL}
-                icon={getStationDetailsSectionIcon('stepFree', { label: STEP_FREE_SECTION_LABEL })}
-                pageHeading
-              />
-              <StationDetailsSubsection title="Access">
-                <div className="modal-details-grid modal-facilities-grid">
+      {showStepFree &&
+        ((fieldSchema.showStepFreeSection && !fieldSchema.stepFreeInDetails) ||
+          fieldSchema.showLiftSection) && (
+        <div className="modal-section">
+          <StationSectionTitle
+            title={STEP_FREE_SECTION_LABEL}
+            icon={getStationDetailsSectionIcon('stepFree', { label: STEP_FREE_SECTION_LABEL })}
+            pageHeading
+          />
+          {fieldSchema.showStepFreeSection && !fieldSchema.stepFreeInDetails ? (
+            <StationDetailsSubsection title="Access">
+              <div className="modal-details-grid modal-facilities-grid">
+                <StationDetailField
+                  label="Step Free Status"
+                  value={
+                    fieldSchema.isLightRail
+                      ? formatValue(readLightRailDocString(lightRailDoc, LIGHT_RAIL_DOC_FIELDS.isStepFree))
+                      : formatValue(additionalDoc?.stepFree?.stepFreeCode)
+                  }
+                  pendingFieldChanges={pendingFieldChanges}
+                  showIcon
+                  iconKey="stepFree"
+                />
+                {fieldSchema.showStepFreeNote && (
                   <StationDetailField
-                    label="Step Free Status"
-                    value={
-                      fieldSchema.isLightRail
-                        ? formatValue(readLightRailDocString(lightRailDoc, LIGHT_RAIL_DOC_FIELDS.isStepFree))
-                        : formatValue(additionalDoc?.stepFree?.stepFreeCode)
-                    }
+                    label="Note"
+                    value={formatValue(additionalDoc?.stepFree?.stepFreeNote)}
+                    pendingFieldChanges={pendingFieldChanges}
+                  />
+                )}
+                {fieldSchema.showLiftSection && fieldSchema.isLightRail ? (
+                  <StationDetailField
+                    label="Has lift"
+                    value={formatValue(readLightRailDocString(lightRailDoc, LIGHT_RAIL_DOC_FIELDS.hasLift))}
                     pendingFieldChanges={pendingFieldChanges}
                     showIcon
-                    iconKey="stepFree"
+                    iconKey="lift"
                   />
-                  {fieldSchema.showStepFreeNote && (
-                    <StationDetailField
-                      label="Note"
-                      value={formatValue(additionalDoc?.stepFree?.stepFreeNote)}
-                      pendingFieldChanges={pendingFieldChanges}
-                    />
-                  )}
-                </div>
-              </StationDetailsSubsection>
-              <KnowledgebaseSourceHint label={kbSourceHint} />
-            </div>
-          )}
-          {fieldSchema.showLiftSection && (
-        <div className="modal-section">
-          <StationSectionTitle title="Lift" icon={getStationDetailsSectionIcon('stepFree', { label: 'Lift' })} />
-          <StationDetailsSubsection title="Availability">
-            <div className="modal-details-grid modal-facilities-grid">
-              {fieldSchema.isLightRail ? (
+                ) : null}
+              </div>
+            </StationDetailsSubsection>
+          ) : null}
+          {fieldSchema.showLiftSection && !fieldSchema.isLightRail ? (
+            <StationDetailsSubsection title="Availability">
+              <div className="modal-details-grid modal-facilities-grid">
+                <StationDetailField
+                  label="Available"
+                  value={formatValue(additionalDoc?.lift?.liftAvailable)}
+                  pendingFieldChanges={pendingFieldChanges}
+                  showIcon
+                  iconKey="lift"
+                />
+                <StationDetailField
+                  label="Notes"
+                  value={formatValue(additionalDoc?.lift?.liftNotes)}
+                  pendingFieldChanges={pendingFieldChanges}
+                />
+                <StationDetailField
+                  label="Details"
+                  value={formatValue(additionalDoc?.lift?.liftDetails)}
+                  pendingFieldChanges={pendingFieldChanges}
+                />
+              </div>
+            </StationDetailsSubsection>
+          ) : null}
+          {fieldSchema.showLiftSection &&
+          fieldSchema.isLightRail &&
+          !(fieldSchema.showStepFreeSection && !fieldSchema.stepFreeInDetails) ? (
+            <StationDetailsSubsection title="Access">
+              <div className="modal-details-grid modal-facilities-grid">
                 <StationDetailField
                   label="Has lift"
                   value={formatValue(readLightRailDocString(lightRailDoc, LIGHT_RAIL_DOC_FIELDS.hasLift))}
@@ -833,35 +892,11 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
                   showIcon
                   iconKey="lift"
                 />
-              ) : (
-                <>
-                  <StationDetailField
-                    label="Available"
-                    value={formatValue(additionalDoc?.lift?.liftAvailable)}
-                    pendingFieldChanges={pendingFieldChanges}
-                    showIcon
-                    iconKey="lift"
-                  />
-                  <StationDetailField
-                    label="Notes"
-                    value={formatValue(additionalDoc?.lift?.liftNotes)}
-                    pendingFieldChanges={pendingFieldChanges}
-                  />
-                  <StationDetailField
-                    label="Details"
-                    value={formatValue(additionalDoc?.lift?.liftDetails)}
-                    pendingFieldChanges={pendingFieldChanges}
-                  />
-                </>
-              )}
-            </div>
-          </StationDetailsSubsection>
-          {!(fieldSchema.showStepFreeSection && !fieldSchema.stepFreeInDetails) ? (
-            <KnowledgebaseSourceHint label={kbSourceHint} />
+              </div>
+            </StationDetailsSubsection>
           ) : null}
+          <KnowledgebaseSourceHint label={kbSourceHint} />
         </div>
-          )}
-        </>
       )}
 
       {showService && fieldSchema.isLightRail && (
@@ -1267,6 +1302,13 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
                   <StationDetailField
                     label="URL slug"
                     value={formatOptionalText(routingUrlSlug)}
+                    pendingFieldChanges={pendingFieldChanges}
+                  />
+                )}
+                {fieldSchema.showUrl && (
+                  <StationDetailField
+                    label={fieldSchema.urlFieldLabel}
+                    value={formatOptionalText(stationUrlValue)}
                     pendingFieldChanges={pendingFieldChanges}
                   />
                 )}

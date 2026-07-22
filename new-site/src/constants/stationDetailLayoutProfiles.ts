@@ -237,6 +237,8 @@ export const STATION_DETAIL_LAYOUT_PRESETS: Record<
     showStaffingLevel: true,
     showStepFreeSection: true,
     showStepFreeTab: true,
+    // Keep step-free + lift together on the Step-free tab (not under Details).
+    stepFreeInDetails: false,
     showLiftSection: true,
     showServiceTab: true,
     showConnectionBus: true,

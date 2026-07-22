@@ -59,6 +59,12 @@
     overflow: visible;
 }
 
+/* Map has no sidebar mobile tabs — always keep the toolbar network strip visible. */
+.stations-map-page .stations-network-tabs-wrap--toolbar {
+    display: block;
+    max-width: none;
+}
+
 .stations-map-page__admin-actions {
     display: flex;
     flex-wrap: wrap;

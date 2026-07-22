@@ -182,8 +182,8 @@
 
 .station-usage-area-chart__tooltip {
   position: absolute;
-  z-index: 2;
-  transform: translate(-50%, -100%);
+  z-index: 3;
+  transform: translate(calc(-50% + var(--station-usage-tooltip-shift, 0px)), -100%);
   padding: 0.45rem 0.7rem 0.5rem;
   background: var(--bg-secondary);
   color: var(--text-primary);
@@ -193,6 +193,10 @@
   pointer-events: none;
   min-width: 4.5rem;
   text-align: center;
+}
+
+.station-usage-area-chart__tooltip--below {
+  transform: translate(calc(-50% + var(--station-usage-tooltip-shift, 0px)), 0);
 }
 
 .station-usage-area-chart__tooltip-year {
@@ -593,7 +597,41 @@
   border-top: 1px solid var(--border-color);
 }
 
+.station-usage-area-chart--expanded .station-usage-area-chart__plot {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  width: 100%;
+}
+
+.station-usage-area-chart--expanded .station-usage-area-chart__y-rail {
+  flex: 0 0 var(--station-usage-y-axis-width, 48px);
+  width: var(--station-usage-y-axis-width, 48px);
+  height: var(--station-usage-plot-height);
+  max-height: var(--station-usage-plot-height);
+  z-index: 2;
+  /* Match .app / .main-content page surface; solid to 50%, then fade clear */
+  background: linear-gradient(
+    to right,
+    var(--bg-tertiary) 0%,
+    var(--bg-tertiary) 50%,
+    transparent 100%
+  );
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.station-usage-area-chart--expanded .station-usage-area-chart__y-rail .recharts-responsive-container,
+.station-usage-area-chart--expanded .station-usage-area-chart__y-rail .recharts-wrapper,
+.station-usage-area-chart--expanded .station-usage-area-chart__y-rail .recharts-surface,
+.station-usage-area-chart--expanded .station-usage-area-chart__y-rail svg {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
 .station-usage-area-chart--expanded .station-usage-area-chart__scroll {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;

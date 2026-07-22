@@ -34,6 +34,22 @@ export const NETWORK_VIEW_TABS: Array<{ label: string; value: NetworkViewFilter 
   { label: NETWORK_LABELS.lightrail_GBSHEFFSUPERTRAM, value: 'lightrail_GBSHEFFSUPERTRAM' },
 ]
 
+/** Networks only shown in the network tab strip when admin mode is on. */
+export const ADMIN_ONLY_NETWORK_VIEW_IDS = ['stations_gbheritage'] as const
+
+export function getVisibleNetworkViewTabs(
+  isAdminMode: boolean
+): Array<{ label: string; value: NetworkViewFilter }> {
+  if (isAdminMode) return NETWORK_VIEW_TABS
+  return NETWORK_VIEW_TABS.filter(
+    (tab) => !(ADMIN_ONLY_NETWORK_VIEW_IDS as readonly string[]).includes(tab.value)
+  )
+}
+
+export function isAdminOnlyNetworkView(view: NetworkViewFilter): boolean {
+  return (ADMIN_ONLY_NETWORK_VIEW_IDS as readonly string[]).includes(view)
+}
+
 export const SANDBOX_COLLECTION_ID = 'newsandboxstations1' as const
 
 export type StationCollectionId = NetworkCollectionId | typeof SANDBOX_COLLECTION_ID

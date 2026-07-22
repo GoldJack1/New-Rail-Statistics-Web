@@ -1,13 +1,16 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect } from 'react'
 import { BUTTabButton } from '../../buttons'
 import {
-  NETWORK_VIEW_TABS,
+  DEFAULT_NETWORK_VIEW,
+  getVisibleNetworkViewTabs,
+  isAdminOnlyNetworkView,
   isNetworkCollection,
   type NetworkViewFilter,
 } from '../../../constants/stationCollections'
 import { NETWORK_MAP_COLORS } from '../../../constants/stationNetworkMapColors'
+import { useStationAdminMode } from '../../../hooks/useStationAdminMode'
 import './NetworkStationTabGroup.css'
 
 interface NetworkStationTabGroupProps {
@@ -21,13 +24,22 @@ const NetworkStationTabGroup: React.FC<NetworkStationTabGroupProps> = ({
   onChange,
   className = '',
 }) => {
+  const isAdminMode = useStationAdminMode()
+  const visibleTabs = getVisibleNetworkViewTabs(isAdminMode)
+
+  useEffect(() => {
+    if (isAdminMode) return
+    if (!isAdminOnlyNetworkView(value)) return
+    onChange(DEFAULT_NETWORK_VIEW)
+  }, [isAdminMode, onChange, value])
+
   return (
     <div
       className={`network-station-tab-group ${className}`.trim()}
       role="tablist"
       aria-label="Station network"
     >
-      {NETWORK_VIEW_TABS.map((tab) => {
+      {visibleTabs.map((tab) => {
         const isSelected = value === tab.value
         const dotColor = isNetworkCollection(tab.value) ? NETWORK_MAP_COLORS[tab.value] : null
         return (

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useId, useRef, useState } from 'react'
+import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal, flushSync } from 'react-dom'
 import {
   Area,
@@ -38,6 +38,8 @@ import './StationUsageAreaChart.css'
 
 const MIN_POINTS = 2
 const TOOLTIP_GAP = 12
+/** Keep the floating hover callout inside the plot (first/last years). */
+const TOOLTIP_EDGE_PAD = 8
 const Y_AXIS_WIDTH = 48
 const SCROLL_YEAR_WIDTH = 72
 const COARSE_POINTER_MEDIA = '(pointer: coarse)'
@@ -348,13 +350,19 @@ export function StationUsageAreaChart({
 }: StationUsageAreaChartProps) {
   const gradientId = useId().replace(/:/g, '')
   const secondaryGradientId = `${gradientId}-secondary`
+  const plotShellRef = useRef<HTMLDivElement>(null)
   const plotRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const tooltipRef = useRef<HTMLDivElement>(null)
   const chartModeTouchedRef = useRef(false)
   const coarsePointer = useCoarsePointer()
   const narrowViewport = useNarrowChartViewport()
   const [mode, setMode] = useState<ChartMode>(getDefaultChartMode)
   const [density, setDensity] = useState<DensityMode>('compact')
   const [activeTooltip, setActiveTooltip] = useState<ActiveTooltip | null>(null)
+  const [tooltipShiftX, setTooltipShiftX] = useState(0)
+  const [tooltipPlaceBelow, setTooltipPlaceBelow] = useState(false)
+  const [scrollLeft, setScrollLeft] = useState(0)
   const [exportOpen, setExportOpen] = useState(false)
   const [exportStep, setExportStep] = useState<1 | 2>(1)
   const [exportFormat, setExportFormat] = useState<ChartExportFormat>('png')
@@ -381,6 +389,8 @@ export function StationUsageAreaChart({
 
   const isDualSeries = (secondaryData?.length ?? 0) > 0
   const expanded = density === 'expanded'
+  /** Expand scrolls years; keep a fixed Y-axis rail outside the scroller (not during export capture). */
+  const pinYAxis = expanded && exportCaptureSize == null
   const yearCount = isDualSeries
     ? new Set([
         ...data.map((point) => point.year),
@@ -391,12 +401,12 @@ export function StationUsageAreaChart({
   const denseYears = yearCount > 14
   /** Tilted labels use a fixed axis band in both density modes. */
   const tiltedXAxis = denseYears || expanded || narrowViewport
-  // Hover (not click) so Recharts touchmove updates the axis tooltip while dragging.
+  // Recharts hover still drives the axis cursor on touch; callout position comes from scrub.
   const tooltipTrigger = 'hover'
   const dotRadius = coarsePointer || expanded ? 6.5 : 4.5
   const activeDotRadius = coarsePointer || expanded ? 8.5 : 6.5
   const xAxisHeight = tiltedXAxis ? 52 : 28
-  const yAxisWidthForScrub = Y_AXIS_WIDTH
+  const yAxisWidthForScrub = pinYAxis ? 0 : Y_AXIS_WIDTH
   const firstYear = isDualSeries
     ? [...data, ...(secondaryData ?? [])].map((point) => point.year).sort()[0] ?? ''
     : data[0]?.year ?? ''
@@ -486,11 +496,15 @@ export function StationUsageAreaChart({
   const chartMargin = {
     top: overlayPoint ? 56 : 12,
     right: expanded || overlayPoint ? 28 : 12,
-    left: expanded ? 8 : 0,
+    left: pinYAxis || expanded ? 8 : 0,
     bottom: tiltedXAxis ? 8 : 4,
   }
 
   const syncTooltip = ({ active, payload, label, coordinate }: TooltipContentProps) => {
+    // On touch, pointer scrub sets the callout from the data point. Recharts' shared
+    // hover uses the finger Y, which fights that anchor when dragging mid/lower chart.
+    if (coarsePointer) return null
+
     const primaryRaw = payload?.find((entry) => entry.dataKey === 'primary')?.value
     const secondaryRaw = payload?.find((entry) => entry.dataKey === 'secondary')?.value
     const singleRaw =
@@ -518,8 +532,6 @@ export function StationUsageAreaChart({
     queueMicrotask(() => {
       setActiveTooltip((prev) => {
         if (next == null) {
-          // Keep the last readout sticky on touch — Recharts clears hover on stray events.
-          if (coarsePointer) return prev
           return prev == null ? prev : null
         }
         if (
@@ -657,28 +669,48 @@ export function StationUsageAreaChart({
     />
   )
 
+  const yAxisDomain = isYoy
+    ? ([dataMin, dataMax]: readonly [number, number]): [number, number] => {
+        const extent = Math.max(Math.abs(dataMin), Math.abs(dataMax), 5)
+        return [-extent * 1.15, extent * 1.15]
+      }
+    : ([0, padPassengerYDomainMax] as [number, (dataMax: number) => number])
+
+  const yAxisTick = (props: {
+    x?: string | number
+    y?: string | number
+    payload?: { value?: number | string }
+  }) => (
+    <YAxisTick
+      {...props}
+      mode={mode}
+      fontSize={isExportCapture ? exportAxisFontSize : 12}
+    />
+  )
+
   const yAxis = (
+    <YAxis
+      hide={pinYAxis}
+      axisLine={false}
+      tickLine={false}
+      width={pinYAxis ? 0 : isExportCapture ? exportYAxisWidth : Y_AXIS_WIDTH}
+      tickMargin={0}
+      tick={pinYAxis ? false : yAxisTick}
+      tickCount={8}
+      domain={yAxisDomain}
+      allowDecimals
+    />
+  )
+
+  const stickyYAxis = (
     <YAxis
       axisLine={false}
       tickLine={false}
-      width={isExportCapture ? exportYAxisWidth : Y_AXIS_WIDTH}
+      width={Y_AXIS_WIDTH}
       tickMargin={0}
-      tick={(props) => (
-        <YAxisTick
-          {...props}
-          mode={mode}
-          fontSize={isExportCapture ? exportAxisFontSize : 12}
-        />
-      )}
+      tick={yAxisTick}
       tickCount={8}
-      domain={
-        isYoy
-          ? ([dataMin, dataMax]: readonly [number, number]) => {
-              const extent = Math.max(Math.abs(dataMin), Math.abs(dataMax), 5)
-              return [-extent * 1.15, extent * 1.15]
-            }
-          : [0, padPassengerYDomainMax]
-      }
+      domain={yAxisDomain}
       allowDecimals
     />
   )
@@ -875,6 +907,77 @@ export function StationUsageAreaChart({
       ? activeTooltip
       : overlayTooltip ?? activeTooltip
 
+  // Expand: tooltip lives on the plot shell so it can sit above the sticky Y-rail.
+  const tooltipAnchorX =
+    pinnedTooltip == null
+      ? 0
+      : pinnedTooltip.x - scrollLeft + (pinYAxis ? Y_AXIS_WIDTH : 0)
+
+  useEffect(() => {
+    const scroller = scrollRef.current
+    if (!scroller || !pinYAxis) {
+      setScrollLeft(0)
+      return
+    }
+    const syncScroll = () => setScrollLeft(scroller.scrollLeft)
+    syncScroll()
+    scroller.addEventListener('scroll', syncScroll, { passive: true })
+    return () => scroller.removeEventListener('scroll', syncScroll)
+  }, [pinYAxis, chartEpoch, expanded, yearCount])
+
+  useLayoutEffect(() => {
+    const tip = tooltipRef.current
+    const shell = plotShellRef.current
+    if (!tip || !shell || !pinnedTooltip) {
+      setTooltipShiftX(0)
+      setTooltipPlaceBelow(false)
+      return
+    }
+
+    const tipWidth = tip.offsetWidth
+    const tipHeight = tip.offsetHeight
+    const shellWidthPx = shell.clientWidth
+    const shellHeightPx = shell.clientHeight
+    if (tipWidth <= 0 || tipHeight <= 0 || shellWidthPx <= 0 || shellHeightPx <= 0) {
+      setTooltipShiftX(0)
+      setTooltipPlaceBelow(false)
+      return
+    }
+
+    // Default placement is centered on the anchor via translate(-50%, -100%).
+    const left = tooltipAnchorX - tipWidth / 2
+    const right = tooltipAnchorX + tipWidth / 2
+    let shift = 0
+    if (left < TOOLTIP_EDGE_PAD) shift = TOOLTIP_EDGE_PAD - left
+    else if (right > shellWidthPx - TOOLTIP_EDGE_PAD) {
+      shift = shellWidthPx - TOOLTIP_EDGE_PAD - right
+    }
+
+    // Prefer above the point; flip below when the callout would clip the top edge.
+    const aboveTop = pinnedTooltip.y - TOOLTIP_GAP - tipHeight
+    let placeBelow = aboveTop < TOOLTIP_EDGE_PAD
+    if (placeBelow) {
+      const belowBottom = pinnedTooltip.y + TOOLTIP_GAP + tipHeight
+      // If below also overflows, keep above and let horizontal clamp handle edges.
+      if (belowBottom > shellHeightPx - TOOLTIP_EDGE_PAD) placeBelow = false
+    }
+
+    setTooltipShiftX((prev) => (prev === shift ? prev : shift))
+    setTooltipPlaceBelow((prev) => (prev === placeBelow ? prev : placeBelow))
+  }, [
+    pinnedTooltip?.year,
+    pinnedTooltip?.x,
+    pinnedTooltip?.y,
+    pinnedTooltip?.value,
+    pinnedTooltip?.primaryValue,
+    pinnedTooltip?.secondaryValue,
+    tooltipAnchorX,
+    isDualSeries,
+    mode,
+    pinYAxis,
+    scrollLeft,
+  ])
+
   const areaGradient = (
     <defs>
       <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -1066,8 +1169,35 @@ export function StationUsageAreaChart({
   const plotWidth = exportCaptureSize
     ? exportCaptureSize.width
     : expanded
-      ? Math.max(yearCount * SCROLL_YEAR_WIDTH + Y_AXIS_WIDTH + 40, 480)
+      ? Math.max(yearCount * SCROLL_YEAR_WIDTH + (pinYAxis ? 0 : Y_AXIS_WIDTH) + 40, 480)
       : undefined
+
+  const stickyYAxisRail =
+    pinYAxis ? (
+      <div className="station-usage-area-chart__y-rail" aria-hidden="true">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart
+            data={chartSeries as Array<Record<string, unknown>>}
+            margin={{
+              top: chartMargin.top,
+              right: 0,
+              left: 0,
+              bottom: chartMargin.bottom + xAxisHeight,
+            }}
+          >
+            {stickyYAxis}
+            {isDualSeries ? (
+              <>
+                <Area dataKey="primary" stroke="none" fill="none" isAnimationActive={false} />
+                <Area dataKey="secondary" stroke="none" fill="none" isAnimationActive={false} />
+              </>
+            ) : (
+              <Area dataKey="value" stroke="none" fill="none" isAnimationActive={false} />
+            )}
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    ) : null
 
   return (
     <div
@@ -1084,8 +1214,11 @@ export function StationUsageAreaChart({
         exportCaptureSize
           ? ({
               '--station-usage-plot-height': `${exportCaptureSize.height}px`,
+              '--station-usage-y-axis-width': `${Y_AXIS_WIDTH}px`,
             } as React.CSSProperties)
-          : undefined
+          : ({
+              '--station-usage-y-axis-width': `${Y_AXIS_WIDTH}px`,
+            } as React.CSSProperties)
       }
     >
       <div className="station-usage-area-chart__header">
@@ -1112,8 +1245,9 @@ export function StationUsageAreaChart({
           </div>
         </div>
       </div>
-      <div className="station-usage-area-chart__plot">
-        <div className="station-usage-area-chart__scroll">
+      <div className="station-usage-area-chart__plot" ref={plotShellRef}>
+        {stickyYAxisRail}
+        <div className="station-usage-area-chart__scroll" ref={scrollRef}>
           <div
             ref={plotRef}
             className="station-usage-area-chart__plot-inner"
@@ -1137,60 +1271,69 @@ export function StationUsageAreaChart({
             <ResponsiveContainer key={chartEpoch} width="100%" height="100%">
               {chart}
             </ResponsiveContainer>
-            {pinnedTooltip ? (
-              <div
-                className="station-usage-area-chart__tooltip"
-                style={{
-                  left: pinnedTooltip.x,
-                  top: pinnedTooltip.y - TOOLTIP_GAP,
-                }}
-              >
-                <div className="station-usage-area-chart__tooltip-year">{pinnedTooltip.year}</div>
-                {isDualSeries &&
-                pinnedTooltip.primaryValue != null &&
-                pinnedTooltip.secondaryValue != null ? (
-                  <div className="station-usage-area-chart__tooltip-series">
-                    <div className="station-usage-area-chart__tooltip-row">
-                      <span
-                        className="station-usage-area-chart__legend-swatch"
-                        style={{ backgroundColor: CHART_LINE }}
-                        aria-hidden
-                      />
-                      <span className="station-usage-area-chart__tooltip-row-label">
-                        {primarySeriesLabel}
-                      </span>
-                      <span className="station-usage-area-chart__tooltip-value">
-                        {formatChartValue(pinnedTooltip.primaryValue, mode)}
-                      </span>
-                    </div>
-                    <div className="station-usage-area-chart__tooltip-row">
-                      <span
-                        className="station-usage-area-chart__legend-swatch"
-                        style={{ backgroundColor: CHART_SERIES_SECONDARY }}
-                        aria-hidden
-                      />
-                      <span className="station-usage-area-chart__tooltip-row-label">
-                        {secondarySeriesLabel}
-                      </span>
-                      <span className="station-usage-area-chart__tooltip-value">
-                        {formatChartValue(pinnedTooltip.secondaryValue, mode)}
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="station-usage-area-chart__tooltip-value">
-                    {formatChartValue(
-                      pinnedTooltip.primaryValue ??
-                        pinnedTooltip.secondaryValue ??
-                        pinnedTooltip.value,
-                      mode
-                    )}
-                  </div>
-                )}
-              </div>
-            ) : null}
           </div>
         </div>
+        {pinnedTooltip ? (
+          <div
+            ref={tooltipRef}
+            className={[
+              'station-usage-area-chart__tooltip',
+              tooltipPlaceBelow ? 'station-usage-area-chart__tooltip--below' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            style={{
+              left: tooltipAnchorX,
+              top: tooltipPlaceBelow
+                ? pinnedTooltip.y + TOOLTIP_GAP
+                : pinnedTooltip.y - TOOLTIP_GAP,
+              ['--station-usage-tooltip-shift' as string]: `${tooltipShiftX}px`,
+            }}
+          >
+            <div className="station-usage-area-chart__tooltip-year">{pinnedTooltip.year}</div>
+            {isDualSeries &&
+            pinnedTooltip.primaryValue != null &&
+            pinnedTooltip.secondaryValue != null ? (
+              <div className="station-usage-area-chart__tooltip-series">
+                <div className="station-usage-area-chart__tooltip-row">
+                  <span
+                    className="station-usage-area-chart__legend-swatch"
+                    style={{ backgroundColor: CHART_LINE }}
+                    aria-hidden
+                  />
+                  <span className="station-usage-area-chart__tooltip-row-label">
+                    {primarySeriesLabel}
+                  </span>
+                  <span className="station-usage-area-chart__tooltip-value">
+                    {formatChartValue(pinnedTooltip.primaryValue, mode)}
+                  </span>
+                </div>
+                <div className="station-usage-area-chart__tooltip-row">
+                  <span
+                    className="station-usage-area-chart__legend-swatch"
+                    style={{ backgroundColor: CHART_SERIES_SECONDARY }}
+                    aria-hidden
+                  />
+                  <span className="station-usage-area-chart__tooltip-row-label">
+                    {secondarySeriesLabel}
+                  </span>
+                  <span className="station-usage-area-chart__tooltip-value">
+                    {formatChartValue(pinnedTooltip.secondaryValue, mode)}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="station-usage-area-chart__tooltip-value">
+                {formatChartValue(
+                  pinnedTooltip.primaryValue ??
+                    pinnedTooltip.secondaryValue ??
+                    pinnedTooltip.value,
+                  mode
+                )}
+              </div>
+            )}
+          </div>
+        ) : null}
       </div>
       {isDualSeries ? (
         <div className="station-usage-area-chart__legend" aria-label="Series legend">

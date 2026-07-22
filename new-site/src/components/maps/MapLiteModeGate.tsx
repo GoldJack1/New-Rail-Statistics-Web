@@ -2,8 +2,9 @@
 
 import React from 'react'
 import { BUTWideButton } from '@/components/buttons'
-import { NETWORK_VIEW_TABS } from '@/constants/stationCollections'
+import { getVisibleNetworkViewTabs } from '@/constants/stationCollections'
 import type { NetworkViewFilter } from '@/constants/stationCollections'
+import { useStationAdminMode } from '@/hooks/useStationAdminMode'
 import './MapLiteModeGate.css'
 
 interface MapLiteModeGateProps {
@@ -12,7 +13,8 @@ interface MapLiteModeGateProps {
 }
 
 const MapLiteModeGate: React.FC<MapLiteModeGateProps> = ({ onSelectNetwork, onUseFullMap }) => {
-  const networkOptions = NETWORK_VIEW_TABS.filter((tab) => tab.value !== 'all')
+  const isAdminMode = useStationAdminMode()
+  const networkOptions = getVisibleNetworkViewTabs(isAdminMode).filter((tab) => tab.value !== 'all')
 
   return (
     <div className="map-lite-mode-gate" role="region" aria-label="Map performance mode">
