@@ -28,6 +28,8 @@ export interface Station {
   linesServed?: string | null
   /** Opening date (Firestore `Date Opened`, mainly light rail). */
   dateOpened?: string | null
+  /** Network opening sequence (Firestore `Order of Opening`, SuperTram timeline). */
+  orderOfOpening?: number | string | null
   platforms?: string | null
   operatorCode?: string | null
   staffingLevel?: string | null
@@ -113,6 +115,7 @@ export interface SandboxStationDoc {
   fareZone?: string | number
   StopName?: string
   'Date Opened'?: string
+  'Order of Opening'?: string | number
   'Lines Served'?: string
   IsLimitedService?: string
   Platforms?: string

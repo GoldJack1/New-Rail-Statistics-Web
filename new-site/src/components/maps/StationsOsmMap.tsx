@@ -24,7 +24,10 @@ import {
 } from '../../utils/superTramMapMarker'
 import { getMarkerHitRadius, getMarkerVisualRadius, MARKER_STROKE } from '../../utils/mapMarkerSizing'
 import { addThemeTileLayersToMap, swapThemeTileLayers, type MapTileLayerRefs } from '../../utils/mapTileLayers'
-import { isStationVisibleAtTimelineCutoff } from '../../utils/superTramTimeline'
+import {
+  isStationVisibleAtTimelineCutoff,
+  type SuperTramTimelineCutoff,
+} from '../../utils/superTramTimeline'
 import { LIGHTRAIL_COLLECTION_ID } from '../../utils/lightRailStationFields'
 import { LITE_MAP_MAX_MARKERS } from '../../utils/deviceCapability'
 import type { Station } from '../../types'
@@ -80,7 +83,7 @@ interface StationsOsmMapProps {
   onAddStationAtLocation?: (latitude: number, longitude: number) => void
   onAddStationModeChange?: (enabled: boolean) => void
   /** SuperTram opening timeline — null disables timeline filtering. */
-  timelineCutoffMs?: number | null
+  timelineCutoff?: SuperTramTimelineCutoff | null
   timelineShowUndatedAtMax?: boolean
   /** Viewport-culled markers on low-end devices. */
   liteMode?: boolean
@@ -204,7 +207,7 @@ export function StationsOsmMap({
   addStationMode = false,
   onAddStationAtLocation,
   onAddStationModeChange,
-  timelineCutoffMs = null,
+  timelineCutoff = null,
   timelineShowUndatedAtMax = true,
   liteMode = false,
 }: StationsOsmMapProps) {
@@ -503,14 +506,14 @@ export function StationsOsmMap({
         mobileMarkers
       )
 
-      if (timelineCutoffMs === null || station.sourceCollectionId !== LIGHTRAIL_COLLECTION_ID) {
+      if (timelineCutoff === null || station.sourceCollectionId !== LIGHTRAIL_COLLECTION_ID) {
         setMarkerTimelineVisibility(marker, true)
         return
       }
 
       const visible = isStationVisibleAtTimelineCutoff(
         station,
-        timelineCutoffMs,
+        timelineCutoff,
         timelineShowUndatedAtMax
       )
       setMarkerTimelineVisibility(marker, visible)
@@ -521,7 +524,7 @@ export function StationsOsmMap({
     networkView,
     mobileMarkers,
     pendingNewStationKeys,
-    timelineCutoffMs,
+    timelineCutoff,
     timelineShowUndatedAtMax,
   ])
 

@@ -3,7 +3,8 @@ import type { PendingChangeEntry } from '../contexts/pendingStationChangesTypes'
 import type { NetworkViewFilter } from '../constants/stationCollections'
 import { isNetworkCollection } from '../constants/stationCollections'
 import type { Station } from '../types'
-import { getStationMapKey } from './stationAreaSlug'
+import { LIGHT_RAIL_DOC_FIELDS } from './lightRailStationFields'
+import { getStationMapKey, getStationNetworkCollectionId } from './stationAreaSlug'
 import { isValidStationCoordinate } from './stationCoordinates'
 
 export function pendingEntryToMapStation(stationId: string, entry: PendingChangeEntry): Station | null {
@@ -40,12 +41,50 @@ export function pendingEntryToMapStation(stationId: string, entry: PendingChange
   }
 }
 
+function toOptionalString(value: unknown): string | null {
+  if (value == null) return null
+  const trimmed = String(value).trim()
+  return trimmed === '' ? null : trimmed
+}
+
+/**
+ * Light-rail timeline fields are stored as raw Firestore keys in `sandboxUpdated`, so unpublished
+ * edits need mapping onto the `Station` shape for the SuperTram timeline to see them.
+ */
+export function applyPendingTimelineFields(
+  station: Station,
+  entry: PendingChangeEntry | undefined
+): Station {
+  if (!entry || entry.isNew) return station
+
+  const stationCollection = getStationNetworkCollectionId(station)
+  if (stationCollection && resolvePendingTargetCollectionId(entry) !== stationCollection) {
+    return station
+  }
+
+  const sandbox = entry.sandboxUpdated as Record<string, unknown> | undefined
+  if (!sandbox) return station
+
+  const dateOpened = sandbox[LIGHT_RAIL_DOC_FIELDS.dateOpened]
+  const orderOfOpening = sandbox[LIGHT_RAIL_DOC_FIELDS.orderOfOpening]
+  if (dateOpened === undefined && orderOfOpening === undefined) return station
+
+  return {
+    ...station,
+    ...(dateOpened === undefined ? {} : { dateOpened: toOptionalString(dateOpened) }),
+    ...(orderOfOpening === undefined ? {} : { orderOfOpening: toOptionalString(orderOfOpening) }),
+  }
+}
+
 export function mergePendingNewStationsForMap(
   firestoreStations: Station[],
   pendingChanges: Record<string, PendingChangeEntry>,
   networkView: NetworkViewFilter
 ): { stations: Station[]; pendingNewKeys: Set<string> } {
-  const existingKeys = new Set(firestoreStations.map(getStationMapKey))
+  const stationsWithPendingEdits = firestoreStations.map((station) =>
+    applyPendingTimelineFields(station, pendingChanges[station.id])
+  )
+  const existingKeys = new Set(stationsWithPendingEdits.map(getStationMapKey))
   const pendingNewKeys = new Set<string>()
   const pendingStations: Station[] = []
 
@@ -61,5 +100,5 @@ export function mergePendingNewStationsForMap(
     pendingStations.push(station)
   }
 
-  return { stations: [...firestoreStations, ...pendingStations], pendingNewKeys }
+  return { stations: [...stationsWithPendingEdits, ...pendingStations], pendingNewKeys }
 }

@@ -37,9 +37,24 @@ import './StationUsageAreaChart.css'
 import dynamic from 'next/dynamic'
 
 function KnowledgebaseSourceHint({ label }: { label?: string | null }) {
-  const text = label?.trim()
-  if (!text) return null
-  return <p className="edit-hint kb-source-hint">{text}</p>
+  const lines = splitStationDetailsSourceHintParagraphs(label ?? '')
+  if (lines.length === 0) return null
+  return (
+    <>
+      {lines.map((line, index) => (
+        <p
+          key={index}
+          className={
+            index === 0
+              ? 'edit-hint kb-source-hint'
+              : 'edit-hint kb-source-hint kb-source-hint--continued'
+          }
+        >
+          {line}
+        </p>
+      ))}
+    </>
+  )
 }
 
 type GbnrUsageMetric = 'entriesExits' | 'interchanges' | 'combined'
@@ -158,6 +173,7 @@ import type { KbJson } from '../../../utils/knowledgebaseStationXml'
 import { isKnowledgebaseTabId, KNOWLEDGEBASE_OVERVIEW_KEY } from '../../../utils/knowledgebaseStationSections'
 import {
   getStationDetailsNetworkSourceHint,
+  splitStationDetailsSourceHintParagraphs,
   STATION_DETAILS_USAGE_SOURCE_HINT,
 } from '../../../utils/stationDetailsSourceHint'
 import { getStationNetworkCollectionId } from '../../../utils/stationAreaSlug'
@@ -1298,6 +1314,15 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
                   value={formatOptionalText(station.stnarea)}
                   pendingFieldChanges={pendingFieldChanges}
                 />
+                {fieldSchema.isLightRail && fieldSchema.showOrderOfOpening && (
+                  <StationDetailField
+                    label="Order of opening"
+                    value={formatValue(
+                      readLightRailDocString(lightRailDoc, LIGHT_RAIL_DOC_FIELDS.orderOfOpening)
+                    )}
+                    pendingFieldChanges={pendingFieldChanges}
+                  />
+                )}
                 {fieldSchema.showAdminUrlSlug && (
                   <StationDetailField
                     label="URL slug"

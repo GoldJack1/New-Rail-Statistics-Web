@@ -88,6 +88,10 @@
   color: var(--text-secondary, #555);
 }
 
+.kb-source-hint--continued {
+  margin-top: 0.35rem;
+}
+
 .kb-nested-block {
   margin-top: 0.25rem;
 }

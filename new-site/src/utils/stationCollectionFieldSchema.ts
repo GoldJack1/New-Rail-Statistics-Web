@@ -67,6 +67,7 @@ export type StationCollectionFieldSchema = {
   showLinesServed: boolean
   showPlatforms: boolean
   showDateOpened: boolean
+  showOrderOfOpening: boolean
   showRequestStop: boolean
   showLimitedService: boolean
   showStationStatusSection: boolean
@@ -157,6 +158,7 @@ export const EMPTY_STATION_COLLECTION_FIELD_SCHEMA: StationCollectionFieldSchema
   showLinesServed: false,
   showPlatforms: false,
   showDateOpened: false,
+  showOrderOfOpening: false,
   showRequestStop: false,
   showLimitedService: false,
   showStationStatusSection: false,
@@ -204,6 +206,7 @@ function schemaFromLayoutProfile(profile: StationDetailLayoutProfile): StationCo
     showLinesServed: profile.showLinesServed,
     showPlatforms: profile.showPlatforms,
     showDateOpened: profile.showDateOpened,
+    showOrderOfOpening: profile.showOrderOfOpening,
     showRequestStop: profile.showRequestStop,
     showLimitedService: profile.showLimitedService,
     showStationStatusSection: profile.showStationStatusSection,
@@ -254,6 +257,7 @@ export function inferStationCollectionFieldSchema(
       ]),
       showLiftSection: hasPopulatedTopLevel(docs, [LIGHT_RAIL_DOC_FIELDS.hasLift]),
       showDateOpened: hasPopulatedTopLevel(docs, [LIGHT_RAIL_DOC_FIELDS.dateOpened]),
+      showOrderOfOpening: catalogSchema.showOrderOfOpening,
       showLimitedService: hasPopulatedTopLevel(docs, [LIGHT_RAIL_DOC_FIELDS.isLimitedService]),
       showStaffingLevel: hasPopulatedTopLevel(docs, [LIGHT_RAIL_DOC_FIELDS.isStaffed]),
       showConnectionBus: hasPopulatedTopLevel(docs, [LIGHT_RAIL_DOC_FIELDS.bus]),
@@ -395,6 +399,7 @@ export function inferStationCollectionFieldSchema(
     showLinesServed: false,
     showPlatforms: false,
     showDateOpened: false,
+    showOrderOfOpening: false,
     showRequestStop,
     showLimitedService,
     showStationStatusSection,
@@ -447,6 +452,7 @@ export function mergeStationCollectionFieldSchemas(
     showLinesServed: a.showLinesServed || b.showLinesServed,
     showPlatforms: a.showPlatforms || b.showPlatforms,
     showDateOpened: a.showDateOpened || b.showDateOpened,
+    showOrderOfOpening: a.showOrderOfOpening || b.showOrderOfOpening,
     showRequestStop: a.showRequestStop || b.showRequestStop,
     showLimitedService: a.showLimitedService || b.showLimitedService,
     showStationStatusSection: a.showStationStatusSection || b.showStationStatusSection,

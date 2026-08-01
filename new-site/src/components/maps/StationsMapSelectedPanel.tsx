@@ -1,7 +1,7 @@
 'use client'
 
 import { forwardRef, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import StationCard from '../cards/StationCard/StationCard'
 import LightRailStopCard from '../cards/LightRailStopCard/LightRailStopCard'
 import { isLightRailStop } from '../../utils/stationCardForNetwork'
@@ -11,6 +11,7 @@ import { buildStationPath, getStationNetworkCollectionId } from '../../utils/sta
 import { formatMapPanelLocationDisplay } from '../../utils/formatStationLocation'
 import { parseLightRailLinesServed } from '../../utils/lightRailStationFields'
 import { usePendingStationChanges } from '@/hooks/usePendingStationChanges'
+import { setStationDetailsNavigationState } from '@/utils/clientNavigationState'
 import type { Station } from '../../types'
 import './StationsMapSelectedPanel.css'
 
@@ -45,6 +46,7 @@ function getLatestPassengerEntry(
 const StationsMapSelectedPanel = forwardRef<HTMLElement, StationsMapSelectedPanelProps>(
   ({ station, isPendingNew = false, detailsLoading = false }, ref) => {
     const router = useRouter()
+    const pathname = usePathname()
     const { pendingChanges } = usePendingStationChanges()
 
     const collectionId = station ? getStationNetworkCollectionId(station) : null
@@ -64,6 +66,8 @@ const StationsMapSelectedPanel = forwardRef<HTMLElement, StationsMapSelectedPane
     const isLightRail = station ? isLightRailStop(station) : false
 
     const stationPath = station ? buildStationPath(station, collectionId ?? undefined) : null
+    const mapReturnTo = pathname === '/admin/map' || pathname === '/stations/map' ? pathname : '/stations/map'
+
     const openStation = () => {
       if (isPendingNew && station) {
         if (collectionId && isNetworkCollection(collectionId) && pendingChanges[station.id]?.isNew) {
@@ -74,6 +78,7 @@ const StationsMapSelectedPanel = forwardRef<HTMLElement, StationsMapSelectedPane
         return
       }
       if (stationPath) {
+        setStationDetailsNavigationState({ returnTo: mapReturnTo })
         router.push(`/stations/${stationPath}`)
       }
     }

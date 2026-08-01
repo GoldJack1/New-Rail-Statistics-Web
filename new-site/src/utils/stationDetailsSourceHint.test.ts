@@ -3,6 +3,8 @@ import {
   getStationDetailsNetworkSourceHint,
   resolveStationDetailsSourceHint,
   splitStationDetailsSourceHintLines,
+  splitStationDetailsSourceHintParagraphs,
+  STATION_DETAILS_KB_DATA_QUALITY_NOTE,
   STATION_DETAILS_LOCATION_SOURCE_HINT,
   STATION_DETAILS_REVIEWED_SOURCE_HINT,
   STATION_DETAILS_SUPERTRAM_SOURCE_HINT,
@@ -111,6 +113,20 @@ describe('splitStationDetailsSourceHintLines', () => {
   it('keeps a single sentence as one line', () => {
     expect(splitStationDetailsSourceHintLines(STATION_DETAILS_LOCATION_SOURCE_HINT)).toEqual([
       STATION_DETAILS_LOCATION_SOURCE_HINT,
+    ])
+  })
+})
+
+describe('splitStationDetailsSourceHintParagraphs', () => {
+  it('splits newline-separated attribution and quality note', () => {
+    expect(
+      splitStationDetailsSourceHintParagraphs(
+        'The data shown on this page was last updated by National Rail Enquiries on 31st March 2026 at 08:08.\n' +
+          STATION_DETAILS_KB_DATA_QUALITY_NOTE
+      )
+    ).toEqual([
+      'The data shown on this page was last updated by National Rail Enquiries on 31st March 2026 at 08:08.',
+      STATION_DETAILS_KB_DATA_QUALITY_NOTE,
     ])
   })
 })

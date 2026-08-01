@@ -751,6 +751,10 @@
   line-height: 1.4;
 }
 
+.station-details-main .kb-source-hint--continued {
+  margin-top: 0.35rem;
+}
+
 /* Details code chips + subsections */
 .station-details-code-chips {
   display: flex;

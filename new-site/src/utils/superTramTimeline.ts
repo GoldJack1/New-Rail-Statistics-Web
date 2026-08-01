@@ -1,8 +1,16 @@
 import type { Station } from '../types'
-import { parseStoredDateForSort } from './dateDdMmYyyy'
+import { parseStoredDateForSort, storedDateToIsoDate } from './dateDdMmYyyy'
+
+/** Timeline position: opening date first, then order of opening within that date. */
+export type SuperTramTimelineCutoff = {
+  dateMs: number
+  order: number | null
+}
 
 export type SuperTramTimelineStep = {
-  cutoffMs: number
+  cutoff: SuperTramTimelineCutoff
+  /** Opening date for the step label / datetime attribute. */
+  dateMs: number
   label: string
 }
 
@@ -11,15 +19,79 @@ export function getStationOpenedTimestamp(station: Station): number | null {
   return parseStoredDateForSort(station.dateOpened)
 }
 
-export function buildSuperTramTimelineSteps(stations: Station[]): SuperTramTimelineStep[] {
-  const timestamps = new Set<number>()
-  for (const station of stations) {
-    const openedMs = getStationOpenedTimestamp(station)
-    if (openedMs != null) timestamps.add(openedMs)
+export function getStationOrderOfOpening(station: Station): number | null {
+  if (station.orderOfOpening == null) return null
+  const trimmed = String(station.orderOfOpening).trim()
+  if (trimmed === '') return null
+  const order = Number(trimmed)
+  return Number.isFinite(order) ? order : null
+}
+
+export function getStationTimelineCutoff(station: Station): SuperTramTimelineCutoff | null {
+  const dateMs = getStationOpenedTimestamp(station)
+  if (dateMs == null) return null
+  return { dateMs, order: getStationOrderOfOpening(station) }
+}
+
+/** Stops with no order value open last within their date. */
+function compareOrders(a: number | null, b: number | null): number {
+  if (a == null && b == null) return 0
+  if (a == null) return 1
+  if (b == null) return -1
+  return a - b
+}
+
+export function compareTimelineCutoffs(
+  a: SuperTramTimelineCutoff,
+  b: SuperTramTimelineCutoff
+): number {
+  if (a.dateMs !== b.dateMs) return a.dateMs - b.dateMs
+  return compareOrders(a.order, b.order)
+}
+
+/**
+ * Derive a shared order-of-opening value from a stored opening date (dd/mm/yyyy).
+ * Stops that opened on the same day get the same value (YYYYMMDD), so they open together
+ * until an editor gives them distinct orders.
+ */
+export function orderOfOpeningFromDateOpened(dateOpened: string | null | undefined): string {
+  const trimmed = String(dateOpened ?? '').trim()
+  if (!trimmed) return ''
+  const iso = storedDateToIsoDate(trimmed)
+  if (!iso) return ''
+  return iso.replace(/-/g, '')
+}
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000
+
+/** Empty lead-in step: the calendar day before the first opening, so play starts with no pins. */
+export function buildTimelinePrologueStep(firstOpeningDateMs: number): SuperTramTimelineStep {
+  const dateMs = firstOpeningDateMs - MS_PER_DAY
+  return {
+    cutoff: { dateMs, order: null },
+    dateMs,
+    label: formatTimelineDate(dateMs),
   }
-  return [...timestamps]
-    .sort((a, b) => a - b)
-    .map((cutoffMs) => ({ cutoffMs, label: formatTimelineDate(cutoffMs) }))
+}
+
+export function buildSuperTramTimelineSteps(stations: Station[]): SuperTramTimelineStep[] {
+  const cutoffsByKey = new Map<string, SuperTramTimelineCutoff>()
+
+  for (const station of stations) {
+    const cutoff = getStationTimelineCutoff(station)
+    if (cutoff == null) continue
+    cutoffsByKey.set(`${cutoff.dateMs}:${cutoff.order ?? ''}`, cutoff)
+  }
+
+  const openingSteps = [...cutoffsByKey.values()].sort(compareTimelineCutoffs).map((cutoff) => ({
+    cutoff,
+    dateMs: cutoff.dateMs,
+    label: formatTimelineDate(cutoff.dateMs),
+  }))
+
+  if (openingSteps.length === 0) return []
+
+  return [buildTimelinePrologueStep(openingSteps[0].dateMs), ...openingSteps]
 }
 
 export function formatTimelineDate(ms: number): string {
@@ -33,21 +105,21 @@ export function formatTimelineDate(ms: number): string {
 
 export function isStationVisibleAtTimelineCutoff(
   station: Station,
-  cutoffMs: number | null,
+  cutoff: SuperTramTimelineCutoff | null,
   showUndatedAtMax: boolean
 ): boolean {
-  if (cutoffMs === null) return true
-  const openedMs = getStationOpenedTimestamp(station)
-  if (openedMs == null) return showUndatedAtMax
-  return openedMs <= cutoffMs
+  if (cutoff === null) return true
+  const stationCutoff = getStationTimelineCutoff(station)
+  if (stationCutoff == null) return showUndatedAtMax
+  return compareTimelineCutoffs(stationCutoff, cutoff) <= 0
 }
 
 export function countStationsVisibleAtTimelineCutoff(
   stations: Station[],
-  cutoffMs: number | null,
+  cutoff: SuperTramTimelineCutoff | null,
   showUndatedAtMax: boolean
 ): number {
   return stations.filter((station) =>
-    isStationVisibleAtTimelineCutoff(station, cutoffMs, showUndatedAtMax)
+    isStationVisibleAtTimelineCutoff(station, cutoff, showUndatedAtMax)
   ).length
 }

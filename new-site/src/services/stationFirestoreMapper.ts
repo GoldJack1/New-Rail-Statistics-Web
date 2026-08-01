@@ -194,6 +194,12 @@ function readDateOpened(data: Record<string, unknown>): string | null {
     : null
 }
 
+function readOrderOfOpening(data: Record<string, unknown>): string | null {
+  return data['Order of Opening'] != null && String(data['Order of Opening']).trim() !== ''
+    ? String(data['Order of Opening'])
+    : null
+}
+
 export function mapFirestoreDocToStation(
   docId: string,
   data: Record<string, unknown>,
@@ -203,6 +209,7 @@ export function mapFirestoreDocToStation(
   const { latitude, longitude } = extractCoordinatesFromFirestoreData(data)
   const linesServed = readLinesServed(data)
   const dateOpened = readDateOpened(data)
+  const orderOfOpening = readOrderOfOpening(data)
 
   if (detailLevel === 'lean') {
     return {
@@ -221,6 +228,7 @@ export function mapFirestoreDocToStation(
       yearlyPassengers: null,
       linesServed,
       dateOpened,
+      orderOfOpening,
       ...(isNetworkCollection(collectionName) ? { sourceCollectionId: collectionName } : {}),
     }
   }
@@ -249,6 +257,7 @@ export function mapFirestoreDocToStation(
     stationUrl: String(data.url ?? '').trim() || null,
     linesServed,
     dateOpened,
+    orderOfOpening,
     ...(isNetworkCollection(collectionName) ? { sourceCollectionId: collectionName } : {}),
   }
 

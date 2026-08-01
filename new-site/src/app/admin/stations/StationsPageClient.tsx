@@ -32,6 +32,7 @@ import { useStationCollection } from '@/contexts/StationCollectionContext'
 import { usePendingStationChanges } from '@/hooks/usePendingStationChanges'
 import { buildStationPath, getStationMapKey } from '@/utils/stationAreaSlug'
 import { pathnameForReviewPendingSource } from '@/utils/reviewPendingNavigation'
+import { setStationDetailsNavigationState } from '@/utils/clientNavigationState'
 import { useStationAdminMode } from '@/hooks/useStationAdminMode'
 import {
   useStationAdminDisplayMode,
@@ -340,9 +341,15 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
   const tableStations = paginatedStations
   const handleStationNavigate = useCallback(
     (station: (typeof sortedStations)[number]) => {
-      router.push(isEditMode ? `/admin/stations/${buildStationPath(station, collectionId)}/edit` : `/stations/${buildStationPath(station, collectionId)}`)
+      const returnTo = `${pathname}${routerLocation.search}`
+      setStationDetailsNavigationState({ returnTo: returnTo || '/admin/stations' })
+      router.push(
+        isEditMode
+          ? `/admin/stations/${buildStationPath(station, collectionId)}/edit`
+          : `/stations/${buildStationPath(station, collectionId)}`
+      )
     },
-    [router, collectionId, isEditMode]
+    [router, collectionId, isEditMode, pathname, routerLocation.search]
   )
   const visiblePaginationItems = useMemo(() => {
     const windowSize = viewportWidth < 640 ? 3 : viewportWidth < 1024 ? 5 : 7

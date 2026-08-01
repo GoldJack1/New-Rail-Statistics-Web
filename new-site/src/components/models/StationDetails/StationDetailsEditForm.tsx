@@ -26,6 +26,7 @@ import {
   pickLightRailSandboxOnlyFields,
   readLightRailDocString,
 } from '../../../utils/lightRailStationFields'
+import { orderOfOpeningFromDateOpened } from '../../../utils/superTramTimeline'
 import { getStationFieldChanges } from '../../../utils/stationFieldDiffs'
 import {
   getPendingFieldChangesForEntry,
@@ -1289,9 +1290,21 @@ const StationDetailsEditForm: React.FC<StationDetailsEditFormProps> = ({
                     <LightRailDateOpenedInput
                       id="edit-dateOpened"
                       value={readLightRailDocString(additionalForm as Record<string, unknown>, LIGHT_RAIL_DOC_FIELDS.dateOpened)}
-                      onChange={(nextValue) =>
-                        updateAdditional({ [LIGHT_RAIL_DOC_FIELDS.dateOpened]: nextValue } as Partial<SandboxStationDoc>)
-                      }
+                      onChange={(nextValue) => {
+                        const hasOrder = readLightRailDocString(
+                          additionalForm as Record<string, unknown>,
+                          LIGHT_RAIL_DOC_FIELDS.orderOfOpening
+                        ).trim() !== ''
+                        updateAdditional({
+                          [LIGHT_RAIL_DOC_FIELDS.dateOpened]: nextValue,
+                          ...(hasOrder
+                            ? {}
+                            : {
+                                [LIGHT_RAIL_DOC_FIELDS.orderOfOpening]:
+                                  orderOfOpeningFromDateOpened(nextValue),
+                              }),
+                        } as Partial<SandboxStationDoc>)
+                      }}
                     />
                   </div>
                 )}
@@ -1520,6 +1533,32 @@ const StationDetailsEditForm: React.FC<StationDetailsEditFormProps> = ({
                     colorVariant="secondary"
                   />
                 </div>
+                {fieldSchema.isLightRail && fieldSchema.showOrderOfOpening && (
+                  <div className="edit-field">
+                    <label className="edit-label" htmlFor="edit-orderOfOpening">
+                      Order of opening
+                    </label>
+                    <TXTINPWideButton
+                      id="edit-orderOfOpening"
+                      value={readLightRailDocString(
+                        additionalForm as Record<string, unknown>,
+                        LIGHT_RAIL_DOC_FIELDS.orderOfOpening
+                      )}
+                      onInputChange={(e) =>
+                        updateAdditional({
+                          [LIGHT_RAIL_DOC_FIELDS.orderOfOpening]: e.target.value,
+                        } as Partial<SandboxStationDoc>)
+                      }
+                      inputClassName="edit-input"
+                      colorVariant="secondary"
+                      inputMode="numeric"
+                    />
+                    <p className="edit-hint">
+                      The timeline runs by date opened, then by this order within the same date.
+                      Stops sharing a value open together; set 1, 2, 3… to reveal them one by one.
+                    </p>
+                  </div>
+                )}
                 {fieldSchema.showAdminUrlSlug && (
                   <div className="edit-field">
                     <label className="edit-label" htmlFor="edit-urlSlug">

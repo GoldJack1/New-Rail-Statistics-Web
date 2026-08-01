@@ -60,6 +60,7 @@ export function flattenAdditionalDocForDiff(doc: Partial<SandboxStationDoc> | nu
   if (Object.keys(pickLightRailSandboxOnlyFields(doc as Record<string, unknown>)).length > 0) {
     const lightRailLabels: Record<string, string> = {
       [LIGHT_RAIL_DOC_FIELDS.dateOpened]: 'Date opened',
+      [LIGHT_RAIL_DOC_FIELDS.orderOfOpening]: 'Order of opening',
       [LIGHT_RAIL_DOC_FIELDS.linesServed]: 'Lines served',
       [LIGHT_RAIL_DOC_FIELDS.isLimitedService]: 'Limited service',
       [LIGHT_RAIL_DOC_FIELDS.platforms]: 'Platforms',

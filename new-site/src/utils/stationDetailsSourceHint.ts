@@ -15,6 +15,10 @@ export const STATION_DETAILS_USAGE_SOURCE_HINT =
 export const STATION_DETAILS_SUPERTRAM_SOURCE_HINT =
   'The data shown on this page was sourced by Rail Statistics.'
 
+/** Shown under the NRE last-updated line on Knowledgebase-backed station tabs. */
+export const STATION_DETAILS_KB_DATA_QUALITY_NOTE =
+  'Please note some data may appear incorrect on this page. This is due to the National Rail data feed providing inconsistent data formatting for each station.'
+
 /**
  * Network-specific footer attribution for station details sections.
  * GBNR Knowledgebase / ORR tabs use their own lines; this covers Location and non-KB networks.
@@ -91,4 +95,15 @@ export function splitStationDetailsSourceHintLines(text: string): string[] {
     .map((part) => part.trim())
     .filter(Boolean)
   return parts.length > 0 ? parts : [trimmed]
+}
+
+/**
+ * Split a source hint into paragraphs (newline-separated blocks).
+ * Used when a primary attribution line is followed by a separate note.
+ */
+export function splitStationDetailsSourceHintParagraphs(text: string): string[] {
+  return text
+    .split(/\n+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
 }

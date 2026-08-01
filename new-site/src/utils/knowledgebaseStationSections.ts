@@ -1,5 +1,6 @@
 import type { KbJson } from './knowledgebaseStationXml'
 import { sanitizeKbDisplayText } from './knowledgebaseDisplayText'
+import { STATION_DETAILS_KB_DATA_QUALITY_NOTE } from './stationDetailsSourceHint'
 
 export type KnowledgebaseStationSection = {
   key: string
@@ -195,12 +196,16 @@ function formatKnowledgebaseLastChangedStamp(data: KbJson): string | null {
 
 /**
  * ChangeHistory/LastChangedDate →
- * "The data shown on this page was last updated by National Rail Enquiries on 16th July 2026 at 09:46." (24h, UTC).
+ * "The data shown on this page was last updated by National Rail Enquiries on 16th July 2026 at 09:46." (24h, UTC),
+ * plus a newline-separated note about inconsistent NRE formatting.
  */
 export function formatKnowledgebaseLastUpdatedLabel(data: KbJson): string | null {
   const stamp = formatKnowledgebaseLastChangedStamp(data)
   if (!stamp) return null
-  return `The data shown on this page was last updated by National Rail Enquiries on ${stamp}.`
+  return (
+    `The data shown on this page was last updated by National Rail Enquiries on ${stamp}.\n` +
+    STATION_DETAILS_KB_DATA_QUALITY_NOTE
+  )
 }
 
 /**

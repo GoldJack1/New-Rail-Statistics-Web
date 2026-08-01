@@ -10,12 +10,34 @@ import {
   humanizeKnowledgebaseKey,
 } from '../../../utils/knowledgebaseStationSections'
 import { getKnowledgebaseSectionIcon } from '../../../utils/stationDetailFieldIcons'
+import { splitStationDetailsSourceHintParagraphs } from '../../../utils/stationDetailsSourceHint'
 import { sanitizeKbDisplayText, isGenericNationalRailHomepage, isHelplineContactHeadline, isKbPlaceholderLine, isKbUrlLine, buildHelplineDisplay, buildLuggagePropertyDisplay, buildNationalKeyToiletsDisplay, condenseKnowledgebaseDayList, formatHelplineContactLine, formatHelplineNoteText, formatKbLocationDisplayText, hasStructuredFirstClassLoungeSections, mergeSameScheduleHoursLines, normalizeKbLocationText, parseFirstClassLoungeSections, partitionHelplineNotes, partitionHelplineText, splitHelplineTextBlocks, splitStepFreeCategoryFromStepFreeAccess, splitToiletsLocationItems, stripHelplineNoteMarker, stripHiddenKbFieldUrls, type KbDetailSection } from '../../../utils/knowledgebaseDisplayText'
 import { BUTWideButton } from '../../buttons'
 import { useTocOperators } from '../../../hooks/useTocOperators'
 import { resolveNreTocCodeDisplayName, type TocOperator } from '../../../services/tocOperators'
 import { StationSectionTitle } from './StationSectionTitle'
 import './StationKnowledgebasePanel.css'
+
+function KbSourceHint({ text }: { text?: string | null }) {
+  const lines = splitStationDetailsSourceHintParagraphs(text ?? '')
+  if (lines.length === 0) return null
+  return (
+    <>
+      {lines.map((line, index) => (
+        <p
+          key={index}
+          className={
+            index === 0
+              ? 'edit-hint kb-source-hint'
+              : 'edit-hint kb-source-hint kb-source-hint--continued'
+          }
+        >
+          {line}
+        </p>
+      ))}
+    </>
+  )
+}
 
 function decodeBasicEntities(input: string): string {
   return input
@@ -1156,7 +1178,7 @@ function KbNode({
           })}
         </div>
       )}
-      {useSection && sourceHint ? <p className="edit-hint kb-source-hint">{sourceHint}</p> : null}
+      {useSection && sourceHint ? <KbSourceHint text={sourceHint} /> : null}
     </div>
   )
 }
@@ -1211,7 +1233,7 @@ function FacilitiesAndStaffingDetailsLayout({
             ))}
           </div>
           {index === groups.length - 1 && sourceHint ? (
-            <p className="edit-hint kb-source-hint">{sourceHint}</p>
+            <KbSourceHint text={sourceHint} />
           ) : null}
         </div>
       ))}
@@ -1250,7 +1272,7 @@ function FlatDetailsLayout({
           />
         ))}
       </div>
-      {sourceHint ? <p className="edit-hint kb-source-hint">{sourceHint}</p> : null}
+      {sourceHint ? <KbSourceHint text={sourceHint} /> : null}
     </div>
   )
 }

@@ -179,11 +179,11 @@ const StationsMapPage: React.FC = () => {
     [superTramTimelineStations]
   )
 
-  const timelineCutoffMs = useMemo(() => {
+  const timelineCutoff = useMemo(() => {
     if (!showSuperTramTimeline || superTramTimelineSteps.length === 0) return null
     const maxIndex = superTramTimelineSteps.length - 1
     const clamped = Math.max(0, Math.min(timelineStepIndex, maxIndex))
-    return superTramTimelineSteps[clamped].cutoffMs
+    return superTramTimelineSteps[clamped].cutoff
   }, [showSuperTramTimeline, superTramTimelineSteps, timelineStepIndex])
 
   const timelineShowUndatedAtMax = useMemo(() => {
@@ -201,7 +201,7 @@ const StationsMapPage: React.FC = () => {
     setTimelineStepIndex(Math.max(0, superTramTimelineSteps.length - 1))
   }, [showSuperTramTimeline, superTramTimelineSteps.length])
 
-  const activeTimelineCutoffMs = timelineModeEnabled ? timelineCutoffMs : null
+  const activeTimelineCutoff = timelineModeEnabled ? timelineCutoff : null
   const activeTimelineShowUndatedAtMax = timelineModeEnabled ? timelineShowUndatedAtMax : true
 
   const selectedStationIsPending = Boolean(
@@ -300,7 +300,7 @@ const StationsMapPage: React.FC = () => {
                 addStationMode={isAddStationMode}
                 onAddStationModeChange={setIsAddStationMode}
                 onAddStationAtLocation={handleAddStationAtLocation}
-                timelineCutoffMs={activeTimelineCutoffMs}
+                timelineCutoff={activeTimelineCutoff}
                 timelineShowUndatedAtMax={activeTimelineShowUndatedAtMax}
                 liteMode={isLiteMode}
               />

@@ -59,6 +59,8 @@ export type StationDetailLayoutProfile = {
   showLinesServed: boolean
   showPlatforms: boolean
   showDateOpened: boolean
+  /** SuperTram Admin: network opening sequence for timeline pin order. */
+  showOrderOfOpening: boolean
   showRequestStop: boolean
   showLimitedService: boolean
   showStationStatusSection: boolean
@@ -153,6 +155,7 @@ const HEAVY_RAIL_CATALOG_BASE: Omit<
   showLinesServed: false,
   showPlatforms: false,
   showDateOpened: false,
+  showOrderOfOpening: false,
   showRequestStop: false,
   showLimitedService: false,
   showStationStatusSection: false,
@@ -246,6 +249,7 @@ export const STATION_DETAIL_LAYOUT_PRESETS: Record<
     showLinesServed: true,
     showPlatforms: true,
     showDateOpened: true,
+    showOrderOfOpening: true,
     showLimitedService: true,
     requireCrsCode: false,
     requireTiploc: false,

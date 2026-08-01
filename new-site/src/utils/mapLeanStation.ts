@@ -13,6 +13,7 @@ export type MapLeanStation = Pick<
   | 'sourceCollectionId'
   | 'linesServed'
   | 'dateOpened'
+  | 'orderOfOpening'
   | 'stnarea'
   | 'toc'
 > & {
@@ -42,6 +43,7 @@ export function toMapLeanStation(station: Station): MapLeanStation {
     sourceCollectionId: station.sourceCollectionId,
     linesServed: station.linesServed ?? null,
     dateOpened: station.dateOpened ?? null,
+    orderOfOpening: station.orderOfOpening ?? null,
   }
 }
 

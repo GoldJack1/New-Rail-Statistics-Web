@@ -191,7 +191,8 @@ describe('knowledgebaseStationSections', () => {
       },
     })
     expect(formatKnowledgebaseLastUpdatedLabel(data)).toBe(
-      'The data shown on this page was last updated by National Rail Enquiries on 16th July 2026 at 09:46.'
+      'The data shown on this page was last updated by National Rail Enquiries on 16th July 2026 at 09:46.\n' +
+        'Please note some data may appear incorrect on this page. This is due to the National Rail data feed providing inconsistent data formatting for each station.'
     )
     expect(formatKnowledgebaseDetailsSourceHint(data)).toBe(
       'Some data shown on this page was last updated by National Rail Enquiries on 16th July 2026 at 09:46. With a large majority of data being added by Rail Statistics.'

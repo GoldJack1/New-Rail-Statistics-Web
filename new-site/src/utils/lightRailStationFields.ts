@@ -8,6 +8,7 @@ export const LIGHTRAIL_COLLECTION_ID = 'lightrail_GBSHEFFSUPERTRAM' as const sat
 export const LIGHT_RAIL_DOC_FIELDS = {
   stopName: 'StopName',
   dateOpened: 'Date Opened',
+  orderOfOpening: 'Order of Opening',
   linesServed: 'Lines Served',
   isLimitedService: 'IsLimitedService',
   platforms: 'Platforms',
@@ -24,6 +25,7 @@ export type LightRailDocFieldKey = (typeof LIGHT_RAIL_DOC_FIELDS)[keyof typeof L
 export const LIGHT_RAIL_ADDITIONAL_FIELD_KEYS: LightRailDocFieldKey[] = [
   LIGHT_RAIL_DOC_FIELDS.stopName,
   LIGHT_RAIL_DOC_FIELDS.dateOpened,
+  LIGHT_RAIL_DOC_FIELDS.orderOfOpening,
   LIGHT_RAIL_DOC_FIELDS.linesServed,
   LIGHT_RAIL_DOC_FIELDS.isLimitedService,
   LIGHT_RAIL_DOC_FIELDS.platforms,

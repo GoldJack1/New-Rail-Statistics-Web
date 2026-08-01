@@ -5,7 +5,7 @@ import { BUTWideButton, TOGToggleVisited } from '../buttons'
 import {
   buildSuperTramTimelineSteps,
   countStationsVisibleAtTimelineCutoff,
-  formatTimelineDate,
+  type SuperTramTimelineCutoff,
   type SuperTramTimelineStep,
 } from '../../utils/superTramTimeline'
 import type { Station } from '../../types'
@@ -23,10 +23,13 @@ interface StationsMapTimelineProps {
   onModeEnabledChange: (enabled: boolean) => void
 }
 
-function getCutoffForStep(steps: SuperTramTimelineStep[], index: number): number | null {
+function getCutoffForStep(
+  steps: SuperTramTimelineStep[],
+  index: number
+): SuperTramTimelineCutoff | null {
   if (steps.length === 0) return null
   const clamped = Math.max(0, Math.min(index, steps.length - 1))
-  return steps[clamped].cutoffMs
+  return steps[clamped].cutoff
 }
 
 export function StationsMapTimeline({
@@ -41,12 +44,13 @@ export function StationsMapTimeline({
   const steps = useMemo(() => buildSuperTramTimelineSteps(stations), [stations])
   const maxIndex = Math.max(0, steps.length - 1)
   const clampedIndex = steps.length === 0 ? 0 : Math.max(0, Math.min(stepIndex, maxIndex))
-  const cutoffMs = getCutoffForStep(steps, clampedIndex)
+  const cutoff = getCutoffForStep(steps, clampedIndex)
   const showUndatedAtMax = clampedIndex >= maxIndex
+  const currentStep = steps.length > 0 ? steps[clampedIndex] : null
 
   const visibleCount = useMemo(
-    () => countStationsVisibleAtTimelineCutoff(stations, cutoffMs, showUndatedAtMax),
-    [stations, cutoffMs, showUndatedAtMax]
+    () => countStationsVisibleAtTimelineCutoff(stations, cutoff, showUndatedAtMax),
+    [stations, cutoff, showUndatedAtMax]
   )
 
   useEffect(() => {
@@ -119,7 +123,8 @@ export function StationsMapTimeline({
       : `${visibleCount} of ${stations.length} stops visible on the map for the selected date.`
     : 'All stops are shown on the map. Turn on to replay how the network opened over time.'
 
-  const currentLabel = cutoffMs != null ? formatTimelineDate(cutoffMs) : '—'
+  const currentLabel = currentStep?.label ?? '—'
+  const currentDateMs = currentStep?.dateMs ?? null
   const sliderPercent = maxIndex === 0 ? 100 : (clampedIndex / maxIndex) * 100
   const showTimelineControls = modeEnabled && steps.length > 0
 
@@ -143,7 +148,7 @@ export function StationsMapTimeline({
           <div className="stations-map-timeline__date-row">
             <time
               className="stations-map-timeline__date"
-              dateTime={cutoffMs != null ? new Date(cutoffMs).toISOString() : undefined}
+              dateTime={currentDateMs != null ? new Date(currentDateMs).toISOString() : undefined}
             >
               {currentLabel}
             </time>
