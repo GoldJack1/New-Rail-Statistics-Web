@@ -19,7 +19,7 @@ interface PageTopHeaderActionButton {
 }
 
 interface PageTopHeaderProps {
-  title: string
+  title: React.ReactNode
   subtitle?: React.ReactNode
   titleAddon?: React.ReactNode
   /** Small label rendered above the title (e.g. TOC). */

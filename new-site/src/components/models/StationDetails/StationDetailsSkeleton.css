@@ -1,0 +1,79 @@
+/* Match StationCardSkeleton shimmer tokens used on the stations page. */
+.station-details-main-skeleton,
+.station-details-field-grid-skeleton,
+.station-details-sidebar--loading,
+.station-details-mobile-sections--loading {
+  --skeleton-surface: color-mix(in srgb, var(--button-text-active) 14%, var(--button-bg-active));
+  --skeleton-shimmer: color-mix(in srgb, var(--button-text-active) 22%, transparent);
+}
+
+.station-details-main-skeleton__icon {
+  flex: 0 0 auto;
+  border-radius: var(--radius-pill, 999px);
+  overflow: hidden;
+}
+
+.station-details-main-skeleton__code-chip {
+  pointer-events: none;
+  cursor: default;
+  --skeleton-surface: color-mix(in srgb, var(--button-text-active) 14%, var(--button-bg-active));
+  --skeleton-shimmer: color-mix(in srgb, var(--button-text-active) 22%, transparent);
+}
+
+.station-details-main-skeleton__code-chip .rs-button__text {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Match desktop left-nav floor so the right column doesn’t look sparse. */
+.station-details-main-skeleton {
+  min-height: calc(11 * var(--station-details-section-row, 64px));
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.station-details-main-skeleton__toc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: 0 0 var(--space-lg);
+}
+
+.station-details-main-skeleton__toc-label {
+  margin-right: var(--space-xs);
+}
+
+.station-details-main-skeleton__info-button {
+  pointer-events: none;
+}
+
+.station-details-main-skeleton__source-hints {
+  margin-top: var(--space-xl, 1.5rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.station-details-main-skeleton__source-hints .kb-source-hint {
+  margin: 0;
+}
+
+.container--station-details .rs-page-top-header__title-text:empty {
+  display: none;
+}
+
+/* Nav loading shell: disable interaction; shimmer comes from TextSkeletonLine. */
+.station-details-sidebar--loading,
+.station-details-mobile-sections--loading {
+  pointer-events: none;
+  user-select: none;
+}
+
+.sidebar-panel-nav-item--skeleton .sidebar-dropdown__header,
+.sidebar-panel-nav-item--skeleton .sidebar-panel-nav-item__chevron-btn,
+.sidebar-panel-nav-item--skeleton .sidebar-panel-nav-item__child {
+  cursor: default;
+  pointer-events: none;
+}

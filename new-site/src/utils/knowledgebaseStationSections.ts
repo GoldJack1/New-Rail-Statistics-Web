@@ -79,6 +79,15 @@ export function humanizeKnowledgebaseKey(key: string): string {
     .replace(/^./, (s) => s.toUpperCase())
 }
 
+/** Known KB sidebar sections (excludes overview) — used for skeleton nav placeholders. */
+export const KNOWLEDGEBASE_SIDEBAR_SECTION_PLACEHOLDERS: ReadonlyArray<{
+  key: string
+  label: string
+}> = SECTION_ORDER.filter((key) => key !== OVERVIEW_KEY).map((key) => ({
+  key,
+  label: humanizeKnowledgebaseKey(key),
+}))
+
 export function unwrapKnowledgebaseStationRoot(data: KbJson): Record<string, KbJson> | null {
   if (!isPlainObject(data)) return null
   const keys = Object.keys(data)

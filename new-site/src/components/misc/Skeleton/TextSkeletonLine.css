@@ -1,0 +1,37 @@
+/* Match StationCardSkeleton / details shimmer tokens. */
+.station-details-text-skeleton {
+  --skeleton-surface: color-mix(in srgb, var(--button-text-active) 14%, var(--button-bg-active));
+  --skeleton-shimmer: color-mix(in srgb, var(--button-text-active) 22%, transparent);
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  color: transparent !important;
+  caret-color: transparent;
+  user-select: none;
+  pointer-events: none;
+  line-height: inherit;
+  vertical-align: baseline;
+}
+
+.station-details-text-skeleton__bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1em;
+  transform: translateY(-50%);
+  overflow: hidden;
+  border-radius: var(--radius-pill, 999px);
+  pointer-events: none;
+}
+
+.station-details-nav-skeleton-icon {
+  --skeleton-surface: color-mix(in srgb, var(--button-text-active) 14%, var(--button-bg-active));
+  --skeleton-shimmer: color-mix(in srgb, var(--button-text-active) 22%, transparent);
+  display: block;
+  flex: 0 0 auto;
+  width: 1em;
+  height: 1em;
+  overflow: hidden;
+  border-radius: var(--radius-pill, 999px);
+}

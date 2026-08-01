@@ -8,6 +8,8 @@ import {
   MobileHeaderToggle,
 } from '@/components/misc/Header/MobileHeader'
 import { SidebarPanel, SidebarPanelNav, SidebarPanelNavItem } from '@/components/misc/SidebarPanel'
+import { Skeleton } from '@/components/misc/Skeleton/Skeleton'
+import { TextSkeletonLine } from '@/components/misc/Skeleton/TextSkeletonLine'
 import type { StationDetailsTab } from '@/utils/stationCollectionFieldSchema'
 import { getStationDetailsSectionIcon } from '@/utils/stationDetailFieldIcons'
 import { stationDetailsSubsectionId } from '@/utils/stationDetailsTabSubheaders'
@@ -23,12 +25,15 @@ export type StationDetailsSectionTab = {
 
 type StationDetailsSectionNavProps = {
   tabs: StationDetailsSectionTab[]
-  activeTab: StationDetailsTab
+  /** Null while the URL hash section is being resolved (avoids a Details flash). */
+  activeTab: StationDetailsTab | null
   onSelect: (tabId: StationDetailsTab) => void
   ariaLabel?: string
   /** When knowledgebase is enabled, mark non-KB tabs for source-compare styling. */
   markFirebaseTabs?: boolean
   showIcons?: boolean
+  /** Redact labels/icons like the stations list sidebar while content loads. */
+  loading?: boolean
 }
 
 function tabIconFor(
@@ -49,6 +54,7 @@ function DesktopSectionTabs({
   ariaLabel,
   markFirebaseTabs,
   showIcons,
+  loading,
 }: StationDetailsSectionNavProps) {
   const scrollToSubheader = (title: string) => {
     const id = stationDetailsSubsectionId(title)
@@ -62,7 +68,15 @@ function DesktopSectionTabs({
   }
 
   return (
-    <aside className="station-details-sidebar">
+    <aside
+      className={[
+        'station-details-sidebar',
+        loading ? 'station-details-sidebar--loading' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      aria-busy={loading || undefined}
+    >
       <SidebarPanel className="station-details-sidebar-panel">
         <SidebarPanelNav className="station-details-tabs" aria-label={ariaLabel}>
           {tabs.map((tab) => {
@@ -80,6 +94,7 @@ function DesktopSectionTabs({
                 }}
                 icon={TabIcon}
                 subheaders={tab.subheaders}
+                skeleton={Boolean(loading)}
                 className={[
                   'station-details-tab',
                   'rs-button--color-primary',
@@ -110,6 +125,7 @@ export function StationDetailsSectionNav({
   ariaLabel = 'Station sections',
   markFirebaseTabs = false,
   showIcons = true,
+  loading = false,
 }: StationDetailsSectionNavProps) {
   const navId = useId()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -141,16 +157,27 @@ export function StationDetailsSectionNav({
         ariaLabel={ariaLabel}
         markFirebaseTabs={markFirebaseTabs}
         showIcons={showIcons}
+        loading={loading}
       />
 
-      <div className="station-details-mobile-sections">
+      <div
+        className={[
+          'station-details-mobile-sections',
+          loading ? 'station-details-mobile-sections--loading' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        aria-busy={loading || undefined}
+      >
         <MobileHeaderMenu
           menuOpen={menuOpen}
           className="station-details-mobile-sections__menu"
         >
           <div className="station-details-mobile-sections__bar">
             <span className="station-details-mobile-sections__title">
-              {ActiveIcon ? (
+              {loading ? (
+                <Skeleton className="station-details-nav-skeleton-icon" style={{ width: 16, height: 16 }} />
+              ) : ActiveIcon ? (
                 <ActiveIcon
                   className="station-details-tab__icon"
                   size={16}
@@ -158,7 +185,13 @@ export function StationDetailsSectionNav({
                   aria-hidden
                 />
               ) : null}
-              {activeLabel}
+              {loading ? (
+                <TextSkeletonLine className="station-details-mobile-sections__title-text">
+                  {activeLabel}
+                </TextSkeletonLine>
+              ) : (
+                <span className="station-details-mobile-sections__title-text">{activeLabel}</span>
+              )}
             </span>
             <MobileHeaderToggle
               menuOpen={menuOpen}
@@ -190,7 +223,12 @@ export function StationDetailsSectionNav({
                           closeMenu()
                         }}
                       >
-                        {TabIcon ? (
+                        {loading ? (
+                          <Skeleton
+                            className="station-details-nav-skeleton-icon"
+                            style={{ width: 16, height: 16 }}
+                          />
+                        ) : TabIcon ? (
                           <TabIcon
                             className="station-details-tab__icon"
                             size={16}
@@ -198,7 +236,13 @@ export function StationDetailsSectionNav({
                             aria-hidden
                           />
                         ) : null}
-                        <span className="header-nav-link__label">{tab.label}</span>
+                        {loading ? (
+                          <TextSkeletonLine className="header-nav-link__label">
+                            {tab.label}
+                          </TextSkeletonLine>
+                        ) : (
+                          <span className="header-nav-link__label">{tab.label}</span>
+                        )}
                       </button>
                     </li>
                   )

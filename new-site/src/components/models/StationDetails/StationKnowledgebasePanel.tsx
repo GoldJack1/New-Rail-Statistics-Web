@@ -16,6 +16,7 @@ import { BUTWideButton } from '../../buttons'
 import { useTocOperators } from '../../../hooks/useTocOperators'
 import { resolveNreTocCodeDisplayName, type TocOperator } from '../../../services/tocOperators'
 import { StationSectionTitle } from './StationSectionTitle'
+import { StationDetailsFieldGridSkeleton } from './StationDetailsSkeleton'
 import './StationKnowledgebasePanel.css'
 
 function KbSourceHint({ text }: { text?: string | null }) {
@@ -1323,7 +1324,7 @@ const StationKnowledgebasePanel: React.FC<StationKnowledgebasePanelProps> = ({
       <div className={panelClass}>
         <div className="modal-section">
           <StationSectionTitle title={label} icon={getKnowledgebaseSectionIcon(sectionKey ?? label, label)} pageHeading />
-          <p className="edit-hint">Loading Knowledgebase…</p>
+          <StationDetailsFieldGridSkeleton rows={6} />
         </div>
       </div>
     )

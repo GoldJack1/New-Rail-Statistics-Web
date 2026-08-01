@@ -525,7 +525,7 @@
 .stations-sidebar--loading .rs-button-bar__text {
     color: transparent !important;
     caret-color: transparent;
-    border-radius: var(--radius-sm, 4px);
+    border-radius: var(--radius-pill, 999px);
     background-color: var(--stations-redact-surface);
 }
 
@@ -554,13 +554,13 @@
 }
 
 .stations-sidebar--loading .search-input-shell.rs-button.rs-input:not(.rs-input--has-value)::after {
-    border-radius: var(--radius-sm, 4px);
+    border-radius: var(--radius-pill, 999px);
     background-color: var(--stations-redact-surface);
 }
 
 .stations-sidebar--loading .search-input-shell.rs-input--has-value .rs-input__field {
     color: transparent !important;
-    border-radius: var(--radius-sm, 4px);
+    border-radius: var(--radius-pill, 999px);
     background-color: var(--stations-redact-surface) !important;
     background-image: none !important;
     animation: none !important;

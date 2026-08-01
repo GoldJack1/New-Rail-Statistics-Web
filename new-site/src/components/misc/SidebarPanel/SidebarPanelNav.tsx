@@ -4,6 +4,8 @@ import { useEffect, useId, useState, type MouseEvent, type ReactNode } from 'rea
 import type { Icon } from '@phosphor-icons/react'
 import { ChevronRightIcon } from '@/components/icons'
 import AutoAnimateCollapse from '@/components/misc/AutoAnimateCollapse/AutoAnimateCollapse'
+import { Skeleton } from '@/components/misc/Skeleton/Skeleton'
+import { TextSkeletonLine } from '@/components/misc/Skeleton/TextSkeletonLine'
 import { getStationDetailsSubsectionIcon } from '@/utils/stationDetailFieldIcons'
 import '@/components/misc/SidebarDropdownSection/SidebarDropdownSection.css'
 import './SidebarPanel.css'
@@ -43,7 +45,10 @@ type SidebarPanelNavItemProps = {
   /** Controlled expand; defaults to open when selected. */
   expanded?: boolean
   onExpandedChange?: (expanded: boolean) => void
+  /** Replace label/icon glyphs with text-matched shimmer bars. */
+  skeleton?: boolean
 }
+
 
 /**
  * Details-style section tab row with optional collapsible subsection children.
@@ -58,6 +63,7 @@ export function SidebarPanelNavItem({
   subheaders = [],
   expanded: expandedProp,
   onExpandedChange,
+  skeleton = false,
 }: SidebarPanelNavItemProps) {
   const childrenId = useId()
   const hasChildren = subheaders.length > 0
@@ -109,6 +115,7 @@ export function SidebarPanelNavItem({
         selected ? 'sidebar-dropdown--selected' : '',
         expanded ? 'sidebar-dropdown--open' : '',
         hasChildren ? 'sidebar-panel-nav-item--has-children' : '',
+        skeleton ? 'sidebar-panel-nav-item--skeleton' : '',
         className,
       ]
         .filter(Boolean)
@@ -124,7 +131,9 @@ export function SidebarPanelNavItem({
           onClick={handleTitleClick}
         >
           <span className="sidebar-dropdown__title">
-            {IconComponent ? (
+            {skeleton ? (
+              <Skeleton className="station-details-nav-skeleton-icon" style={{ width: 16, height: 16 }} />
+            ) : IconComponent ? (
               <IconComponent
                 className="sidebar-panel-nav-item__icon"
                 size={16}
@@ -132,7 +141,11 @@ export function SidebarPanelNavItem({
                 aria-hidden
               />
             ) : null}
-            {label}
+            {skeleton ? (
+              <TextSkeletonLine className="sidebar-panel-nav-item__label">{label}</TextSkeletonLine>
+            ) : (
+              <span className="sidebar-panel-nav-item__label">{label}</span>
+            )}
           </span>
         </button>
         <button
@@ -149,7 +162,11 @@ export function SidebarPanelNavItem({
           aria-controls={hasChildren ? childrenId : undefined}
           onClick={handleChevronClick}
         >
-          <ChevronRightIcon className="sidebar-dropdown__chevron" aria-hidden />
+          {skeleton ? (
+            <Skeleton className="station-details-nav-skeleton-icon" style={{ width: 16, height: 16 }} />
+          ) : (
+            <ChevronRightIcon className="sidebar-dropdown__chevron" aria-hidden />
+          )}
         </button>
       </div>
 
@@ -166,7 +183,12 @@ export function SidebarPanelNavItem({
                     onClick={() => handleSubheaderClick(title)}
                   >
                     <span className="sidebar-panel-nav-item__child-label">
-                      {ChildIcon ? (
+                      {skeleton ? (
+                        <Skeleton
+                          className="station-details-nav-skeleton-icon"
+                          style={{ width: 14, height: 14 }}
+                        />
+                      ) : ChildIcon ? (
                         <ChildIcon
                           className="sidebar-panel-nav-item__child-icon"
                           size={14}
@@ -174,12 +196,25 @@ export function SidebarPanelNavItem({
                           aria-hidden
                         />
                       ) : null}
-                      {title}
+                      {skeleton ? (
+                        <TextSkeletonLine className="sidebar-panel-nav-item__child-label-text">
+                          {title}
+                        </TextSkeletonLine>
+                      ) : (
+                        <span className="sidebar-panel-nav-item__child-label-text">{title}</span>
+                      )}
                     </span>
-                    <ChevronRightIcon
-                      className="sidebar-panel-nav-item__child-chevron"
-                      aria-hidden
-                    />
+                    {skeleton ? (
+                      <Skeleton
+                        className="station-details-nav-skeleton-icon"
+                        style={{ width: 14, height: 14 }}
+                      />
+                    ) : (
+                      <ChevronRightIcon
+                        className="sidebar-panel-nav-item__child-chevron"
+                        aria-hidden
+                      />
+                    )}
                   </button>
                 </li>
               )

@@ -16,6 +16,7 @@ import { StationDetailField } from './StationDetailField'
 import { StationSectionTitle } from './StationSectionTitle'
 import { StationDetailsSubsection } from './StationDetailsSubsection'
 import { StationPendingChangesBanner } from './StationPendingChangesBanner'
+import { StationDetailsFieldGridSkeleton } from './StationDetailsSkeleton'
 import StationKnowledgebaseAlertBanner from './StationKnowledgebaseAlertBanner'
 import { StationUsageAreaChart } from './StationUsageAreaChart'
 import { StationOdmFlowsSection } from './StationOdmFlowsSection'
@@ -748,7 +749,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
 
       {showAdditional && additionalLoading && (
         <div className="modal-section">
-          <p className="modal-sandbox-loading">Loading additional details…</p>
+          <StationDetailsFieldGridSkeleton rows={6} />
         </div>
       )}
 

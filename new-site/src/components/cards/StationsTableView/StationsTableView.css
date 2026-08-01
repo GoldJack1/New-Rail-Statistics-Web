@@ -208,7 +208,7 @@ html[data-theme='dark'] .stations-table-wrap {
   display: inline-block;
   vertical-align: middle;
   flex: 0 0 auto;
-  border-radius: var(--radius-sm, 4px);
+  border-radius: var(--radius-pill, 999px);
 }
 
 .stations-table__skeleton-chips {
@@ -226,7 +226,7 @@ html[data-theme='dark'] .stations-table-wrap {
 .stations-table__skeleton-header {
   display: block;
   flex: 0 0 auto;
-  border-radius: var(--radius-sm, 4px);
+  border-radius: var(--radius-pill, 999px);
 }
 
 .stations-table__sort-button--loading {

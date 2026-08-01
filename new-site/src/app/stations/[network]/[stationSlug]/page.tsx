@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useParams } from 'next/navigation'
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { useStationDetailsRoute } from '@/hooks/useStationDetailsRoute'
 import { useStationCollectionFieldSchema } from '@/hooks/useStationCollectionFieldSchema'
@@ -32,6 +32,13 @@ import {
 import { getStationDetailsTabSubheaders } from '@/utils/stationDetailsTabSubheaders'
 import StationDetailsView from '@/components/models/StationDetails/StationDetailsView'
 import StationDetailsSectionNav from '@/components/models/StationDetails/StationDetailsSectionNav'
+import {
+  StationDetailsHeaderSkeleton,
+  StationDetailsHeaderSubtitleSkeleton,
+  StationDetailsHeaderEyebrowSkeleton,
+  StationDetailsMainSkeleton,
+  buildStationDetailsSkeletonTabs,
+} from '@/components/models/StationDetails/StationDetailsSkeleton'
 import { BUTWideButton } from '@/components/buttons'
 import { BUTCircleButton } from '@/components/buttons'
 import { BackIcon } from '@/components/icons'
@@ -71,6 +78,50 @@ function getStationDetailsReturnPath(state: unknown): string {
 const DESKTOP_SECTION_NAV_MIN_HEIGHT_PX = 11 * 64
 const DESKTOP_CHART_MEDIA = '(min-width: 1024px)'
 
+const STATIC_STATION_DETAILS_TAB_IDS = new Set<string>([
+  'details',
+  'location',
+  'usage',
+  'additional',
+  'stepFree',
+  'service',
+  'facilities',
+  'admin',
+])
+
+function parseStationDetailsTabHash(hash: string): StationDetailsTab | null {
+  const raw = hash.startsWith('#') ? hash.slice(1) : hash
+  if (!raw) return null
+  let decoded = raw
+  try {
+    decoded = decodeURIComponent(raw)
+  } catch {
+    // Keep the raw hash if it is not URI-encoded.
+  }
+  if (STATIC_STATION_DETAILS_TAB_IDS.has(decoded) || decoded.startsWith('kb:')) {
+    return decoded as StationDetailsTab
+  }
+  return null
+}
+
+function readStationDetailsTabFromHash(): StationDetailsTab | null {
+  if (typeof window === 'undefined') return null
+  return parseStationDetailsTabHash(window.location.hash)
+}
+
+/** Persist section in the URL so refresh keeps the active left-nav tab. */
+function writeStationDetailsTabHash(tab: StationDetailsTab): void {
+  if (typeof window === 'undefined') return
+  const nextHash = tab === 'details' ? '' : `#${encodeURIComponent(tab)}`
+  const current = `${window.location.pathname}${window.location.search}${window.location.hash}`
+  const next = `${window.location.pathname}${window.location.search}${nextHash}`
+  if (current === next) return
+  window.history.replaceState(window.history.state, '', next)
+}
+
+/** Minimum time the loading skeleton stays visible so fast cache hits do not flash. */
+const MIN_SKELETON_MS = 1500
+
 function StationDetailsPage() {
   const router = useRouter()
   const backPath = getStationDetailsReturnPath(readStationDetailsNavigationState())
@@ -84,18 +135,45 @@ function StationDetailsPage() {
   const isAdminMode = useStationAdminMode()
   const { station, loading, error, routeCollectionId } = useStationDetailsRoute(network, stationSlug)
   const [additionalDoc, setAdditionalDoc] = useState<SandboxStationDoc | null>(null)
-  const [additionalLoading, setAdditionalLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState<StationDetailsTab>('details')
+  const [additionalLoading, setAdditionalLoading] = useState(true)
+  /** Null until the URL hash is read — avoids painting Details then snapping to the real section. */
+  const [activeTab, setActiveTab] = useState<StationDetailsTab | null>(null)
   const [maxTabContentHeight, setMaxTabContentHeight] = useState(0)
   const [sourceCompareEnabled, setSourceCompareEnabled] = useState(false)
+  const [minSkeletonElapsed, setMinSkeletonElapsed] = useState(false)
   /** GBNR: null while ORR usage lookup is pending; false when no Table 1415 data. */
   const [gbnrUsageAvailable, setGbnrUsageAvailable] = useState<boolean | null>(null)
   const visibleBodyRef = useRef<HTMLDivElement | null>(null)
   const tabMeasureRefs = useRef<Partial<Record<StationDetailsTab, HTMLDivElement | null>>>({})
 
+  const selectTab = useCallback((tab: StationDetailsTab) => {
+    setActiveTab(tab)
+    writeStationDetailsTabHash(tab)
+  }, [])
+
+  // Resolve section from URL hash before paint (refresh / shared links).
+  useLayoutEffect(() => {
+    setActiveTab(readStationDetailsTabFromHash() ?? 'details')
+  }, [network, stationSlug])
+
+  useEffect(() => {
+    const onHashChange = () => {
+      setActiveTab(readStationDetailsTabFromHash() ?? 'details')
+    }
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
+
   useEffect(() => {
     setGbnrUsageAvailable(null)
   }, [station?.id])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    setMinSkeletonElapsed(false)
+    const timer = window.setTimeout(() => setMinSkeletonElapsed(true), MIN_SKELETON_MS)
+    return () => window.clearTimeout(timer)
+  }, [station?.id, network, stationSlug])
 
   useEffect(() => {
     const sync = () => setSourceCompareEnabled(readKnowledgebaseSourceCompareEnabled())
@@ -241,15 +319,6 @@ function StationDetailsPage() {
           subheaders: [],
         })
       }
-    } else if (fieldSchema.showKnowledgebaseTab) {
-      // Placeholder while KB loads so the sidebar shows KB is coming.
-      tabs.push({
-        id: toKnowledgebaseTabId('__loading__'),
-        label: knowledgebase.status === 'error' ? 'KB (error)' : 'KB (loading…)',
-        knowledgebase: true,
-        sectionKey: '__loading__',
-        subheaders: [],
-      })
     }
     if (showAdminSection) {
       tabs.push({ id: 'admin', label: 'Admin', subheaders: subheadersFor('admin') })
@@ -265,7 +334,9 @@ function StationDetailsPage() {
   ])
 
   const activeKnowledgebaseSection = useMemo(() => {
-    if (!isKnowledgebaseTabId(activeTab) || knowledgebase.status !== 'ready') return null
+    if (!activeTab || !isKnowledgebaseTabId(activeTab) || knowledgebase.status !== 'ready') {
+      return null
+    }
     const key = parseKnowledgebaseTabId(activeTab)
     if (!key || key === KNOWLEDGEBASE_OVERVIEW_KEY) return null
     return knowledgebase.sections.find((section) => section.key === key) ?? null
@@ -324,25 +395,35 @@ function StationDetailsPage() {
     )
   }, [headerDisplayStation, headerIsLightRail, headerTocRaw, headerManagedByToc])
 
+  const kbPending =
+    fieldSchema.showKnowledgebaseTab &&
+    (knowledgebase.status === 'idle' || knowledgebase.status === 'loading')
+  const dataPending = loading || !station || additionalLoading || kbPending
+  const sectionPending = activeTab === null
+  const showContentSkeleton = !error && (sectionPending || dataPending || !minSkeletonElapsed)
+
   useEffect(() => {
-    if (activeTab === 'additional' && !showAdditionalTab) setActiveTab('details')
-    if (activeTab === 'service' && !fieldSchema.showServiceTab) setActiveTab('details')
-    if (activeTab === 'usage' && !fieldSchema.showUsageTab) setActiveTab('details')
+    // Wait until the hash is applied and tab availability is known — otherwise a thin
+    // early schema briefly forces Details and clears the restored section.
+    if (activeTab === null || dataPending || !minSkeletonElapsed) return
+    if (activeTab === 'additional' && !showAdditionalTab) selectTab('details')
+    if (activeTab === 'service' && !fieldSchema.showServiceTab) selectTab('details')
+    if (activeTab === 'usage' && !fieldSchema.showUsageTab) selectTab('details')
     if (
       activeTab === 'usage' &&
       fieldSchema.showKnowledgebaseTab &&
       gbnrUsageAvailable === false
     ) {
-      setActiveTab('details')
+      selectTab('details')
     }
-    if (activeTab === 'stepFree' && !fieldSchema.showStepFreeTab) setActiveTab('details')
-    if (activeTab === 'facilities' && !fieldSchema.showFacilitiesTab) setActiveTab('details')
-    if (isKnowledgebaseTabId(activeTab) && !fieldSchema.showKnowledgebaseTab) setActiveTab('details')
+    if (activeTab === 'stepFree' && !fieldSchema.showStepFreeTab) selectTab('details')
+    if (activeTab === 'facilities' && !fieldSchema.showFacilitiesTab) selectTab('details')
+    if (isKnowledgebaseTabId(activeTab) && !fieldSchema.showKnowledgebaseTab) selectTab('details')
     if (
       isKnowledgebaseTabId(activeTab) &&
       parseKnowledgebaseTabId(activeTab) === KNOWLEDGEBASE_OVERVIEW_KEY
     ) {
-      setActiveTab(showAdminSection ? 'admin' : 'details')
+      selectTab(showAdminSection ? 'admin' : 'details')
     }
     if (
       isKnowledgebaseTabId(activeTab) &&
@@ -351,11 +432,13 @@ function StationDetailsPage() {
       parseKnowledgebaseTabId(activeTab) !== '__loading__' &&
       parseKnowledgebaseTabId(activeTab) !== KNOWLEDGEBASE_OVERVIEW_KEY
     ) {
-      setActiveTab('details')
+      selectTab('details')
     }
-    if (activeTab === 'admin' && !showAdminSection) setActiveTab('details')
+    if (activeTab === 'admin' && !showAdminSection) selectTab('details')
   }, [
     activeTab,
+    dataPending,
+    minSkeletonElapsed,
     showAdditionalTab,
     fieldSchema.showServiceTab,
     fieldSchema.showUsageTab,
@@ -366,6 +449,7 @@ function StationDetailsPage() {
     knowledgebase.status,
     activeKnowledgebaseSection,
     gbnrUsageAvailable,
+    selectTab,
   ])
 
   useEffect(() => {
@@ -434,27 +518,37 @@ function StationDetailsPage() {
     setMaxTabContentHeight(0)
   }, [station?.id])
 
-  if (loading) {
-    return (
-      <div className="container container--station-details">
-        <PageTopHeader
-          title="Loading station"
-          actionContent={
-            <div className="station-details-header-actions">
-              <BUTWideButton
-                type="button"
-                width="hug"
-                icon={<BackIcon />}
-                onClick={() => router.push(backPath)}
-              >
-                Back
-              </BUTWideButton>
-            </div>
-          }
-        />
+  const skeletonTabs = buildStationDetailsSkeletonTabs(
+    sectionTabs,
+    fieldSchema.showKnowledgebaseTab
+  )
+  const navTabs = showContentSkeleton ? skeletonTabs : sectionTabs
+
+  const headerActions = (
+    <div className="station-details-header-actions">
+      <div className="station-details-header-actions__controls">
+        <BUTWideButton
+          type="button"
+          width="hug"
+          icon={<BackIcon />}
+          onClick={() => router.push(backPath)}
+        >
+          Back
+        </BUTWideButton>
+        {station && canEdit ? (
+          <BUTCircleButton
+            type="button"
+            ariaLabel="Edit station"
+            onClick={() => {
+              setStationDetailsNavigationState(navigationState)
+              router.push(`/admin/stations/${buildStationPath(station, collectionId)}/edit`)
+            }}
+            icon={<PencilSimple size={16} aria-hidden />}
+          />
+        ) : null}
       </div>
-    )
-  }
+    </div>
+  )
 
   if (error && !station) {
     return (
@@ -462,79 +556,46 @@ function StationDetailsPage() {
         <PageTopHeader
           title="Failed to load station"
           subtitle={error}
-          actionContent={
-            <div className="station-details-header-actions">
-              <BUTWideButton
-                type="button"
-                width="hug"
-                icon={<BackIcon />}
-                onClick={() => router.push(backPath)}
-              >
-                Back
-              </BUTWideButton>
-            </div>
-          }
+          actionContent={headerActions}
         />
       </div>
     )
   }
 
-  if (!network || !stationSlug || !station) {
+  if (!loading && (!network || !stationSlug || !station)) {
     return (
       <div className="container container--station-details">
         <PageTopHeader
           title="Station not found"
           subtitle="We couldn’t find that station in the current data source."
-          actionContent={
-            <div className="station-details-header-actions">
-              <BUTWideButton
-                type="button"
-                width="hug"
-                icon={<BackIcon />}
-                onClick={() => router.push(backPath)}
-              >
-                Back
-              </BUTWideButton>
-            </div>
-          }
+          actionContent={headerActions}
         />
       </div>
     )
   }
 
+  const stationName = station
+    ? (displayStation ?? station).stationName || 'Station'
+    : null
+  const headerTitle = stationName ?? <StationDetailsHeaderSkeleton />
+  const headerEyebrowNode = station
+    ? headerEyebrow
+    : fieldSchema.showKnowledgebaseTab
+      ? <StationDetailsHeaderEyebrowSkeleton />
+      : undefined
+  const headerSubtitleNode = station
+    ? formatStationDetailsHeaderSubtitle(displayStation ?? station, {
+        pendingSuffix: showPendingOverlay ? 'Unpublished changes' : null,
+      })
+    : <StationDetailsHeaderSubtitleSkeleton />
+
   return (
     <div className="container container--station-details">
       <PageTopHeader
-        eyebrow={headerEyebrow}
-        title={(displayStation ?? station).stationName || 'Station'}
-        subtitle={formatStationDetailsHeaderSubtitle(displayStation ?? station, {
-          pendingSuffix: showPendingOverlay ? 'Unpublished changes' : null,
-        })}
-        actionContent={
-          <div className="station-details-header-actions">
-            <div className="station-details-header-actions__controls">
-              <BUTWideButton
-                type="button"
-                width="hug"
-                icon={<BackIcon />}
-                onClick={() => router.push(backPath)}
-              >
-                Back
-              </BUTWideButton>
-              {canEdit && (
-                <BUTCircleButton
-                  type="button"
-                  ariaLabel="Edit station"
-                  onClick={() => {
-                    setStationDetailsNavigationState(navigationState)
-                    router.push(`/admin/stations/${buildStationPath(station, collectionId)}/edit`)
-                  }}
-                  icon={<PencilSimple size={16} aria-hidden />}
-                />
-              )}
-            </div>
-          </div>
-        }
+        eyebrow={headerEyebrowNode}
+        title={headerTitle}
+        subtitle={headerSubtitleNode}
+        actionContent={headerActions}
       />
       <div
         className={[
@@ -548,78 +609,97 @@ function StationDetailsPage() {
       >
         <div className="station-details-layout">
           <StationDetailsSectionNav
-            tabs={sectionTabs}
+            tabs={navTabs}
             activeTab={activeTab}
-            onSelect={setActiveTab}
+            onSelect={selectTab}
             ariaLabel="Station sections"
             markFirebaseTabs={fieldSchema.showKnowledgebaseTab}
+            loading={showContentSkeleton}
           />
 
-          <main className="station-details-main">
+          <main className="station-details-main" aria-busy={showContentSkeleton}>
             <section className="station-details-card modal-content">
               <div
                 className="modal-body station-details-visible-body"
-                ref={visibleBodyRef}
-                style={maxTabContentHeight > 0 ? { minHeight: `${maxTabContentHeight}px` } : undefined}
+                ref={station ? visibleBodyRef : undefined}
+                style={
+                  showContentSkeleton || !station
+                    ? { minHeight: `${DESKTOP_SECTION_NAV_MIN_HEIGHT_PX}px` }
+                    : maxTabContentHeight > 0
+                      ? { minHeight: `${maxTabContentHeight}px` }
+                      : undefined
+                }
               >
-                <StationDetailsView
-                  station={displayStation ?? station}
-                  additionalDoc={displayAdditionalDoc}
-                  additionalLoading={additionalLoading}
-                  activeTab={activeTab}
-                  fieldSchema={fieldSchema}
-                  pendingFieldChanges={showPendingOverlay ? pendingFieldChanges : undefined}
-                  isPendingNew={pendingEntry?.isNew === true}
-                  knowledgebaseSection={activeKnowledgebaseSection}
-                  knowledgebaseSections={
-                    knowledgebase.status === 'ready' ? knowledgebase.sections : []
-                  }
-                  knowledgebaseStatus={knowledgebase.status}
-                  knowledgebaseError={
-                    knowledgebase.status === 'error' ? knowledgebase.message : undefined
-                  }
-                  knowledgebaseCrs={
-                    knowledgebase.status === 'ready' ? knowledgebase.crs : station.crsCode
-                  }
-                  knowledgebaseFetchedAt={
-                    knowledgebase.status === 'ready' ? knowledgebase.fetchedAt : undefined
-                  }
-                  knowledgebaseLastUpdatedLabel={knowledgebaseLastUpdatedLabel}
-                  knowledgebaseDetailsSourceHint={knowledgebaseDetailsSourceHint}
-                  knowledgebaseStationOperator={knowledgebaseStationOperator}
-                  knowledgebaseNlc={knowledgebaseNlc}
-                  knowledgebasePostalAddress={knowledgebasePostalAddress}
-                  knowledgebaseStationAlert={knowledgebaseStationAlert}
-                  sourceCompareEnabled={sourceCompareEnabled}
-                  onSourceCompareChange={(enabled) => {
-                    writeKnowledgebaseSourceCompareEnabled(enabled)
-                    setSourceCompareEnabled(enabled)
-                  }}
-                  onGbnrUsageAvailabilityChange={setGbnrUsageAvailable}
-                />
-                <div className="station-details-measure-layer" aria-hidden="true">
-                  {measureTabs.map((tab) => (
-                    <div
-                      key={tab}
-                      className="station-details-measure-pane"
-                      ref={(el) => {
-                        tabMeasureRefs.current[tab] = el
+                {showContentSkeleton || !station || !activeTab ? (
+                  <StationDetailsMainSkeleton
+                    showCodeChips={!fieldSchema.isLightRail}
+                    showKnowledgebase={fieldSchema.showKnowledgebaseTab}
+                    isLightRail={fieldSchema.isLightRail}
+                  />
+                ) : (
+                  <>
+                    <StationDetailsView
+                      station={displayStation ?? station}
+                      additionalDoc={displayAdditionalDoc}
+                      additionalLoading={additionalLoading}
+                      activeTab={activeTab}
+                      fieldSchema={fieldSchema}
+                      pendingFieldChanges={showPendingOverlay ? pendingFieldChanges : undefined}
+                      isPendingNew={pendingEntry?.isNew === true}
+                      knowledgebaseSection={activeKnowledgebaseSection}
+                      knowledgebaseSections={
+                        knowledgebase.status === 'ready' ? knowledgebase.sections : []
+                      }
+                      knowledgebaseStatus={knowledgebase.status}
+                      knowledgebaseError={
+                        knowledgebase.status === 'error' ? knowledgebase.message : undefined
+                      }
+                      knowledgebaseCrs={
+                        knowledgebase.status === 'ready' ? knowledgebase.crs : station.crsCode
+                      }
+                      knowledgebaseFetchedAt={
+                        knowledgebase.status === 'ready' ? knowledgebase.fetchedAt : undefined
+                      }
+                      knowledgebaseLastUpdatedLabel={knowledgebaseLastUpdatedLabel}
+                      knowledgebaseDetailsSourceHint={knowledgebaseDetailsSourceHint}
+                      knowledgebaseStationOperator={knowledgebaseStationOperator}
+                      knowledgebaseNlc={knowledgebaseNlc}
+                      knowledgebasePostalAddress={knowledgebasePostalAddress}
+                      knowledgebaseStationAlert={knowledgebaseStationAlert}
+                      sourceCompareEnabled={sourceCompareEnabled}
+                      onSourceCompareChange={(enabled) => {
+                        writeKnowledgebaseSourceCompareEnabled(enabled)
+                        setSourceCompareEnabled(enabled)
                       }}
-                    >
-                      <StationDetailsView
-                        station={displayStation ?? station}
-                        additionalDoc={displayAdditionalDoc}
-                        additionalLoading={additionalLoading}
-                        activeTab={tab}
-                        fieldSchema={fieldSchema}
-                        pendingFieldChanges={showPendingOverlay ? pendingFieldChanges : undefined}
-                        isPendingNew={pendingEntry?.isNew === true}
-                        knowledgebaseStatus={knowledgebase.status}
-                        knowledgebasePostalAddress={knowledgebasePostalAddress}
-                      />
+                      onGbnrUsageAvailabilityChange={setGbnrUsageAvailable}
+                    />
+                    <div className="station-details-measure-layer" aria-hidden="true">
+                      {measureTabs.map((tab) => (
+                        <div
+                          key={tab}
+                          className="station-details-measure-pane"
+                          ref={(el) => {
+                            tabMeasureRefs.current[tab] = el
+                          }}
+                        >
+                          <StationDetailsView
+                            station={displayStation ?? station}
+                            additionalDoc={displayAdditionalDoc}
+                            additionalLoading={additionalLoading}
+                            activeTab={tab}
+                            fieldSchema={fieldSchema}
+                            pendingFieldChanges={
+                              showPendingOverlay ? pendingFieldChanges : undefined
+                            }
+                            isPendingNew={pendingEntry?.isNew === true}
+                            knowledgebaseStatus={knowledgebase.status}
+                            knowledgebasePostalAddress={knowledgebasePostalAddress}
+                          />
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </>
+                )}
               </div>
             </section>
           </main>
