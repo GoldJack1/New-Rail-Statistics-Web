@@ -33,19 +33,6 @@
     pointer-events: auto;
 }
 
-@media (max-width: 639px) {
-    /* Pin in the map stage — no scroll-tracking dock on phone */
-    .stations-map-selected-dock {
-        position: absolute;
-        left: var(--stations-map-chrome-inset, var(--space-lg));
-        right: var(--stations-map-chrome-inset, var(--space-lg));
-        bottom: var(--space-sm);
-        width: auto;
-        max-width: none;
-        transform: none;
-    }
-}
-
 .stations-osm-map__attribution {
     flex-shrink: 0;
     margin: 0;

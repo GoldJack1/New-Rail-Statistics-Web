@@ -69,7 +69,7 @@ const VIEWPORT_MOVEEND_DEBOUNCE_MS = 150
 const PROGRAMMATIC_MOVE_MS = 300
 const SCROLL_ZOOM_HINT_MS = 2200
 
-/** Keeps the selected-station overlay inside the visible map stage while the page scrolls (desktop). */
+/** Keeps the selected-station overlay inside the visible map stage while the page scrolls. */
 function MapSelectedCardDock({
   stageRef,
   children,
@@ -84,18 +84,6 @@ function MapSelectedCardDock({
     const stage = stageRef.current
     if (!dock || !stage) return
 
-    const mobileMq = window.matchMedia(MOBILE_MAP_MEDIA)
-
-    const clearInlinePosition = () => {
-      dock.style.visibility = ''
-      dock.style.pointerEvents = ''
-      dock.style.bottom = ''
-      dock.style.left = ''
-      dock.style.right = ''
-      dock.style.transform = ''
-      dock.style.maxHeight = ''
-    }
-
     const readSpacingPx = (varName: string, fallback: number) => {
       const probe = document.createElement('div')
       probe.style.cssText = `position:absolute;visibility:hidden;pointer-events:none;height:var(${varName});`
@@ -105,20 +93,54 @@ function MapSelectedCardDock({
       return px > 0 ? px : fallback
     }
 
+    const readSafeAreaBottomPx = () => {
+      const probe = document.createElement('div')
+      probe.style.cssText =
+        'position:absolute;visibility:hidden;pointer-events:none;height:env(safe-area-inset-bottom, 0px);'
+      document.body.appendChild(probe)
+      const px = probe.getBoundingClientRect().height
+      probe.remove()
+      return px > 0 ? px : 0
+    }
+
+    /** Visual viewport when available — accounts for mobile browser bottom chrome. */
+    const readViewBox = () => {
+      const vv = window.visualViewport
+      if (vv) {
+        return {
+          top: vv.offsetTop,
+          left: vv.offsetLeft,
+          width: vv.width,
+          height: vv.height,
+          bottom: vv.offsetTop + vv.height,
+        }
+      }
+      return {
+        top: 0,
+        left: 0,
+        width: window.innerWidth,
+        height: window.innerHeight,
+        bottom: window.innerHeight,
+      }
+    }
+
+    let spacingSm = readSpacingPx('--space-sm', 8)
     let spacingMd = readSpacingPx('--space-md', 12)
+    let chromeInset = readSpacingPx('--stations-map-chrome-inset', 16)
+    let safeAreaBottom = readSafeAreaBottomPx()
     let rafId = 0
-    let removeDesktopListeners: (() => void) | null = null
 
-    const updateDesktop = () => {
+    const update = () => {
       const rect = stage.getBoundingClientRect()
-      const viewportWidth = window.innerWidth
-      const viewportHeight = window.innerHeight
-      const spacing = spacingMd
+      const view = readViewBox()
+      const isMobile = window.matchMedia(MOBILE_MAP_MEDIA).matches
+      const spacing = isMobile ? spacingSm : spacingMd
+      const layoutHeight = window.innerHeight
 
-      const visibleTop = Math.max(rect.top, 0)
-      const visibleBottom = Math.min(rect.bottom, viewportHeight)
-      const visibleLeft = Math.max(rect.left, 0)
-      const visibleRight = Math.min(rect.right, viewportWidth)
+      const visibleTop = Math.max(rect.top, view.top)
+      const visibleBottom = Math.min(rect.bottom, view.bottom)
+      const visibleLeft = Math.max(rect.left, view.left)
+      const visibleRight = Math.min(rect.right, view.left + view.width)
       const visibleHeight = visibleBottom - visibleTop
       const visibleWidth = visibleRight - visibleLeft
 
@@ -130,63 +152,62 @@ function MapSelectedCardDock({
 
       dock.style.visibility = 'visible'
       dock.style.pointerEvents = 'auto'
-      dock.style.bottom = `${Math.max(0, viewportHeight - visibleBottom) + spacing}px`
+      // fixed `bottom` is relative to the layout viewport; lift by any browser chrome
+      // below the visual viewport, plus safe-area (home indicator) on phone.
+      const bottomChrome = Math.max(0, layoutHeight - view.bottom)
+      const stageBottomGap = Math.max(0, layoutHeight - visibleBottom)
+      const bottomPad = isMobile ? spacing + safeAreaBottom : spacing
+      dock.style.bottom = `${Math.max(bottomChrome, stageBottomGap) + bottomPad}px`
       dock.style.maxHeight = ''
-      dock.style.left = 'auto'
-      dock.style.right = `${Math.max(0, viewportWidth - visibleRight) + spacing}px`
-      dock.style.transform = 'none'
+
+      if (isMobile) {
+        const inset = Math.max(chromeInset, 0)
+        dock.style.left = `${visibleLeft + inset}px`
+        dock.style.right = `${Math.max(0, window.innerWidth - visibleRight) + inset}px`
+        dock.style.width = 'auto'
+        dock.style.maxWidth = 'none'
+        dock.style.transform = 'none'
+      } else {
+        dock.style.left = 'auto'
+        dock.style.right = `${Math.max(0, window.innerWidth - visibleRight) + spacing}px`
+        dock.style.width = ''
+        dock.style.maxWidth = ''
+        dock.style.transform = 'none'
+      }
     }
 
-    const scheduleDesktopUpdate = () => {
+    const scheduleUpdate = () => {
       if (rafId !== 0) return
       rafId = window.requestAnimationFrame(() => {
         rafId = 0
-        updateDesktop()
+        update()
       })
     }
 
-    const bindDesktop = () => {
-      clearInlinePosition()
-      const onResize = () => {
-        spacingMd = readSpacingPx('--space-md', 12)
-        scheduleDesktopUpdate()
-      }
-
-      updateDesktop()
-      window.addEventListener('scroll', scheduleDesktopUpdate, { capture: true, passive: true })
-      window.addEventListener('resize', onResize)
-      const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(scheduleDesktopUpdate) : null
-      observer?.observe(stage)
-
-      removeDesktopListeners = () => {
-        if (rafId !== 0) {
-          window.cancelAnimationFrame(rafId)
-          rafId = 0
-        }
-        window.removeEventListener('scroll', scheduleDesktopUpdate, true)
-        window.removeEventListener('resize', onResize)
-        observer?.disconnect()
-      }
+    const onResize = () => {
+      spacingSm = readSpacingPx('--space-sm', 8)
+      spacingMd = readSpacingPx('--space-md', 12)
+      chromeInset = readSpacingPx('--stations-map-chrome-inset', 16)
+      safeAreaBottom = readSafeAreaBottomPx()
+      scheduleUpdate()
     }
 
-    const unbindDesktop = () => {
-      removeDesktopListeners?.()
-      removeDesktopListeners = null
-      clearInlinePosition()
-    }
-
-    const syncMode = () => {
-      unbindDesktop()
-      // Phone: CSS pins the card in the stage — no scroll tracking.
-      if (!mobileMq.matches) bindDesktop()
-    }
-
-    syncMode()
-    mobileMq.addEventListener('change', syncMode)
+    update()
+    window.addEventListener('scroll', scheduleUpdate, { capture: true, passive: true })
+    window.addEventListener('resize', onResize)
+    const vv = window.visualViewport
+    vv?.addEventListener('resize', scheduleUpdate)
+    vv?.addEventListener('scroll', scheduleUpdate)
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(scheduleUpdate) : null
+    observer?.observe(stage)
 
     return () => {
-      mobileMq.removeEventListener('change', syncMode)
-      unbindDesktop()
+      if (rafId !== 0) window.cancelAnimationFrame(rafId)
+      window.removeEventListener('scroll', scheduleUpdate, true)
+      window.removeEventListener('resize', onResize)
+      vv?.removeEventListener('resize', scheduleUpdate)
+      vv?.removeEventListener('scroll', scheduleUpdate)
+      observer?.disconnect()
     }
   }, [stageRef, children])
 

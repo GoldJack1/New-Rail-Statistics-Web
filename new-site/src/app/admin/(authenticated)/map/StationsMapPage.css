@@ -282,9 +282,9 @@
     }
 
     /*
-     * Phone: document scrolls (map + optional external timeline).
-     * Station card stays overlaid on the map; timeline sits below.
-     * Don't flex-grow the layout — that leaves an empty gap under the timeline.
+     * Phone: document scrolls (timeline above map when shown).
+     * Station card stays overlaid on the map.
+     * Don't flex-grow the layout — that leaves an empty gap under the content.
      */
     .stations-map-page__layout {
         flex: 0 0 auto;
@@ -293,7 +293,9 @@
         overflow: visible;
     }
 
+    /* Timeline above the map, still below the network tabs */
     .stations-map-page.stations-page .stations-main {
+        order: 2;
         height: auto;
         min-height: 0;
         max-height: none;
@@ -318,6 +320,7 @@
     }
 
     .stations-map-float--timeline {
+        order: 1;
         position: static;
         top: auto;
         right: auto;

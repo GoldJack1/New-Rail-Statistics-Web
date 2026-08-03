@@ -6,6 +6,8 @@ import AutoAnimateCollapse from '@/components/misc/AutoAnimateCollapse/AutoAnima
 import {
   buildSuperTramTimelineSteps,
 } from '../../utils/superTramTimeline'
+import { LIGHTRAIL_COLLECTION_ID } from '../../utils/lightRailStationFields'
+import { NETWORK_MAP_COLORS } from '../../constants/stationNetworkMapColors'
 import type { Station } from '../../types'
 import '../cards/TextCard/TextCard.css'
 import './StationsMapTimeline.css'
@@ -104,8 +106,9 @@ export function StationsMapTimeline({
 
   const currentLabel = currentStep?.label ?? '—'
   const currentDateMs = currentStep?.dateMs ?? null
-  const sliderPercent = maxIndex === 0 ? 100 : (clampedIndex / maxIndex) * 100
+  const sliderProgress = maxIndex === 0 ? 1 : clampedIndex / maxIndex
   const showTimelineControls = modeEnabled && steps.length > 0
+  const timelineNetworkColor = NETWORK_MAP_COLORS[LIGHTRAIL_COLLECTION_ID]
 
   return (
     <section
@@ -152,20 +155,30 @@ export function StationsMapTimeline({
             </div>
 
             <div className="stations-map-timeline__slider-wrap">
-              <input
-                type="range"
-                className="stations-map-timeline__slider"
-                min={0}
-                max={maxIndex}
-                step={1}
-                value={clampedIndex}
-                onChange={handleSliderChange}
-                aria-valuemin={0}
-                aria-valuemax={maxIndex}
-                aria-valuenow={clampedIndex}
-                aria-valuetext={currentLabel}
-                style={{ '--timeline-progress': `${sliderPercent}%` } as CSSProperties}
-              />
+              <div
+                className="stations-map-timeline__slider-rail"
+                style={
+                  {
+                    '--timeline-p': sliderProgress,
+                    '--timeline-network-color': timelineNetworkColor,
+                  } as CSSProperties
+                }
+              >
+                <div className="stations-map-timeline__slider-fill" aria-hidden="true" />
+                <input
+                  type="range"
+                  className="stations-map-timeline__slider"
+                  min={0}
+                  max={maxIndex}
+                  step={1}
+                  value={clampedIndex}
+                  onChange={handleSliderChange}
+                  aria-valuemin={0}
+                  aria-valuemax={maxIndex}
+                  aria-valuenow={clampedIndex}
+                  aria-valuetext={currentLabel}
+                />
+              </div>
               <div className="stations-map-timeline__range-labels">
                 <span>{steps[0].label}</span>
                 <span>{steps[steps.length - 1].label}</span>
