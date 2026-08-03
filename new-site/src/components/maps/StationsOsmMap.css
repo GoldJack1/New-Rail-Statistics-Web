@@ -8,6 +8,67 @@
     height: 100%;
 }
 
+.stations-osm-map__stage {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    /* clip (not hidden) so wheel can scroll-chain to the page when zoom is unarmed */
+    overflow: clip;
+}
+
+.stations-map-selected-dock {
+    position: fixed;
+    z-index: 1200;
+    width: min(22.5rem, calc(100% - 2 * var(--stations-map-chrome-inset, var(--space-md))));
+    max-width: calc(100vw - 2 * var(--stations-map-chrome-inset, var(--space-md)));
+    box-sizing: border-box;
+    pointer-events: none;
+    overflow: visible;
+}
+
+.stations-map-selected-dock > * {
+    pointer-events: auto;
+}
+
+@media (max-width: 639px) {
+    /* Pin in the map stage — no scroll-tracking dock on phone */
+    .stations-map-selected-dock {
+        position: absolute;
+        left: var(--stations-map-chrome-inset, var(--space-lg));
+        right: var(--stations-map-chrome-inset, var(--space-lg));
+        bottom: var(--space-sm);
+        width: auto;
+        max-width: none;
+        transform: none;
+    }
+}
+
+.stations-osm-map__attribution {
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0.4rem var(--space-md);
+    border-top: 1px solid var(--border-color);
+    background-color: var(--bg-secondary);
+    box-sizing: border-box;
+    font-size: 0.6875rem;
+    line-height: 1.4;
+    color: var(--text-secondary);
+    text-align: right;
+}
+
+.stations-osm-map__attribution a {
+    color: var(--text-primary);
+    text-decoration: underline;
+    text-underline-offset: 0.12em;
+}
+
+.stations-osm-map__attribution a:hover {
+    color: var(--accent-hover);
+}
+
 .stations-osm-map__legend {
     position: absolute;
     left: var(--space-md);
@@ -49,12 +110,25 @@
 }
 
 @media (max-width: 639px) {
-    .stations-map-page .stations-osm-map,
-    .stations-map-page .stations-osm-map__canvas {
-        height: var(--stations-map-mobile-height, 560px);
-        min-height: var(--stations-map-mobile-height, 560px);
-        max-height: var(--stations-map-mobile-height, 560px);
+    .stations-map-page .stations-osm-map {
+        height: auto;
+        min-height: 0;
+        max-height: none;
         flex: none;
+    }
+
+    .stations-map-page .stations-osm-map__stage,
+    .stations-map-page .stations-osm-map__canvas {
+        height: var(--stations-map-mobile-height, 660px);
+        min-height: var(--stations-map-mobile-height, 660px);
+        max-height: var(--stations-map-mobile-height, 660px);
+        flex: none;
+    }
+
+    .stations-osm-map__attribution {
+        padding-left: var(--space-sm);
+        padding-right: var(--space-sm);
+        text-align: center;
     }
 
     .stations-osm-map__legend {
@@ -120,16 +194,15 @@
     cursor: crosshair;
 }
 
-.stations-osm-map__add-mode-hint {
+.stations-osm-map__add-mode-hint,
+.stations-osm-map__scroll-zoom-hint {
     position: absolute;
     top: var(--space-md);
     left: 50%;
     z-index: 500;
     transform: translateX(-50%);
     margin: 0;
-    padding: var(--space-xs) var(--space-md);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
     background-color: color-mix(in srgb, var(--bg-secondary) 92%, transparent);
     backdrop-filter: blur(6px);
     box-shadow: 0 2px 8px rgb(0 0 0 / 0.12);
@@ -138,6 +211,16 @@
     color: var(--text-primary);
     white-space: nowrap;
     pointer-events: none;
+}
+
+.stations-osm-map__add-mode-hint {
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-md);
+}
+
+.stations-osm-map__scroll-zoom-hint {
+    padding: var(--space-sm) var(--space-lg);
+    border-radius: var(--radius-xl);
 }
 
 .stations-osm-map--admin-add .stations-osm-map__canvas {
@@ -150,7 +233,7 @@
     width: 100%;
     height: 100%;
     border-radius: 0;
-    overflow: hidden;
+    overflow: clip;
     z-index: 0;
 }
 

@@ -1,38 +1,39 @@
-.stations-map-timeline {
+.stations-map-timeline.rs-text-card {
     display: flex;
     flex-direction: column;
-    gap: var(--space-md);
-    padding-bottom: var(--space-lg);
-    border-bottom: 1px solid var(--border-color);
+    align-items: stretch;
+    gap: 0;
     flex-shrink: 0;
+    min-width: 0;
+    width: 100%;
+    cursor: default;
+    /* Header/body own their padding so the secondary band can be full-bleed. */
+    padding: 0;
+    overflow: hidden;
 }
 
 .stations-map-timeline__header {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    gap: var(--space-md);
-    padding: var(--space-md);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    background-color: var(--bg-primary);
-    box-sizing: border-box;
-}
-
-.stations-map-timeline__header-copy {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-sm);
+    gap: 8px;
     min-width: 0;
+    padding: 12px;
+    position: relative;
+    z-index: 1;
 }
 
-.stations-map-timeline__title {
+.stations-map-timeline__header-copy.rs-text-card__content {
+    padding-right: 0;
+    gap: 0;
+}
+
+.stations-map-timeline__title.rs-text-card__title {
+    margin: 0 0 2px;
+}
+
+.stations-map-timeline__subtitle.rs-text-card__description {
     margin: 0;
-    font-size: var(--text-sm);
-    font-weight: 700;
-    color: var(--text-primary);
-    line-height: 1.2;
-    min-width: 0;
 }
 
 .stations-map-timeline__toggle.rs-tog-toggle {
@@ -44,21 +45,28 @@
     min-height: 25px;
     min-width: unset;
     height: 25px;
+    position: relative;
+    z-index: 1;
 }
 
-.stations-map-timeline__subtitle,
-.stations-map-timeline__meta {
-    margin: 0;
-    font-size: var(--text-xs);
-    color: var(--text-secondary);
-    line-height: 1.45;
+.stations-map-timeline__collapse {
+    width: 100%;
+    position: relative;
+    z-index: 1;
 }
 
-.stations-map-timeline__empty {
-    margin: 0;
-    font-size: var(--text-sm);
-    color: var(--text-secondary);
-    line-height: 1.45;
+.stations-map-timeline__collapse-item {
+    background-color: var(--bg-secondary);
+}
+
+.stations-map-timeline__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    min-width: 0;
+    padding: 12px;
+    border-top: 1px solid color-mix(in srgb, var(--text-primary) 12%, transparent);
+    background-color: var(--bg-secondary);
 }
 
 .stations-map-timeline__date-row {
@@ -71,12 +79,13 @@
 .stations-map-timeline__date {
     font-size: var(--text-lg);
     font-weight: 700;
-    color: var(--text-primary);
+    color: inherit;
 }
 
 .stations-map-timeline__step {
     font-size: var(--text-xs);
-    color: var(--text-secondary);
+    color: inherit;
+    opacity: 0.72;
     white-space: nowrap;
 }
 
@@ -88,7 +97,7 @@
 }
 
 .stations-map-timeline__slider {
-    --timeline-track: color-mix(in srgb, var(--text-secondary) 28%, transparent);
+    --timeline-track: color-mix(in srgb, currentColor 28%, transparent);
     --timeline-fill: #ff5700;
     --timeline-track-height: 3px;
     --timeline-thumb-size: 0.875rem;
@@ -172,33 +181,14 @@
     justify-content: space-between;
     gap: var(--space-sm);
     font-size: 0.6875rem;
-    color: var(--text-secondary);
+    color: inherit;
+    opacity: 0.72;
 }
 
 .stations-map-timeline__actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: var(--space-sm);
-}
-
-.stations-map-side-panel {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-lg);
-    min-height: 0;
-    min-width: 0;
-    max-height: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
-    box-sizing: border-box;
-}
-
-.stations-map-side-panel .stations-map-selected-panel {
-    flex: 0 0 auto;
-    min-height: min-content;
-    max-height: none;
-    overflow: visible;
-    padding: 0;
-    border: none;
-    background: transparent;
+    position: relative;
+    z-index: 1;
 }

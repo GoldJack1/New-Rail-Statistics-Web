@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import {
@@ -67,6 +67,135 @@ import './leafletDarkTiles.css'
 const MOBILE_MAP_MEDIA = '(max-width: 639px)'
 const VIEWPORT_MOVEEND_DEBOUNCE_MS = 150
 const PROGRAMMATIC_MOVE_MS = 300
+const SCROLL_ZOOM_HINT_MS = 2200
+
+/** Keeps the selected-station overlay inside the visible map stage while the page scrolls (desktop). */
+function MapSelectedCardDock({
+  stageRef,
+  children,
+}: {
+  stageRef: RefObject<HTMLDivElement | null>
+  children: ReactNode
+}) {
+  const dockRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const dock = dockRef.current
+    const stage = stageRef.current
+    if (!dock || !stage) return
+
+    const mobileMq = window.matchMedia(MOBILE_MAP_MEDIA)
+
+    const clearInlinePosition = () => {
+      dock.style.visibility = ''
+      dock.style.pointerEvents = ''
+      dock.style.bottom = ''
+      dock.style.left = ''
+      dock.style.right = ''
+      dock.style.transform = ''
+      dock.style.maxHeight = ''
+    }
+
+    const readSpacingPx = (varName: string, fallback: number) => {
+      const probe = document.createElement('div')
+      probe.style.cssText = `position:absolute;visibility:hidden;pointer-events:none;height:var(${varName});`
+      document.body.appendChild(probe)
+      const px = probe.getBoundingClientRect().height
+      probe.remove()
+      return px > 0 ? px : fallback
+    }
+
+    let spacingMd = readSpacingPx('--space-md', 12)
+    let rafId = 0
+    let removeDesktopListeners: (() => void) | null = null
+
+    const updateDesktop = () => {
+      const rect = stage.getBoundingClientRect()
+      const viewportWidth = window.innerWidth
+      const viewportHeight = window.innerHeight
+      const spacing = spacingMd
+
+      const visibleTop = Math.max(rect.top, 0)
+      const visibleBottom = Math.min(rect.bottom, viewportHeight)
+      const visibleLeft = Math.max(rect.left, 0)
+      const visibleRight = Math.min(rect.right, viewportWidth)
+      const visibleHeight = visibleBottom - visibleTop
+      const visibleWidth = visibleRight - visibleLeft
+
+      if (visibleHeight < 48 || visibleWidth < 48) {
+        dock.style.visibility = 'hidden'
+        dock.style.pointerEvents = 'none'
+        return
+      }
+
+      dock.style.visibility = 'visible'
+      dock.style.pointerEvents = 'auto'
+      dock.style.bottom = `${Math.max(0, viewportHeight - visibleBottom) + spacing}px`
+      dock.style.maxHeight = ''
+      dock.style.left = 'auto'
+      dock.style.right = `${Math.max(0, viewportWidth - visibleRight) + spacing}px`
+      dock.style.transform = 'none'
+    }
+
+    const scheduleDesktopUpdate = () => {
+      if (rafId !== 0) return
+      rafId = window.requestAnimationFrame(() => {
+        rafId = 0
+        updateDesktop()
+      })
+    }
+
+    const bindDesktop = () => {
+      clearInlinePosition()
+      const onResize = () => {
+        spacingMd = readSpacingPx('--space-md', 12)
+        scheduleDesktopUpdate()
+      }
+
+      updateDesktop()
+      window.addEventListener('scroll', scheduleDesktopUpdate, { capture: true, passive: true })
+      window.addEventListener('resize', onResize)
+      const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(scheduleDesktopUpdate) : null
+      observer?.observe(stage)
+
+      removeDesktopListeners = () => {
+        if (rafId !== 0) {
+          window.cancelAnimationFrame(rafId)
+          rafId = 0
+        }
+        window.removeEventListener('scroll', scheduleDesktopUpdate, true)
+        window.removeEventListener('resize', onResize)
+        observer?.disconnect()
+      }
+    }
+
+    const unbindDesktop = () => {
+      removeDesktopListeners?.()
+      removeDesktopListeners = null
+      clearInlinePosition()
+    }
+
+    const syncMode = () => {
+      unbindDesktop()
+      // Phone: CSS pins the card in the stage — no scroll tracking.
+      if (!mobileMq.matches) bindDesktop()
+    }
+
+    syncMode()
+    mobileMq.addEventListener('change', syncMode)
+
+    return () => {
+      mobileMq.removeEventListener('change', syncMode)
+      unbindDesktop()
+    }
+  }, [stageRef, children])
+
+  return (
+    <div ref={dockRef} className="stations-map-selected-dock">
+      {children}
+    </div>
+  )
+}
 
 function getMapFitPaddingOptions(
   networkView: NetworkViewFilter,
@@ -131,6 +260,8 @@ interface StationsOsmMapProps {
    * Parent should pass empty station lists until ready so pins appear together.
    */
   dataReady?: boolean
+  /** Overlay content positioned over the map stage (not the attribution bar). */
+  children?: ReactNode
 }
 
 function getStationLegendCollectionId(
@@ -238,8 +369,10 @@ export function StationsOsmMap({
   liteMode = false,
   fitNonce = 0,
   dataReady = true,
+  children,
 }: StationsOsmMapProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
+  const mapStageRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<L.Map | null>(null)
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null)
   const tileLayersRef = useRef<MapTileLayerRefs | null>(null)
@@ -258,6 +391,12 @@ export function StationsOsmMap({
   const [mobileMarkers, setMobileMarkers] = useState(isMobileMapViewport)
   const [visibleLegendNetworks, setVisibleLegendNetworks] = useState<NetworkCollectionId[]>([])
   const [viewportBounds, setViewportBounds] = useState<L.LatLngBounds | null>(null)
+  /** Plain wheel zooms only after the map is clicked/dragged (Google Maps–style). */
+  const wheelZoomArmedRef = useRef(false)
+  const [wheelZoomArmed, setWheelZoomArmed] = useState(false)
+  const [showScrollZoomHint, setShowScrollZoomHint] = useState(false)
+  const scrollZoomHintTimerRef = useRef<number | null>(null)
+  const showUnarmedScrollHintRef = useRef<() => void>(() => {})
   const viewportMoveEndTimerRef = useRef<number | null>(null)
   const previousFitNonceRef = useRef(fitNonce)
   const programmaticMoveRef = useRef(false)
@@ -359,6 +498,35 @@ export function StationsOsmMap({
       }, PROGRAMMATIC_MOVE_MS)
     }
   }, [])
+
+  const setWheelZoomArmedState = useCallback((armed: boolean) => {
+    wheelZoomArmedRef.current = armed
+    setWheelZoomArmed(armed)
+    const map = mapRef.current
+    if (map) {
+      if (armed) map.scrollWheelZoom.enable()
+      else map.scrollWheelZoom.disable()
+    }
+    if (armed) {
+      setShowScrollZoomHint(false)
+      if (scrollZoomHintTimerRef.current !== null) {
+        window.clearTimeout(scrollZoomHintTimerRef.current)
+        scrollZoomHintTimerRef.current = null
+      }
+    }
+  }, [])
+
+  showUnarmedScrollHintRef.current = () => {
+    if (wheelZoomArmedRef.current) return
+    setShowScrollZoomHint(true)
+    if (scrollZoomHintTimerRef.current !== null) {
+      window.clearTimeout(scrollZoomHintTimerRef.current)
+    }
+    scrollZoomHintTimerRef.current = window.setTimeout(() => {
+      scrollZoomHintTimerRef.current = null
+      setShowScrollZoomHint(false)
+    }, SCROLL_ZOOM_HINT_MS)
+  }
 
   const persistCurrentMapView = useCallback(
     (map: L.Map, nextNetworkView: NetworkViewFilter, options?: { pinned?: boolean }) => {
@@ -635,6 +803,10 @@ export function StationsOsmMap({
 
     const map = L.map(mapContainerRef.current, {
       zoomControl: false,
+      attributionControl: false,
+      // Plain wheel scrolls the page until the map is armed (click/drag). Ctrl/Cmd+wheel
+      // and trackpad pinch (usually reported as ctrl+wheel) always zoom via onWheel.
+      scrollWheelZoom: false,
       preferCanvas: true,
       maxZoom: 19,
       minZoom: 3,
@@ -677,6 +849,33 @@ export function StationsOsmMap({
     })
 
     let cancelled = false
+
+    const onWheel = (event: WheelEvent) => {
+      if (cancelled) return
+
+      // Armed: Leaflet scrollWheelZoom owns plain wheel (and pinch).
+      if (wheelZoomArmedRef.current) return
+
+      // Unarmed: Ctrl/Cmd+wheel (and trackpad pinch) still zoom; plain wheel scrolls the page.
+      if (event.ctrlKey || event.metaKey) {
+        event.preventDefault()
+        event.stopPropagation()
+
+        const delta = L.DomEvent.getWheelDelta(event)
+        if (delta === 0) return
+
+        const nextZoom = map.getZoom() + delta
+        const point = map.mouseEventToContainerPoint(event)
+        const latLng = map.containerPointToLatLng(point)
+        map.setZoomAround(latLng, nextZoom)
+        return
+      }
+
+      showUnarmedScrollHintRef.current()
+    }
+
+    const mapContainer = map.getContainer()
+    mapContainer.addEventListener('wheel', onWheel, { passive: false })
 
     const onUserCameraChange = () => {
       if (programmaticMoveRef.current || cancelled) return
@@ -730,6 +929,11 @@ export function StationsOsmMap({
       unregisterActiveStationsMap(map)
       window.cancelAnimationFrame(rafId)
       window.removeEventListener('resize', refreshSize)
+      mapContainer.removeEventListener('wheel', onWheel)
+      if (scrollZoomHintTimerRef.current !== null) {
+        window.clearTimeout(scrollZoomHintTimerRef.current)
+        scrollZoomHintTimerRef.current = null
+      }
       if (programmaticClearTimerRef.current !== null) {
         window.clearTimeout(programmaticClearTimerRef.current)
         programmaticClearTimerRef.current = null
@@ -879,6 +1083,36 @@ export function StationsOsmMap({
   }, [themeKey])
 
   useEffect(() => {
+    if (!mapInstance) return
+
+    const arm = () => setWheelZoomArmedState(true)
+
+    const onPointerDownCapture = (event: PointerEvent) => {
+      const target = event.target
+      if (!(target instanceof Node)) return
+      if (mapStageRef.current?.contains(target)) {
+        arm()
+        return
+      }
+      setWheelZoomArmedState(false)
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setWheelZoomArmedState(false)
+    }
+
+    document.addEventListener('pointerdown', onPointerDownCapture, true)
+    window.addEventListener('keydown', onKeyDown)
+    mapInstance.on('dragstart', arm)
+
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDownCapture, true)
+      window.removeEventListener('keydown', onKeyDown)
+      mapInstance.off('dragstart', arm)
+    }
+  }, [mapInstance, setWheelZoomArmedState])
+
+  useEffect(() => {
     if (!addStationMode) return
 
     const onKeyDown = (event: KeyboardEvent) => {
@@ -897,49 +1131,78 @@ export function StationsOsmMap({
         'stations-osm-map',
         addStationMode ? 'stations-osm-map--add-station-mode' : '',
         allowAddStation ? 'stations-osm-map--admin-add' : '',
+        wheelZoomArmed ? 'stations-osm-map--wheel-zoom-armed' : '',
       ]
         .filter(Boolean)
         .join(' ')}
     >
-      <div ref={mapContainerRef} className="stations-osm-map__canvas" aria-label="Map" />
-      <MapZoomControls map={mapInstance} />
-      {addStationMode && (
-        <p className="stations-osm-map__add-mode-hint" role="status">
-          Click the map to add a station · Esc to exit
-        </p>
-      )}
-      {allowAddStation && !addStationMode && (
-        <MapAddStationContextMenu
-          menu={addStationMenu}
-          onClose={() => setAddStationMenu(null)}
-          onAddStation={(latitude, longitude) => onAddStationAtLocation?.(latitude, longitude)}
-        />
-      )}
-      {((networkView === 'all' && visibleLegendNetworks.length > 0) || hasVisiblePendingNew) && (
-        <ul className="stations-osm-map__legend" aria-label="Map marker colours">
-          {networkView === 'all' &&
-            visibleLegendNetworks.map((collectionId) => (
-              <li key={collectionId} className="stations-osm-map__legend-item">
+      <div ref={mapStageRef} className="stations-osm-map__stage">
+        <div ref={mapContainerRef} className="stations-osm-map__canvas" aria-label="Map" />
+        <MapZoomControls map={mapInstance} />
+        {addStationMode && (
+          <p className="stations-osm-map__add-mode-hint" role="status">
+            Click the map to add a station · Esc to exit
+          </p>
+        )}
+        {showScrollZoomHint && !addStationMode && (
+          <p className="stations-osm-map__scroll-zoom-hint" role="status">
+            Click the map to enable zoom
+          </p>
+        )}
+        {allowAddStation && !addStationMode && (
+          <MapAddStationContextMenu
+            menu={addStationMenu}
+            onClose={() => setAddStationMenu(null)}
+            onAddStation={(latitude, longitude) => onAddStationAtLocation?.(latitude, longitude)}
+          />
+        )}
+        {((networkView === 'all' && visibleLegendNetworks.length > 0) || hasVisiblePendingNew) && (
+          <ul className="stations-osm-map__legend" aria-label="Map marker colours">
+            {networkView === 'all' &&
+              visibleLegendNetworks.map((collectionId) => (
+                <li key={collectionId} className="stations-osm-map__legend-item">
+                  <span
+                    className="stations-osm-map__legend-dot"
+                    style={{ backgroundColor: NETWORK_MAP_COLORS[collectionId] }}
+                    aria-hidden="true"
+                  />
+                  <span className="stations-osm-map__legend-label">{NETWORK_LABELS[collectionId]}</span>
+                </li>
+              ))}
+            {hasVisiblePendingNew && (
+              <li className="stations-osm-map__legend-item">
                 <span
                   className="stations-osm-map__legend-dot"
-                  style={{ backgroundColor: NETWORK_MAP_COLORS[collectionId] }}
+                  style={{ backgroundColor: PENDING_NEW_STATION_MAP_COLOR }}
                   aria-hidden="true"
                 />
-                <span className="stations-osm-map__legend-label">{NETWORK_LABELS[collectionId]}</span>
+                <span className="stations-osm-map__legend-label">Unsaved new station</span>
               </li>
-            ))}
-          {hasVisiblePendingNew && (
-            <li className="stations-osm-map__legend-item">
-              <span
-                className="stations-osm-map__legend-dot"
-                style={{ backgroundColor: PENDING_NEW_STATION_MAP_COLOR }}
-                aria-hidden="true"
-              />
-              <span className="stations-osm-map__legend-label">Unsaved new station</span>
-            </li>
-          )}
-        </ul>
-      )}
+            )}
+          </ul>
+        )}
+        {children ? (
+          <MapSelectedCardDock stageRef={mapStageRef}>{children}</MapSelectedCardDock>
+        ) : null}
+      </div>
+      <p className="stations-osm-map__attribution">
+        <a href="https://leafletjs.com" target="_blank" rel="noreferrer">
+          Leaflet
+        </a>
+        {' · '}
+        ©{' '}
+        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">
+          OpenStreetMap
+        </a>
+        {' · '}
+        Style:{' '}
+        <a href="https://creativecommons.org/licenses/by-sa/2.0/" target="_blank" rel="noreferrer">
+          CC-BY-SA 2.0
+        </a>{' '}
+        <a href="https://www.openrailwaymap.org/" target="_blank" rel="noreferrer">
+          OpenRailwayMap
+        </a>
+      </p>
     </div>
   )
 }

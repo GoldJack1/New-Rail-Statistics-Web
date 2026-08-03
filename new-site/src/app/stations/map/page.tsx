@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { WarningCircle } from '@phosphor-icons/react'
 
@@ -10,7 +10,7 @@ import BetaTag from '@/components/misc/BetaTag/BetaTag'
 import { BUTBaseButton as Button, BUTWideButton } from '@/components/buttons'
 import NetworkStationTabGroup from '@/components/cards/NetworkStationTabGroup/NetworkStationTabGroup'
 import MapLiteModeGate from '@/components/maps/MapLiteModeGate'
-import StationsMapSelectedPanel from '@/components/maps/StationsMapSelectedPanel'
+import StationsMapSelectedCardFloat from '@/components/maps/StationsMapSelectedCardFloat'
 import StationsMapTimeline from '@/components/maps/StationsMapTimeline'
 import { LIGHTRAIL_COLLECTION_ID } from '@/utils/lightRailStationFields'
 import {
@@ -47,8 +47,6 @@ const StationsOsmMap = dynamic(() => import('@/components/maps/StationsOsmMap'),
   loading: () => <div className="stations-osm-map stations-osm-map--loading" aria-busy="true" aria-label="Loading map" />,
 })
 
-const MOBILE_MAP_MEDIA = '(max-width: 639px)'
-
 const StationsMapPage: React.FC = () => {
   const router = useRouter()
   const pathname = usePathname()
@@ -64,7 +62,6 @@ const StationsMapPage: React.FC = () => {
   const [isAddStationMode, setIsAddStationMode] = useState(false)
   const [stationDetailsLoading, setStationDetailsLoading] = useState(false)
   const [mapFitNonce, setMapFitNonce] = useState(0)
-  const panelRef = useRef<HTMLElement>(null)
 
   const showSuperTramTimeline = networkView === LIGHTRAIL_COLLECTION_ID
 
@@ -113,17 +110,6 @@ const StationsMapPage: React.FC = () => {
       setSelectedStation(null)
     }
   }, [networkView, selectedStation])
-
-  useEffect(() => {
-    if (!selectedStation) return
-    if (!window.matchMedia(MOBILE_MAP_MEDIA).matches) return
-
-    const frameId = window.requestAnimationFrame(() => {
-      panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    })
-
-    return () => window.cancelAnimationFrame(frameId)
-  }, [selectedStation])
 
   const handleStationSelect = useCallback(
     (station: Station) => {
@@ -322,11 +308,17 @@ const StationsMapPage: React.FC = () => {
                 liteMode={isLiteMode}
                 fitNonce={mapFitNonce}
                 dataReady={dataReady}
-              />
+              >
+                <StationsMapSelectedCardFloat
+                  station={selectedStation}
+                  isPendingNew={selectedStationIsPending}
+                  detailsLoading={stationDetailsLoading}
+                />
+              </StationsOsmMap>
             )}
           </main>
-          <aside ref={panelRef} className="stations-map-side-panel" aria-label="Map details">
-            {showSuperTramTimeline && (
+          {showSuperTramTimeline && !shouldGateAllNetworks && (
+            <div className="stations-map-float stations-map-float--timeline">
               <StationsMapTimeline
                 stations={superTramTimelineStations}
                 stepIndex={timelineStepIndex}
@@ -336,13 +328,8 @@ const StationsMapPage: React.FC = () => {
                 modeEnabled={timelineModeEnabled}
                 onModeEnabledChange={setTimelineModeEnabled}
               />
-            )}
-            <StationsMapSelectedPanel
-              station={selectedStation}
-              isPendingNew={selectedStationIsPending}
-              detailsLoading={stationDetailsLoading}
-            />
-          </aside>
+            </div>
+          )}
         </div>
       </div>
     </div>

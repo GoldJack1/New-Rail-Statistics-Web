@@ -2,13 +2,12 @@
 
 import { useCallback, useEffect, useMemo, type CSSProperties } from 'react'
 import { BUTWideButton, TOGToggleVisited } from '../buttons'
+import AutoAnimateCollapse from '@/components/misc/AutoAnimateCollapse/AutoAnimateCollapse'
 import {
   buildSuperTramTimelineSteps,
-  countStationsVisibleAtTimelineCutoff,
-  type SuperTramTimelineCutoff,
-  type SuperTramTimelineStep,
 } from '../../utils/superTramTimeline'
 import type { Station } from '../../types'
+import '../cards/TextCard/TextCard.css'
 import './StationsMapTimeline.css'
 
 const AUTO_PLAY_INTERVAL_MS = 900
@@ -23,15 +22,6 @@ interface StationsMapTimelineProps {
   onModeEnabledChange: (enabled: boolean) => void
 }
 
-function getCutoffForStep(
-  steps: SuperTramTimelineStep[],
-  index: number
-): SuperTramTimelineCutoff | null {
-  if (steps.length === 0) return null
-  const clamped = Math.max(0, Math.min(index, steps.length - 1))
-  return steps[clamped].cutoff
-}
-
 export function StationsMapTimeline({
   stations,
   stepIndex,
@@ -44,14 +34,7 @@ export function StationsMapTimeline({
   const steps = useMemo(() => buildSuperTramTimelineSteps(stations), [stations])
   const maxIndex = Math.max(0, steps.length - 1)
   const clampedIndex = steps.length === 0 ? 0 : Math.max(0, Math.min(stepIndex, maxIndex))
-  const cutoff = getCutoffForStep(steps, clampedIndex)
-  const showUndatedAtMax = clampedIndex >= maxIndex
   const currentStep = steps.length > 0 ? steps[clampedIndex] : null
-
-  const visibleCount = useMemo(
-    () => countStationsVisibleAtTimelineCutoff(stations, cutoff, showUndatedAtMax),
-    [stations, cutoff, showUndatedAtMax]
-  )
 
   useEffect(() => {
     if (!modeEnabled || !isPlaying || steps.length === 0) return
@@ -117,11 +100,7 @@ export function StationsMapTimeline({
     [onModeEnabledChange, onPlayingChange, onStepIndexChange, steps.length]
   )
 
-  const subtitle = modeEnabled
-    ? steps.length === 0
-      ? 'No opening dates are available for this network.'
-      : `${visibleCount} of ${stations.length} stops visible on the map for this step.`
-    : 'All stops are shown on the map. Turn on to replay how the network opened over time.'
+  const subtitle = 'Watch how the network has expanded over the years, stop by stop.'
 
   const currentLabel = currentStep?.label ?? '—'
   const currentDateMs = currentStep?.dateMs ?? null
@@ -129,11 +108,21 @@ export function StationsMapTimeline({
   const showTimelineControls = modeEnabled && steps.length > 0
 
   return (
-    <section className="stations-map-timeline" aria-label="Network timeline">
+    <section
+      className={[
+        'stations-map-timeline',
+        'rs-text-card',
+        'rs-text-card--active',
+        modeEnabled ? 'stations-map-timeline--expanded' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      aria-label="Network timeline"
+    >
       <div className="stations-map-timeline__header">
-        <div className="stations-map-timeline__header-copy">
-          <h2 className="stations-map-timeline__title">Network Timeline</h2>
-          <p className="stations-map-timeline__subtitle">{subtitle}</p>
+        <div className="stations-map-timeline__header-copy rs-text-card__content">
+          <h2 className="stations-map-timeline__title rs-text-card__title">Network Timeline</h2>
+          <p className="stations-map-timeline__subtitle rs-text-card__description">{subtitle}</p>
         </div>
         <TOGToggleVisited
           checked={modeEnabled}
@@ -143,51 +132,59 @@ export function StationsMapTimeline({
         />
       </div>
 
-      {showTimelineControls && (
-        <>
-          <div className="stations-map-timeline__date-row">
-            <time
-              className="stations-map-timeline__date"
-              dateTime={currentDateMs != null ? new Date(currentDateMs).toISOString() : undefined}
-            >
-              {currentLabel}
-            </time>
-            <span className="stations-map-timeline__step">
-              {clampedIndex + 1} / {steps.length}
-            </span>
-          </div>
+      {steps.length > 0 && (
+        <AutoAnimateCollapse
+          isOpen={showTimelineControls}
+          className="stations-map-timeline__collapse"
+          itemClassName="stations-map-timeline__collapse-item"
+        >
+          <div className="stations-map-timeline__body">
+            <div className="stations-map-timeline__date-row">
+              <time
+                className="stations-map-timeline__date"
+                dateTime={currentDateMs != null ? new Date(currentDateMs).toISOString() : undefined}
+              >
+                {currentLabel}
+              </time>
+              <span className="stations-map-timeline__step">
+                {clampedIndex + 1} / {steps.length}
+              </span>
+            </div>
 
-          <div className="stations-map-timeline__slider-wrap">
-            <input
-              type="range"
-              className="stations-map-timeline__slider"
-              min={0}
-              max={maxIndex}
-              step={1}
-              value={clampedIndex}
-              onChange={handleSliderChange}
-              aria-valuemin={0}
-              aria-valuemax={maxIndex}
-              aria-valuenow={clampedIndex}
-              aria-valuetext={currentLabel}
-              style={{ '--timeline-progress': `${sliderPercent}%` } as CSSProperties}
-            />
-            <div className="stations-map-timeline__range-labels">
-              <span>{steps[0].label}</span>
-              <span>{steps[steps.length - 1].label}</span>
+            <div className="stations-map-timeline__slider-wrap">
+              <input
+                type="range"
+                className="stations-map-timeline__slider"
+                min={0}
+                max={maxIndex}
+                step={1}
+                value={clampedIndex}
+                onChange={handleSliderChange}
+                aria-valuemin={0}
+                aria-valuemax={maxIndex}
+                aria-valuenow={clampedIndex}
+                aria-valuetext={currentLabel}
+                style={{ '--timeline-progress': `${sliderPercent}%` } as CSSProperties}
+              />
+              <div className="stations-map-timeline__range-labels">
+                <span>{steps[0].label}</span>
+                <span>{steps[steps.length - 1].label}</span>
+              </div>
+            </div>
+
+            <div className="stations-map-timeline__actions">
+              <BUTWideButton type="button" width="fill" onClick={handlePlayToggle} aria-pressed={isPlaying}>
+                {isPlaying ? 'Pause' : clampedIndex >= maxIndex ? 'Replay' : 'Play'}
+              </BUTWideButton>
+              <BUTWideButton type="button" width="fill" colorVariant="primary" onClick={handleRestart}>
+                From start
+              </BUTWideButton>
             </div>
           </div>
-
-          <div className="stations-map-timeline__actions">
-            <BUTWideButton type="button" width="fill" onClick={handlePlayToggle} aria-pressed={isPlaying}>
-              {isPlaying ? 'Pause' : clampedIndex >= maxIndex ? 'Replay' : 'Play'}
-            </BUTWideButton>
-            <BUTWideButton type="button" width="fill" colorVariant="primary" onClick={handleRestart}>
-              From start
-            </BUTWideButton>
-          </div>
-        </>
+        </AutoAnimateCollapse>
       )}
+
+      <span className="rs-text-card__inner-shadow" aria-hidden="true" />
     </section>
   )
 }
