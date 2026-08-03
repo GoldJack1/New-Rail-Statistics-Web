@@ -120,7 +120,7 @@ export function StationsMapTimeline({
   const subtitle = modeEnabled
     ? steps.length === 0
       ? 'No opening dates are available for this network.'
-      : `${visibleCount} of ${stations.length} stops visible on the map for the selected date.`
+      : `${visibleCount} of ${stations.length} stops visible on the map for this step.`
     : 'All stops are shown on the map. Turn on to replay how the network opened over time.'
 
   const currentLabel = currentStep?.label ?? '—'

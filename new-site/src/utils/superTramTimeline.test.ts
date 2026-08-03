@@ -34,14 +34,19 @@ describe('superTramTimeline', () => {
     ]
 
     const steps = buildSuperTramTimelineSteps(stations)
-    expect(steps).toHaveLength(3)
+    // Prologue + one step per stop (same-day shared order still splits by station).
+    expect(steps).toHaveLength(4)
     expect(steps[0].label).toBe('20 Mar 1994')
     expect(steps[1].label).toBe('21 Mar 1994')
-    expect(steps[2].label).toBe('22 Aug 1994')
+    expect(steps[2].label).toBe('21 Mar 1994')
+    expect(steps[3].label).toBe('22 Aug 1994')
+    expect(steps.map((step) => step.cutoff.stationId)).toEqual([null, 'b', 'c', 'a'])
     expect(countStationsVisibleAtTimelineCutoff(stations, steps[0].cutoff, false)).toBe(0)
+    expect(countStationsVisibleAtTimelineCutoff(stations, steps[1].cutoff, false)).toBe(1)
+    expect(countStationsVisibleAtTimelineCutoff(stations, steps[2].cutoff, false)).toBe(2)
   })
 
-  it('splits same-day stops into their own steps when orders differ', () => {
+  it('steps through stops in order-of-opening sequence', () => {
     const stations = [
       baseStation({ id: 'c', dateOpened: '21/03/1994', orderOfOpening: 3 }),
       baseStation({ id: 'a', dateOpened: '21/03/1994', orderOfOpening: 1 }),
@@ -50,7 +55,14 @@ describe('superTramTimeline', () => {
     ]
 
     const steps = buildSuperTramTimelineSteps(stations)
-    expect(steps.map((step) => step.cutoff.order)).toEqual([null, 1, 2, 3, 4])
+    expect(steps.map((step) => step.cutoff.order)).toEqual([
+      Number.NEGATIVE_INFINITY,
+      1,
+      2,
+      3,
+      4,
+    ])
+    expect(steps.map((step) => step.cutoff.stationId)).toEqual([null, 'a', 'b', 'c', 'd'])
     expect(countStationsVisibleAtTimelineCutoff(stations, steps[0].cutoff, false)).toBe(0)
     expect(countStationsVisibleAtTimelineCutoff(stations, steps[1].cutoff, false)).toBe(1)
     expect(countStationsVisibleAtTimelineCutoff(stations, steps[2].cutoff, false)).toBe(2)
@@ -58,26 +70,39 @@ describe('superTramTimeline', () => {
     expect(countStationsVisibleAtTimelineCutoff(stations, steps[4].cutoff, true)).toBe(4)
   })
 
-  it('keeps date as the primary sort even when orders disagree with it', () => {
+  it('follows order of opening even when dates disagree', () => {
     const stations = [
       baseStation({ id: 'later-date-lower-order', dateOpened: '22/08/1994', orderOfOpening: 1 }),
       baseStation({ id: 'earlier-date-higher-order', dateOpened: '21/03/1994', orderOfOpening: 9 }),
     ]
 
     const steps = buildSuperTramTimelineSteps(stations)
-    expect(steps.map((step) => step.label)).toEqual(['20 Mar 1994', '21 Mar 1994', '22 Aug 1994'])
+    expect(steps.map((step) => step.cutoff.stationId)).toEqual([
+      null,
+      'later-date-lower-order',
+      'earlier-date-higher-order',
+    ])
+    expect(steps.map((step) => step.label)).toEqual(['20 Mar 1994', '22 Aug 1994', '21 Mar 1994'])
     expect(countStationsVisibleAtTimelineCutoff(stations, steps[0].cutoff, false)).toBe(0)
     expect(countStationsVisibleAtTimelineCutoff(stations, steps[1].cutoff, false)).toBe(1)
+    expect(countStationsVisibleAtTimelineCutoff(stations, steps[2].cutoff, false)).toBe(2)
   })
 
-  it('opens stops without an order last within their date', () => {
-    const ordered = baseStation({ id: 'a', dateOpened: '21/03/1994', orderOfOpening: 1 })
-    const unordered = baseStation({ id: 'b', dateOpened: '21/03/1994' })
-    const steps = buildSuperTramTimelineSteps([ordered, unordered])
+  it('opens stops without an order after all ordered stops, by date', () => {
+    const orderedLate = baseStation({
+      id: 'a',
+      dateOpened: '22/08/1994',
+      orderOfOpening: 1,
+    })
+    const unorderedEarly = baseStation({ id: 'b', dateOpened: '21/03/1994' })
+    const unorderedLater = baseStation({ id: 'c', dateOpened: '18/02/1995' })
+    const steps = buildSuperTramTimelineSteps([orderedLate, unorderedEarly, unorderedLater])
 
-    expect(steps).toHaveLength(3)
-    expect(isStationVisibleAtTimelineCutoff(unordered, steps[1].cutoff, false)).toBe(false)
-    expect(isStationVisibleAtTimelineCutoff(unordered, steps[2].cutoff, false)).toBe(true)
+    expect(steps.map((step) => step.cutoff.stationId)).toEqual([null, 'a', 'b', 'c'])
+    expect(isStationVisibleAtTimelineCutoff(unorderedEarly, steps[1].cutoff, false)).toBe(false)
+    expect(isStationVisibleAtTimelineCutoff(unorderedEarly, steps[2].cutoff, false)).toBe(true)
+    expect(isStationVisibleAtTimelineCutoff(unorderedLater, steps[2].cutoff, false)).toBe(false)
+    expect(isStationVisibleAtTimelineCutoff(unorderedLater, steps[3].cutoff, false)).toBe(true)
   })
 
   it('derives a shared YYYYMMDD order value from date opened', () => {
@@ -100,7 +125,11 @@ describe('superTramTimeline', () => {
 
   it('hides undated stops until the timeline reaches the end', () => {
     const station = baseStation({ id: 'a', dateOpened: '' })
-    const cutoff = { dateMs: Date.UTC(1994, 2, 21), order: null }
+    const cutoff = {
+      dateMs: Date.UTC(1994, 2, 21),
+      order: Number.NEGATIVE_INFINITY,
+      stationId: null,
+    }
     expect(isStationVisibleAtTimelineCutoff(station, cutoff, false)).toBe(false)
     expect(isStationVisibleAtTimelineCutoff(station, cutoff, true)).toBe(true)
   })

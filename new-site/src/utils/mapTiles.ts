@@ -23,6 +23,7 @@ export function getTileLayersConfig(): { light: TileLayerConfig; dark: TileLayer
     url: shouldUseOsmBackendProxy() ? OSM_PROXY : OSM_DIRECT,
     options: {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 19,
     },
   }
   return { light: config, dark: config }

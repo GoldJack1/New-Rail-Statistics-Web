@@ -1,6 +1,10 @@
 /**
  * Dark-mode OSM map: inverted tiles plus themed attribution.
  * Zoom uses MapZoomControls (BUTCircleButton), not Leaflet's native bar.
+ *
+ * Filter is on the tile pane (one compositing layer). Animated zoom can
+ * briefly misalign canvas pins vs filtered tiles; we keep zoom animation
+ * anyway — disabling it felt laggier than the jiggle.
  */
 [data-theme='dark'] .stations-osm-map__canvas.leaflet-container,
 [data-theme='dark'] .location-map-picker-map.leaflet-container,

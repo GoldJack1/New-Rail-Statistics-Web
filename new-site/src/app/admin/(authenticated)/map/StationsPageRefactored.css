@@ -478,7 +478,6 @@
     }
 
     .stations-admin-controls-wrap,
-    .stations-network-tabs-wrap--toolbar,
     .stations-content {
         padding-left: var(--space-lg);
         padding-right: var(--space-lg);

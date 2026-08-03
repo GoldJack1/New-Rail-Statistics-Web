@@ -1,10 +1,15 @@
 import type { Station } from '../types'
 import { parseStoredDateForSort, storedDateToIsoDate } from './dateDdMmYyyy'
 
-/** Timeline position: opening date first, then order of opening within that date. */
+/**
+ * Timeline position: order of opening first, then date, then station id.
+ * Stops without an order open after all ordered stops (by date).
+ */
 export type SuperTramTimelineCutoff = {
   dateMs: number
   order: number | null
+  /** Stable per-stop tie-break; null only for the empty prologue step. */
+  stationId: string | null
 }
 
 export type SuperTramTimelineStep = {
@@ -13,6 +18,9 @@ export type SuperTramTimelineStep = {
   dateMs: number
   label: string
 }
+
+/** Sorts before every real stop so the playhead can start with an empty map. */
+const TIMELINE_PROLOGUE_ORDER = Number.NEGATIVE_INFINITY
 
 export function getStationOpenedTimestamp(station: Station): number | null {
   if (!station.dateOpened?.trim()) return null
@@ -30,10 +38,14 @@ export function getStationOrderOfOpening(station: Station): number | null {
 export function getStationTimelineCutoff(station: Station): SuperTramTimelineCutoff | null {
   const dateMs = getStationOpenedTimestamp(station)
   if (dateMs == null) return null
-  return { dateMs, order: getStationOrderOfOpening(station) }
+  return {
+    dateMs,
+    order: getStationOrderOfOpening(station),
+    stationId: station.id,
+  }
 }
 
-/** Stops with no order value open last within their date. */
+/** Stops with no order value open after every stop that has one. */
 function compareOrders(a: number | null, b: number | null): number {
   if (a == null && b == null) return 0
   if (a == null) return 1
@@ -45,14 +57,15 @@ export function compareTimelineCutoffs(
   a: SuperTramTimelineCutoff,
   b: SuperTramTimelineCutoff
 ): number {
+  const orderCmp = compareOrders(a.order, b.order)
+  if (orderCmp !== 0) return orderCmp
   if (a.dateMs !== b.dateMs) return a.dateMs - b.dateMs
-  return compareOrders(a.order, b.order)
+  return (a.stationId ?? '').localeCompare(b.stationId ?? '')
 }
 
 /**
- * Derive a shared order-of-opening value from a stored opening date (dd/mm/yyyy).
- * Stops that opened on the same day get the same value (YYYYMMDD), so they open together
- * until an editor gives them distinct orders.
+ * Derive a default order-of-opening value from a stored opening date (dd/mm/yyyy).
+ * Prefer a network sequence (1, 2, 3…) when editing — that drives the slider order.
  */
 export function orderOfOpeningFromDateOpened(dateOpened: string | null | undefined): string {
   const trimmed = String(dateOpened ?? '').trim()
@@ -64,34 +77,32 @@ export function orderOfOpeningFromDateOpened(dateOpened: string | null | undefin
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000
 
-/** Empty lead-in step: the calendar day before the first opening, so play starts with no pins. */
-export function buildTimelinePrologueStep(firstOpeningDateMs: number): SuperTramTimelineStep {
-  const dateMs = firstOpeningDateMs - MS_PER_DAY
+/** Empty lead-in step: the calendar day before the earliest opening, so play starts with no pins. */
+export function buildTimelinePrologueStep(earliestOpeningDateMs: number): SuperTramTimelineStep {
+  const dateMs = earliestOpeningDateMs - MS_PER_DAY
   return {
-    cutoff: { dateMs, order: null },
+    cutoff: { dateMs, order: TIMELINE_PROLOGUE_ORDER, stationId: null },
     dateMs,
     label: formatTimelineDate(dateMs),
   }
 }
 
+/** One slider step per dated stop, ordered by order of opening → date → station id. */
 export function buildSuperTramTimelineSteps(stations: Station[]): SuperTramTimelineStep[] {
-  const cutoffsByKey = new Map<string, SuperTramTimelineCutoff>()
-
-  for (const station of stations) {
-    const cutoff = getStationTimelineCutoff(station)
-    if (cutoff == null) continue
-    cutoffsByKey.set(`${cutoff.dateMs}:${cutoff.order ?? ''}`, cutoff)
-  }
-
-  const openingSteps = [...cutoffsByKey.values()].sort(compareTimelineCutoffs).map((cutoff) => ({
-    cutoff,
-    dateMs: cutoff.dateMs,
-    label: formatTimelineDate(cutoff.dateMs),
-  }))
+  const openingSteps = stations
+    .map((station) => getStationTimelineCutoff(station))
+    .filter((cutoff): cutoff is SuperTramTimelineCutoff => cutoff != null)
+    .sort(compareTimelineCutoffs)
+    .map((cutoff) => ({
+      cutoff,
+      dateMs: cutoff.dateMs,
+      label: formatTimelineDate(cutoff.dateMs),
+    }))
 
   if (openingSteps.length === 0) return []
 
-  return [buildTimelinePrologueStep(openingSteps[0].dateMs), ...openingSteps]
+  const earliestDateMs = Math.min(...openingSteps.map((step) => step.dateMs))
+  return [buildTimelinePrologueStep(earliestDateMs), ...openingSteps]
 }
 
 export function formatTimelineDate(ms: number): string {

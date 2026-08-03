@@ -14,6 +14,15 @@ export interface DeviceCapabilityInput {
 /** Max station markers drawn at once in lite map mode (viewport-culled). */
 export const LITE_MAP_MAX_MARKERS = 350
 
+/** Max station markers drawn at once when viewport-culling in full mode. */
+export const FULL_MAP_VIEWPORT_MAX_MARKERS = 900
+
+/**
+ * Enable viewport culling for single-network views once the pin set is this large
+ * (GB National Rail alone exceeds this).
+ */
+export const MAP_VIEWPORT_CULL_MIN_STATIONS = 400
+
 export function resolveDevicePerformanceTier(input: DeviceCapabilityInput): DevicePerformanceTier {
   if (input.liteMapOverride) return 'full'
   if (input.saveData || input.prefersReducedMotion) return 'lite'

@@ -48,6 +48,7 @@ const NetworkStationTabGroup: React.FC<NetworkStationTabGroupProps> = ({
             type="button"
             width="hug"
             role="tab"
+            instantAction
             pressed={isSelected}
             ariaSelected={isSelected}
             onClick={() => onChange(tab.value)}

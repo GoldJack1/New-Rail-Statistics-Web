@@ -1554,7 +1554,7 @@ const StationDetailsEditForm: React.FC<StationDetailsEditFormProps> = ({
                       inputMode="numeric"
                     />
                     <p className="edit-hint">
-                      The timeline runs by date opened, then by this order within the same date.
+                      The timeline steps through each stop by order of opening, then date. Stops without an order appear after ordered ones.
                       Stops sharing a value open together; set 1, 2, 3… to reveal them one by one.
                     </p>
                   </div>

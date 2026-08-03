@@ -11,7 +11,9 @@ import { buildStationPath, getStationNetworkCollectionId } from '../../utils/sta
 import { formatMapPanelLocationDisplay } from '../../utils/formatStationLocation'
 import { parseLightRailLinesServed } from '../../utils/lightRailStationFields'
 import { usePendingStationChanges } from '@/hooks/usePendingStationChanges'
+import { useStationCollection } from '@/contexts/StationCollectionContext'
 import { setStationDetailsNavigationState } from '@/utils/clientNavigationState'
+import { snapshotActiveStationsMapView } from '@/utils/mapsMapViewStorage'
 import type { Station } from '../../types'
 import './StationsMapSelectedPanel.css'
 
@@ -47,6 +49,7 @@ const StationsMapSelectedPanel = forwardRef<HTMLElement, StationsMapSelectedPane
   ({ station, isPendingNew = false, detailsLoading = false }, ref) => {
     const router = useRouter()
     const pathname = usePathname()
+    const { networkView } = useStationCollection()
     const { pendingChanges } = usePendingStationChanges()
 
     const collectionId = station ? getStationNetworkCollectionId(station) : null
@@ -78,6 +81,7 @@ const StationsMapSelectedPanel = forwardRef<HTMLElement, StationsMapSelectedPane
         return
       }
       if (stationPath) {
+        snapshotActiveStationsMapView(networkView)
         setStationDetailsNavigationState({ returnTo: mapReturnTo })
         router.push(`/stations/${stationPath}`)
       }

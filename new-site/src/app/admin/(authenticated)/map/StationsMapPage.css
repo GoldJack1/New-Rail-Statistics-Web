@@ -2,13 +2,23 @@
 
 .stations-map-page.stations-page {
     --stations-map-app-header: calc(4rem + env(safe-area-inset-top, 0px));
-    --network-tab-toolbar-bleed: var(--space-lg);
+    /* Match stations list page network-tab inset / bleed */
+    --stations-card-gap: var(--space-lg);
+    --stations-content-inset: var(--stations-card-gap);
+    --network-tab-group-shadow-pad: 8px;
+    --network-tab-toolbar-bleed: var(--stations-content-inset);
     flex: 1;
     min-height: 0;
     display: flex;
     flex-direction: column;
     min-height: calc(100vh - var(--stations-map-app-header));
     min-height: calc(100dvh - var(--stations-map-app-header));
+}
+
+@media (min-width: 1024px) {
+    .stations-map-page.stations-page {
+        --stations-content-inset: calc(var(--space-2xl) * 2 / 3);
+    }
 }
 
 .stations-map-page.stations-page .stations-content {
@@ -56,13 +66,24 @@
     z-index: 900;
     flex-shrink: 0;
     margin-bottom: 0;
+    padding-top: var(--space-md);
+    padding-bottom: calc(var(--space-sm) + 6px);
     overflow: visible;
 }
 
 /* Map has no sidebar mobile tabs — always keep the toolbar network strip visible. */
+.stations-map-page .stations-network-tabs-wrap,
 .stations-map-page .stations-network-tabs-wrap--toolbar {
     display: block;
-    max-width: none;
+    max-width: var(--container-3xl);
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: var(--space-2xl);
+    padding-right: var(--space-2xl);
+    box-sizing: border-box;
+    min-width: 0;
+    overflow: visible;
 }
 
 .stations-map-page__admin-actions {
@@ -84,12 +105,29 @@
 
 /* Mobile / tablet: map on top, station panel fixed below (always visible) */
 @media (max-width: 1023px) {
+    .stations-map-page.stations-page {
+        --stations-content-inset: var(--stations-card-gap);
+        --network-tab-toolbar-bleed: var(--stations-content-inset);
+    }
+
     .stations-map-page.stations-page .stations-content {
         overflow: hidden;
     }
 
+    .stations-map-page .stations-toolbar-band .stations-network-tabs-wrap {
+        max-width: none;
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .stations-map-page__admin-actions {
+        max-width: none;
+        padding-left: var(--stations-content-inset);
+        padding-right: var(--stations-content-inset);
+    }
+
     .stations-map-page__layout {
-        --stations-map-mobile-panel-height: 38dvh;
+        --stations-map-mobile-panel-height: 32dvh;
         display: grid;
         grid-template-rows: minmax(0, 1fr) var(--stations-map-mobile-panel-height);
         grid-template-columns: minmax(0, 1fr);
@@ -132,12 +170,6 @@
         min-width: 0;
         max-width: 100%;
     }
-
-    .stations-map-page__admin-actions {
-        max-width: none;
-        padding-left: var(--space-lg);
-        padding-right: var(--space-lg);
-    }
 }
 
 @media (min-width: 1024px) {
@@ -163,13 +195,21 @@
         border-left: 1px solid var(--border-color);
         background-color: var(--bg-secondary);
     }
+
+    .stations-map-page__admin-actions {
+        padding-left: var(--space-2xl);
+        padding-right: var(--space-2xl);
+    }
 }
 
 @media (max-width: 639px) {
     .stations-map-page.stations-page {
         --stations-map-app-header: calc(3.5rem + env(safe-area-inset-top, 0px));
-        --stations-map-mobile-height: 500px;
+        --stations-map-mobile-height: 560px;
+        --stations-card-gap: var(--space-md);
+        --stations-content-inset: var(--stations-card-gap);
         min-height: 0;
+        height: auto;
         overflow: visible;
     }
 
@@ -179,13 +219,22 @@
 
     .stations-map-page.stations-page .stations-content {
         overflow: visible;
+        flex: 1 1 auto;
+        min-height: 0;
+        height: auto;
     }
 
+    /*
+     * Phone: document scrolls (map + panel stacked). Tablet (≤1023) uses a
+     * fixed split with overflow:hidden — that must not carry over here.
+     */
     .stations-map-page__layout {
         --stations-map-mobile-panel-height: auto;
-        grid-template-rows: var(--stations-map-mobile-height) minmax(0, 1fr);
+        grid-template-rows: var(--stations-map-mobile-height) auto;
         flex: 1 1 auto;
-        min-height: calc(100dvh - var(--stations-map-app-header));
+        min-height: 0;
+        height: auto;
+        overflow: visible;
     }
 
     .stations-map-page.stations-page .stations-main {
@@ -193,26 +242,34 @@
         min-height: var(--stations-map-mobile-height);
         max-height: var(--stations-map-mobile-height);
         flex: none;
+        overflow: hidden;
     }
 
     .stations-map-page .stations-map-side-panel {
         height: auto;
         max-height: none;
         min-width: 0;
+        overflow: visible;
+        overscroll-behavior: auto;
         scroll-margin-top: var(--stations-map-app-header);
+    }
+
+    .stations-map-page .stations-map-selected-panel {
+        max-height: none;
+        overflow: visible;
     }
 
     .stations-map-page .stations-toolbar-band {
         margin-bottom: 0;
-        padding-top: var(--space-lg);
-        padding-bottom: 0;
+        padding-top: var(--space-md);
+        padding-bottom: var(--network-tab-group-shadow-pad);
         overflow: visible;
     }
 
     .stations-map-page__admin-actions {
         margin-bottom: var(--space-sm);
-        padding-left: var(--space-lg);
-        padding-right: var(--space-lg);
+        padding-left: var(--stations-content-inset);
+        padding-right: var(--stations-content-inset);
     }
 }
 

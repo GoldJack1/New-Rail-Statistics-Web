@@ -10,6 +10,8 @@ import {
   invalidateStationsCache,
   isAnyNetworkCollectionLoading,
   isAnyNetworkCollectionRefreshing,
+  isCollectionLoading,
+  isCollectionRefreshing,
   isStationsInitialSyncPending,
   beginStationsInitialSync,
   endStationsInitialSync,
@@ -20,6 +22,7 @@ import {
 } from '@/services/stationsDataService'
 import type { Station, StationStats, UseStationsReturn } from '@/types'
 import { buildFullStationIndex } from '@/utils/mapLeanStation'
+import { isNetworkCollection } from '@/constants/stationCollections'
 
 const SERVER_STATION_SNAPSHOT = {
   stations: [] as Station[],
@@ -51,6 +54,8 @@ export interface UseStationsMapReturn {
   stations: Station[]
   loading: boolean
   isRefreshing: boolean
+  /** True while the active network's station set may still be growing. */
+  stationsLoading: boolean
   error: string | null
   dataRevision: number
   refetch: () => void
@@ -132,6 +137,7 @@ export const useStationsMap = (): UseStationsMapReturn => {
         fullById: new Map<string, Station>(),
         loading: true,
         isRefreshing: false,
+        stationsLoading: true,
         error: null,
       }
     }
@@ -142,15 +148,23 @@ export const useStationsMap = (): UseStationsMapReturn => {
       isStationsInitialSyncPending() ||
       (isAnyNetworkCollectionLoading() && stations.length === 0)
     const isRefreshing = isAnyNetworkCollectionRefreshing()
+    const stationsLoading =
+      isStationsInitialSyncPending() ||
+      (networkView === 'all'
+        ? isAnyNetworkCollectionLoading() || isAnyNetworkCollectionRefreshing()
+        : isNetworkCollection(networkView)
+          ? isCollectionLoading(networkView) || isCollectionRefreshing(networkView)
+          : isAnyNetworkCollectionLoading() || isAnyNetworkCollectionRefreshing())
     const error = stations.length === 0 ? buildStationsError() : null
     return {
       stations,
       fullById: buildFullStationIndex(fullStations),
       loading,
       isRefreshing,
+      stationsLoading,
       error,
     }
-  }, [hydrated, revision])
+  }, [hydrated, revision, networkView])
 
   const refetch = useCallback(() => {
     invalidateStationsCache()
@@ -175,6 +189,7 @@ export const useStationsMap = (): UseStationsMapReturn => {
       stations: snapshot.stations,
       loading: snapshot.loading,
       isRefreshing: snapshot.isRefreshing,
+      stationsLoading: snapshot.stationsLoading,
       error: snapshot.error,
       dataRevision: revision,
       refetch,

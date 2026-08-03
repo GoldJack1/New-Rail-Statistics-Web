@@ -34,12 +34,10 @@ interface StationCollectionContextValue {
 const StationCollectionContext = createContext<StationCollectionContextValue | null>(null)
 
 export const StationCollectionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [networkView, setNetworkViewState] = useState<NetworkViewFilter>(() =>
-    typeof window !== 'undefined' ? getStationNetworkView() : DEFAULT_NETWORK_VIEW
-  )
-  const [networkId, setNetworkIdState] = useState<NetworkCollectionId>(() =>
-    typeof window !== 'undefined' ? getStationNetworkId() : DEFAULT_NETWORK_COLLECTION_ID
-  )
+  // Always start from defaults so SSR HTML matches the client's first paint.
+  // localStorage is applied in useLayoutEffect below (before browser paint).
+  const [networkView, setNetworkViewState] = useState<NetworkViewFilter>(DEFAULT_NETWORK_VIEW)
+  const [networkId, setNetworkIdState] = useState<NetworkCollectionId>(DEFAULT_NETWORK_COLLECTION_ID)
 
   useLayoutEffect(() => {
     setNetworkViewState(getStationNetworkView())

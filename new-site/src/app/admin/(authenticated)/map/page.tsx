@@ -30,8 +30,11 @@ import { isValidStationCoordinate } from '@/utils/stationCoordinates'
 import { countPendingChangesForCollection } from '@/utils/pendingChangesByCollection'
 import { pathnameForReviewPendingSource } from '@/utils/reviewPendingNavigation'
 import { useStationAdminMode } from '@/hooks/useStationAdminMode'
+import { useMapsTimelineSession } from '@/hooks/useMapsTimelineSession'
+import { useRestoreMapsSelectedStation } from '@/hooks/useRestoreMapsSelectedStation'
 import { useDevicePerformanceTier } from '@/hooks/useDevicePerformanceTier'
-import { isNetworkCollection, NETWORK_COLLECTION_IDS } from '@/constants/stationCollections'
+import { writeMapsSelectedStationKey } from '@/utils/mapsSelectedStationStorage'
+import { isNetworkCollection, NETWORK_COLLECTION_IDS, type NetworkViewFilter } from '@/constants/stationCollections'
 import type { NewStationNavigationState } from '@/types/newStationNavigation'
 import type { Station } from '@/types'
 import { setNewStationNavigationState } from '@/utils/clientNavigationState'
@@ -54,18 +57,25 @@ const StationsMapPage: React.FC = () => {
   const isAdminMode = useStationAdminMode()
   const { collectionId, networkView, setNetworkView } = useStationCollection()
   const { pendingChanges } = usePendingStationChanges()
-  const { stations, loading, error, refetch, resolveStation, loadStationDetails, dataRevision } =
+  const { stations, stationsLoading, error, refetch, resolveStation, loadStationDetails, dataRevision } =
     useStationsMap()
   const { shouldGateAllNetworks, isLiteMode, enableFullMapOverride } = useDevicePerformanceTier(networkView)
   const [selectedStation, setSelectedStation] = useState<Station | null>(null)
   const [isAddStationMode, setIsAddStationMode] = useState(false)
-  const [timelineStepIndex, setTimelineStepIndex] = useState(0)
-  const [timelinePlaying, setTimelinePlaying] = useState(false)
-  const [timelineModeEnabled, setTimelineModeEnabled] = useState(false)
   const [stationDetailsLoading, setStationDetailsLoading] = useState(false)
+  const [mapFitNonce, setMapFitNonce] = useState(0)
   const panelRef = useRef<HTMLElement>(null)
 
   const showSuperTramTimeline = networkView === LIGHTRAIL_COLLECTION_ID
+
+  const handleNetworkViewChange = useCallback(
+    (view: NetworkViewFilter) => {
+      if (view === networkView) return
+      setNetworkView(view)
+      setMapFitNonce((nonce) => nonce + 1)
+    },
+    [networkView, setNetworkView]
+  )
 
   useEffect(() => {
     if (!isAdminMode) {
@@ -99,6 +109,7 @@ const StationsMapPage: React.FC = () => {
       isNetworkCollection(networkView) ? networkView : undefined
     )
     if (stationNetwork !== networkView) {
+      writeMapsSelectedStationKey(null)
       setSelectedStation(null)
     }
   }, [networkView, selectedStation])
@@ -116,9 +127,10 @@ const StationsMapPage: React.FC = () => {
 
   const handleStationSelect = useCallback(
     (station: Station) => {
+      const selectionKey = getStationMapKey(station)
+      writeMapsSelectedStationKey(selectionKey)
       setSelectedStation(resolveStation(station))
       setStationDetailsLoading(true)
-      const selectionKey = getStationMapKey(station)
       void loadStationDetails(station).finally(() => {
         setStationDetailsLoading(false)
         setSelectedStation((current) => {
@@ -131,6 +143,7 @@ const StationsMapPage: React.FC = () => {
   )
 
   const handleStationClear = useCallback(() => {
+    writeMapsSelectedStationKey(null)
     setSelectedStation(null)
   }, [])
 
@@ -166,6 +179,13 @@ const StationsMapPage: React.FC = () => {
     [firestoreMapStations, pendingChanges, networkView]
   )
 
+  useRestoreMapsSelectedStation({
+    dataReady: !stationsLoading,
+    mapStations,
+    selectedStation,
+    onRestore: handleStationSelect,
+  })
+
   const superTramTimelineStations = useMemo(
     () =>
       showSuperTramTimeline
@@ -179,6 +199,15 @@ const StationsMapPage: React.FC = () => {
     [superTramTimelineStations]
   )
 
+  const {
+    timelineModeEnabled,
+    setTimelineModeEnabled,
+    timelineStepIndex,
+    setTimelineStepIndex,
+    timelinePlaying,
+    setTimelinePlaying,
+  } = useMapsTimelineSession(showSuperTramTimeline, superTramTimelineSteps.length)
+
   const timelineCutoff = useMemo(() => {
     if (!showSuperTramTimeline || superTramTimelineSteps.length === 0) return null
     const maxIndex = superTramTimelineSteps.length - 1
@@ -191,15 +220,6 @@ const StationsMapPage: React.FC = () => {
     const maxIndex = superTramTimelineSteps.length - 1
     return timelineStepIndex >= maxIndex
   }, [showSuperTramTimeline, superTramTimelineSteps, timelineStepIndex])
-
-  useEffect(() => {
-    setTimelineModeEnabled(false)
-    setTimelinePlaying(false)
-    if (!showSuperTramTimeline) {
-      return
-    }
-    setTimelineStepIndex(Math.max(0, superTramTimelineSteps.length - 1))
-  }, [showSuperTramTimeline, superTramTimelineSteps.length])
 
   const activeTimelineCutoff = timelineModeEnabled ? timelineCutoff : null
   const activeTimelineShowUndatedAtMax = timelineModeEnabled ? timelineShowUndatedAtMax : true
@@ -222,17 +242,6 @@ const StationsMapPage: React.FC = () => {
     router.push(`/admin/stations/pending-review?from=${encodeURIComponent(pathnameForReviewPendingSource(routerLocation))}`)
   }, [router, routerLocation])
 
-  if (loading) {
-    return (
-      <div className="stations-page stations-map-page">
-        <div className="stations-loading">
-          <div className="loading-spinner" aria-hidden="true" />
-          <p>Loading stations. This may take a few moments.</p>
-        </div>
-      </div>
-    )
-  }
-
   if (error) {
     return (
       <div className="stations-page stations-map-page">
@@ -248,9 +257,17 @@ const StationsMapPage: React.FC = () => {
     )
   }
 
+  const dataReady = !stationsLoading
+  const visibleMapStations = dataReady ? mapStations : []
+  const visiblePublishedStations = dataReady ? firestoreMapStations : []
+
   return (
     <div className="stations-page stations-map-page">
-      <PageTopHeader title="Map" titleAddon={<BetaTag />} />
+      <PageTopHeader
+        title="Map"
+        titleAddon={<BetaTag />}
+        subtitle={stationsLoading ? 'Loading stations…' : '\u00a0'}
+      />
       <div className="stations-toolbar-band">
         {isAdminMode && (
           <div className="stations-map-page__admin-actions">
@@ -276,7 +293,7 @@ const StationsMapPage: React.FC = () => {
           </div>
         )}
         <div className="stations-network-tabs-wrap stations-network-tabs-wrap--toolbar">
-          <NetworkStationTabGroup value={networkView} onChange={setNetworkView} />
+          <NetworkStationTabGroup value={networkView} onChange={handleNetworkViewChange} />
         </div>
       </div>
       <div className="stations-content stations-map-page__content">
@@ -284,13 +301,13 @@ const StationsMapPage: React.FC = () => {
           <main className="stations-main">
             {shouldGateAllNetworks ? (
               <MapLiteModeGate
-                onSelectNetwork={setNetworkView}
+                onSelectNetwork={handleNetworkViewChange}
                 onUseFullMap={enableFullMapOverride}
               />
             ) : (
               <StationsOsmMap
-                stations={mapStations}
-                publishedStations={firestoreMapStations}
+                stations={visibleMapStations}
+                publishedStations={visiblePublishedStations}
                 pendingNewStationKeys={pendingNewKeys}
                 networkView={networkView}
                 selectedStationId={selectedStation ? getStationMapKey(selectedStation) : null}
@@ -303,6 +320,8 @@ const StationsMapPage: React.FC = () => {
                 timelineCutoff={activeTimelineCutoff}
                 timelineShowUndatedAtMax={activeTimelineShowUndatedAtMax}
                 liteMode={isLiteMode}
+                fitNonce={mapFitNonce}
+                dataReady={dataReady}
               />
             )}
           </main>

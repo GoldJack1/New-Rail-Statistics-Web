@@ -51,9 +51,9 @@
 @media (max-width: 639px) {
     .stations-map-page .stations-osm-map,
     .stations-map-page .stations-osm-map__canvas {
-        height: var(--stations-map-mobile-height, 500px);
-        min-height: var(--stations-map-mobile-height, 500px);
-        max-height: var(--stations-map-mobile-height, 500px);
+        height: var(--stations-map-mobile-height, 560px);
+        min-height: var(--stations-map-mobile-height, 560px);
+        max-height: var(--stations-map-mobile-height, 560px);
         flex: none;
     }
 
