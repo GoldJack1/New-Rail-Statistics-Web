@@ -1,5 +1,6 @@
 'use client'
 
+import { useTheme } from '@/hooks/useTheme'
 import {
   getLightRailLineChipColors,
   LIGHT_RAIL_LINE_OPTIONS,
@@ -21,6 +22,7 @@ export function LightRailLinesServedChipPicker({
   id,
   labelledBy,
 }: LightRailLinesServedChipPickerProps) {
+  const { theme } = useTheme()
   const selected = parseLightRailLinesServedSet(value)
 
   const toggleLine = (line: (typeof LIGHT_RAIL_LINE_OPTIONS)[number]) => {
@@ -40,7 +42,7 @@ export function LightRailLinesServedChipPicker({
     >
       {LIGHT_RAIL_LINE_OPTIONS.map((line) => {
         const isSelected = selected.has(line)
-        const colors = getLightRailLineChipColors(line)
+        const colors = getLightRailLineChipColors(line, theme)
         return (
           <button
             key={line}
@@ -55,7 +57,11 @@ export function LightRailLinesServedChipPicker({
             onClick={() => toggleLine(line)}
             style={
               isSelected
-                ? { backgroundColor: colors.bg, color: colors.text, borderColor: colors.bg }
+                ? {
+                    backgroundColor: colors.pressedBg,
+                    color: colors.text,
+                    borderColor: colors.pressedBg,
+                  }
                 : { borderColor: colors.bg, color: colors.text }
             }
           >

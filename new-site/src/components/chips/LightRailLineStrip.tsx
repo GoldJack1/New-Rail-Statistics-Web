@@ -1,5 +1,6 @@
 'use client'
 
+import { useTheme } from '@/hooks/useTheme'
 import {
   getLightRailLineChipColors,
   parseLightRailLinesServed,
@@ -11,13 +12,14 @@ interface LightRailLineStripProps {
 }
 
 export function LightRailLineStrip({ linesServed }: LightRailLineStripProps) {
+  const { theme } = useTheme()
   const lines = parseLightRailLinesServed(linesServed ?? '')
   if (lines.length === 0) return null
 
   return (
     <div className="light-rail-line-strip" role="list" aria-label="Lines served">
       {lines.map((line) => {
-        const colors = getLightRailLineChipColors(line)
+        const colors = getLightRailLineChipColors(line, theme)
         return (
           <span
             key={line}

@@ -218,6 +218,16 @@ export function markStationsListFiltersForRestore(): void {
   }
 }
 
+/** True when the list should restore filters after returning from station details. */
+export function shouldRestoreStationsListFilters(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return sessionStorage.getItem(STATIONS_LIST_FILTERS_RESTORE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
 /**
  * Read restored list UI state when returning from details.
  * Fresh visits clear any stale stored state and return null.

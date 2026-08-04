@@ -21,28 +21,89 @@
 @media (min-width: 1024px) {
     .stations-map-page.stations-page {
         --stations-content-inset: calc(var(--space-2xl) * 2 / 3);
-        min-height: calc(100vh - var(--stations-map-app-header) + 200px);
-        min-height: calc(100dvh - var(--stations-map-app-header) + 200px);
+        min-height: calc(100vh - var(--stations-map-app-header) + 100px);
+        min-height: calc(100dvh - var(--stations-map-app-header) + 100px);
     }
 }
 
 .stations-map-page.stations-page .stations-content {
+    --stations-map-sidebar-width: 360px;
+    --stations-map-sidebar-motion-duration: 280ms;
+    --stations-map-sidebar-motion-easing: cubic-bezier(0.4, 0, 0.2, 1);
     flex: 1 1 auto;
     min-height: 0;
-    display: flex;
-    flex-direction: column;
-    grid-template-columns: unset;
+    display: grid;
+    grid-template-columns: var(--stations-map-sidebar-width) minmax(0, 1fr);
+    /* Map sits flush against the sidebar — no list-style content gap */
     gap: 0;
     max-width: none;
     width: 100%;
     margin: 0;
+    /* No page-level left pad — list-page bleed would leave a black strip before the map */
     padding: 0;
+    align-items: stretch;
+}
+
+.stations-map-page.stations-page .stations-sidebar {
+    min-height: 0;
+    overflow: auto;
+    align-self: stretch;
+}
+
+@media (min-width: 1024px) {
+    .stations-map-page.stations-page .stations-content {
+        /* Clip the panel while it slides so it doesn’t spill over the map */
+        overflow: hidden;
+        transition:
+            grid-template-columns var(--stations-map-sidebar-motion-duration)
+                var(--stations-map-sidebar-motion-easing);
+    }
+
+    .stations-map-page.stations-page .stations-sidebar {
+        /* Override list-page negative margin that opens a gap before the map */
+        margin-left: 0;
+        width: var(--stations-map-sidebar-width);
+        max-width: none;
+        box-sizing: border-box;
+        transform: translateX(0);
+        visibility: visible;
+        transition:
+            transform var(--stations-map-sidebar-motion-duration)
+                var(--stations-map-sidebar-motion-easing),
+            visibility 0s linear 0s;
+    }
+
+    .stations-map-page.stations-page .stations-content--sidebar-collapsed {
+        grid-template-columns: 0 minmax(0, 1fr);
+        padding-left: 0;
+    }
+
+    .stations-map-page.stations-page .stations-content--sidebar-collapsed .stations-sidebar {
+        /* Keep flex layout (overrides list-page `display: none`) so exit can animate */
+        display: flex;
+        transform: translateX(-100%);
+        visibility: hidden;
+        pointer-events: none;
+        transition:
+            transform var(--stations-map-sidebar-motion-duration)
+                var(--stations-map-sidebar-motion-easing),
+            visibility 0s linear var(--stations-map-sidebar-motion-duration);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .stations-map-page.stations-page .stations-content,
+        .stations-map-page.stations-page .stations-sidebar,
+        .stations-map-page.stations-page .stations-content--sidebar-collapsed .stations-sidebar {
+            transition: none;
+        }
+    }
 }
 
 .stations-map-page__layout {
     position: relative;
     flex: 1;
     min-height: 0;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -65,16 +126,25 @@
 
 .stations-map-page .rs-page-top-header {
     flex-shrink: 0;
+    /* Let the title scroll away so the network tabs can dock under the site header */
+    position: relative;
+    top: auto;
+    z-index: auto;
 }
 
-/* Match +/- zoom to the Map title / network-tab inset */
+/* Match +/- zoom to the Map title / network-tab inset when the panel is closed */
 .stations-map-page .leaflet-container .map-zoom-control {
     left: max(var(--stations-map-chrome-inset), env(safe-area-inset-left, 0px));
 }
 
+/* Panel open: same inset as the control’s top so it sits in the map’s top-left corner */
+.stations-map-page--sidebar-open .leaflet-container .map-zoom-control {
+    left: max(var(--space-md), env(safe-area-inset-left, 0px));
+}
+
 .stations-map-page .stations-toolbar-band {
     position: sticky;
-    top: var(--stations-map-app-header);
+    top: var(--app-header-offset);
     z-index: 900;
     flex-shrink: 0;
     margin-bottom: 0;
@@ -91,8 +161,11 @@
     width: 100%;
     margin-left: auto;
     margin-right: auto;
-    /* Offset tab shadow pad so pills line up with the Map title */
-    padding-left: calc(var(--stations-map-chrome-inset) - var(--network-tab-group-shadow-pad));
+    /*
+     * Sidebar toggle is outside the tab strip’s inline shadow pad, so use the full
+     * chrome inset on the left — matches Map title + map +/- zoom controls.
+     */
+    padding-left: var(--stations-map-chrome-inset);
     padding-right: calc(var(--stations-map-chrome-inset) - var(--network-tab-group-shadow-pad));
     box-sizing: border-box;
     min-width: 0;
@@ -101,6 +174,14 @@
 
 .stations-map-page .network-station-tab-group {
     --network-tab-group-inline-pad: var(--network-tab-group-shadow-pad);
+}
+
+@media (min-width: 1024px) {
+    .stations-map-page .network-station-tab-group-row .network-station-tab-group {
+        /* First control is the circle; don’t add a second left inset before All */
+        padding-inline-start: 0;
+        scroll-padding-inline-start: 0;
+    }
 }
 
 .stations-map-page__admin-actions {
@@ -178,6 +259,24 @@
     backdrop-filter: none;
     box-shadow: none;
     overflow: visible;
+    transform: translate3d(0, calc(-100% - var(--space-md)), 0);
+    opacity: 0;
+    transition: transform 0.28s ease, opacity 0.28s ease;
+    will-change: transform, opacity;
+    pointer-events: none;
+}
+
+.stations-map-float--timeline-visible {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stations-map-float--timeline,
+    .stations-map-float--timeline-visible {
+        transition: none;
+    }
 }
 
 .stations-map-float--selected .stations-map-selected-panel {
@@ -192,26 +291,75 @@
 @media (max-width: 1023px) {
     .stations-map-page.stations-page {
         --stations-content-inset: var(--stations-card-gap);
-        --network-tab-toolbar-bleed: var(--stations-map-chrome-inset);
+        /* Same edge-bleed as stations list network tabs */
+        --network-tab-toolbar-bleed: var(--stations-content-inset);
+        /* Fill the shell so the map can take remaining height under the filters */
+        flex: 1 1 auto;
+        min-height: 0;
     }
 
     .stations-map-page.stations-page .stations-content {
         overflow: clip;
+        flex: 1 1 auto;
+        min-height: 0;
+        grid-template-columns: 1fr;
+        /* Sidebar sizes to content; map row consumes the leftover viewport */
+        grid-template-rows: auto minmax(0, 1fr);
+        padding: 0;
+        gap: 0;
+        align-content: stretch;
     }
 
-    .stations-map-page .stations-toolbar-band .stations-network-tabs-wrap {
-        max-width: none;
-        /* Beat NetworkStationTabGroup’s negative bleed — map toolbar has no side pad */
+    .stations-map-page.stations-page .stations-sidebar {
+        order: 1;
+        max-height: min(40vh, 22rem);
+        align-self: start;
+        width: 100%;
         margin-left: 0;
         margin-right: 0;
-        /* Offset shadow pad so tab pills line up with the Map title */
-        padding-left: calc(var(--stations-map-chrome-inset) - var(--network-tab-group-shadow-pad));
-        padding-right: calc(var(--stations-map-chrome-inset) - var(--network-tab-group-shadow-pad));
+        border-bottom: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
+    }
+
+    /* Grid sibling of the sidebar — order here (not on nested .stations-main) */
+    .stations-map-page.stations-page .stations-map-page__layout {
+        order: 2;
+        flex: none;
+        min-height: 0;
+        height: auto;
+        overflow: hidden;
+    }
+
+    .stations-map-page .stations-toolbar-band .stations-network-tabs-wrap,
+    .stations-map-page .stations-toolbar-band .stations-network-tabs-wrap--toolbar {
+        max-width: none;
+        /* Toolbar is already full-bleed — don’t apply list-page negative margin */
+        margin-left: 0;
+        margin-right: 0;
+        padding-left: 0;
+        padding-right: 0;
     }
 
     .stations-map-page .stations-toolbar-band .network-station-tab-group {
-        /* Shadow room only — horizontal inset comes from the wrap */
-        --network-tab-group-inline-pad: var(--network-tab-group-shadow-pad);
+        /* Match Search / Filters section title inset (not map chrome / Map title) */
+        --network-tab-group-inline-pad: var(--stations-content-inset);
+        padding-inline: var(--network-tab-group-inline-pad);
+        /* Preserve vertical room for tab drop shadows inside the scrollport */
+        padding-block: 4px var(--network-tab-group-shadow-pad);
+        scroll-padding-inline: var(--network-tab-group-inline-pad);
+    }
+
+    .stations-map-page .network-station-tab-group-row .network-station-tab-group {
+        /* Toggle is hidden below desktop — keep All inset like Search / Filters */
+        padding-inline-start: var(--network-tab-group-inline-pad);
+        padding-inline-end: var(--network-tab-group-inline-pad);
+        padding-block: 4px var(--network-tab-group-shadow-pad);
+        scroll-padding-inline: var(--network-tab-group-inline-pad);
+    }
+
+    .stations-map-page .stations-toolbar-band {
+        overflow: visible;
+        /* Extra room under the strip so bottom shadows aren’t clipped by the next section */
+        padding-bottom: var(--network-tab-group-shadow-pad);
     }
 
     .stations-map-page__admin-actions {
@@ -220,14 +368,20 @@
         padding-right: var(--stations-map-chrome-inset);
     }
 
-    /* Override stations list mobile `order: 2` so map stays full-bleed */
     .stations-map-page.stations-page .stations-main {
-        order: 0;
         align-self: stretch;
+        flex: 1 1 auto;
         height: 100%;
         min-height: 0;
-        max-height: 100%;
+        max-height: none;
         overflow: clip;
+        padding: 0;
+    }
+
+    /* Match Search / Filters / network-tab inset (map is full-bleed under the panel) */
+    .stations-map-page .leaflet-container .map-zoom-control,
+    .stations-map-page--sidebar-open .leaflet-container .map-zoom-control {
+        left: max(var(--stations-content-inset), env(safe-area-inset-left, 0px));
     }
 }
 
@@ -252,7 +406,7 @@
         --stations-content-inset: var(--stations-card-gap);
         /* Match PageTopHeader mobile title inset */
         --stations-map-chrome-inset: var(--space-lg);
-        --network-tab-toolbar-bleed: var(--stations-map-chrome-inset);
+        --network-tab-toolbar-bleed: var(--stations-content-inset);
         --stations-map-float-width: min(22.5rem, calc(100% - 2 * var(--stations-map-chrome-inset)));
         /* Don't stretch to fill the viewport — leaves a gap under attribution on non-timeline networks */
         flex: 0 0 auto;
@@ -279,6 +433,20 @@
         flex: 0 0 auto;
         min-height: 0;
         height: auto;
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto;
+        padding: 0;
+        gap: 0;
+        align-content: start;
+    }
+
+    .stations-map-page.stations-page .stations-sidebar {
+        order: 1;
+        max-height: none;
+        align-self: stretch;
+        width: 100%;
+        margin-left: 0;
+        margin-right: 0;
     }
 
     /*
@@ -287,13 +455,14 @@
      * Don't flex-grow the layout — that leaves an empty gap under the content.
      */
     .stations-map-page__layout {
+        order: 2;
         flex: 0 0 auto;
         min-height: 0;
         height: auto;
         overflow: visible;
     }
 
-    /* Timeline above the map, still below the network tabs */
+    /* Timeline above the map within the layout column */
     .stations-map-page.stations-page .stations-main {
         order: 2;
         height: auto;
@@ -301,6 +470,12 @@
         max-height: none;
         flex: none;
         overflow: clip;
+        padding: 0;
+    }
+
+    .stations-map-page.stations-page .stations-sidebar-panel {
+        padding-left: 0;
+        padding-right: 0;
     }
 
     .stations-map-float--selected {
@@ -320,31 +495,8 @@
     }
 
     .stations-map-float--timeline {
-        order: 1;
-        position: static;
-        top: auto;
-        right: auto;
-        width: 100%;
-        max-height: none;
-        margin: 0;
-        /* Full-bleed — page chrome inset lives inside the timeline card */
-        padding: 0;
-        border: none;
-        border-radius: 0;
-        background: transparent;
-        backdrop-filter: none;
-        box-shadow: none;
-        overflow: visible;
-        overscroll-behavior: auto;
-        box-sizing: border-box;
-    }
-
-    .stations-map-page .stations-map-timeline__header {
-        padding: 12px var(--stations-map-chrome-inset);
-    }
-
-    .stations-map-page .stations-map-timeline__body {
-        padding: 12px var(--stations-map-chrome-inset);
+        /* Stacked layouts keep the timeline in the side panel — never overlay the map. */
+        display: none;
     }
 
     .stations-map-page .stations-toolbar-band {

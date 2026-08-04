@@ -1,5 +1,7 @@
 'use client'
 
+import { BUTOperatorChip } from '../buttons'
+import { useTheme } from '@/hooks/useTheme'
 import {
   getLightRailLineChipColors,
   parseLightRailLinesServed,
@@ -20,6 +22,7 @@ export function LightRailLineChips({
   emptyLabel,
   labelSuffix = '',
 }: LightRailLineChipsProps) {
+  const { theme } = useTheme()
   const lines = parseLightRailLinesServed(linesServed ?? '')
   const rootClass = ['light-rail-lines-chips', className].filter(Boolean).join(' ')
 
@@ -31,16 +34,26 @@ export function LightRailLineChips({
   return (
     <div className={rootClass} role="list" aria-label="Lines served">
       {lines.map((line) => {
-        const colors = getLightRailLineChipColors(line)
+        const colors = getLightRailLineChipColors(line, theme)
+        const label = `${line}${labelSuffix}`
         return (
-          <span
+          <BUTOperatorChip
             key={line}
-            className="light-rail-lines-chip"
+            instantAction
+            colorVariant="primary"
+            width="hug"
             role="listitem"
-            style={{ backgroundColor: colors.bg, color: colors.text }}
+            className="light-rail-lines-chip"
+            ariaLabel={label}
+            title={label}
+            style={{
+              backgroundColor: colors.bg,
+              color: colors.text,
+              borderColor: colors.bg,
+            }}
           >
-            {`${line}${labelSuffix}`}
-          </span>
+            {label}
+          </BUTOperatorChip>
         )
       })}
     </div>

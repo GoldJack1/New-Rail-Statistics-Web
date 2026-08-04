@@ -141,9 +141,17 @@ export const useStationsMap = (): UseStationsMapReturn => {
         error: null,
       }
     }
+    // Prefer list rows so TOC/county/borough/province filters match the stations list.
+    // Fall back to lean (fast first paint) then detail rows.
+    const displayStations = getMergedNetworkStationsForDisplay()
     const leanStations = getMergedNetworkStations('lean')
     const fullStations = getMergedNetworkStationDetails()
-    const stations = leanStations.length > 0 ? leanStations : fullStations
+    const stations =
+      displayStations.length > 0
+        ? displayStations
+        : leanStations.length > 0
+          ? leanStations
+          : fullStations
     const loading =
       isStationsInitialSyncPending() ||
       (isAnyNetworkCollectionLoading() && stations.length === 0)

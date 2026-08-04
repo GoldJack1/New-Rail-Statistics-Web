@@ -156,7 +156,7 @@ export function buildDefaultLightRailNewStationCoreFields(): { country: string; 
   }
 }
 
-/** SuperTram line chip colours (background + contrasting text). */
+/** SuperTram line chip colours (background + contrasting text) — light mode. */
 export const LIGHT_RAIL_LINE_CHIP_COLORS: Record<string, { bg: string; text: string }> = {
   'Tram-Train': { bg: '#000000', text: '#ffffff' },
   Blue: { bg: '#2d83c0', text: '#ffffff' },
@@ -170,6 +170,47 @@ export const LIGHT_RAIL_LINE_OPTIONS = ['Blue', 'Yellow', 'Purple', 'Tram-Train'
 export type LightRailLineOption = (typeof LIGHT_RAIL_LINE_OPTIONS)[number]
 
 const LIGHT_RAIL_LINE_CHIP_FALLBACK = { bg: '#64748b', text: '#ffffff' }
+
+/** Dark-mode shade amount toward black (Tram-Train is excluded). */
+const LIGHT_RAIL_LINE_CHIP_DARK_SHADE = 0.2
+
+function parseHexRgb(hex: string): { r: number; g: number; b: number } | null {
+  const raw = hex.trim().replace('#', '')
+  if (!/^[0-9a-fA-F]{6}$/.test(raw)) return null
+  return {
+    r: Number.parseInt(raw.slice(0, 2), 16),
+    g: Number.parseInt(raw.slice(2, 4), 16),
+    b: Number.parseInt(raw.slice(4, 6), 16),
+  }
+}
+
+function toHexRgb(r: number, g: number, b: number): string {
+  const channel = (n: number) =>
+    Math.max(0, Math.min(255, Math.round(n)))
+      .toString(16)
+      .padStart(2, '0')
+  return `#${channel(r)}${channel(g)}${channel(b)}`
+}
+
+/** Mix `hex` toward black by `amount` (0–1). */
+export function shadeHexTowardBlack(hex: string, amount: number): string {
+  const rgb = parseHexRgb(hex)
+  if (!rgb) return hex
+  const t = Math.max(0, Math.min(1, amount))
+  return toHexRgb(rgb.r * (1 - t), rgb.g * (1 - t), rgb.b * (1 - t))
+}
+
+/** Mix `hex` toward white by `amount` (0–1). */
+export function tintHexTowardWhite(hex: string, amount: number): string {
+  const rgb = parseHexRgb(hex)
+  if (!rgb) return hex
+  const t = Math.max(0, Math.min(1, amount))
+  return toHexRgb(
+    rgb.r + (255 - rgb.r) * t,
+    rgb.g + (255 - rgb.g) * t,
+    rgb.b + (255 - rgb.b) * t
+  )
+}
 
 export function normalizeLightRailLineName(line: string): string {
   const trimmed = line.trim()
@@ -195,9 +236,30 @@ export function serializeLightRailLinesServed(selected: Iterable<string>): strin
   return LIGHT_RAIL_LINE_OPTIONS.filter((line) => normalized.has(line)).join(', ')
 }
 
-export function getLightRailLineChipColors(line: string): { bg: string; text: string } {
+/**
+ * SuperTram line chip colours.
+ * - Dark mode: Blue / Yellow / Purple get a 20% black shade; Tram-Train stays black.
+ * - Pressed (Blue / Yellow / Purple): further 20% black shade in both themes.
+ * - Pressed (Tram-Train): 20% white tint — pure black cannot darken further.
+ */
+export function getLightRailLineChipColors(
+  line: string,
+  theme: 'light' | 'dark' = 'light'
+): { bg: string; text: string; pressedBg: string } {
   const normalized = normalizeLightRailLineName(line)
-  return LIGHT_RAIL_LINE_CHIP_COLORS[normalized] ?? LIGHT_RAIL_LINE_CHIP_FALLBACK
+  const base = LIGHT_RAIL_LINE_CHIP_COLORS[normalized] ?? LIGHT_RAIL_LINE_CHIP_FALLBACK
+  const bg =
+    theme === 'dark' && normalized !== 'Tram-Train'
+      ? shadeHexTowardBlack(base.bg, LIGHT_RAIL_LINE_CHIP_DARK_SHADE)
+      : base.bg
+  return {
+    bg,
+    text: base.text,
+    pressedBg:
+      normalized === 'Tram-Train'
+        ? tintHexTowardWhite(bg, 0.2)
+        : shadeHexTowardBlack(bg, 0.2),
+  }
 }
 
 /** Preset platform identifiers for SuperTram `Platforms` field. */

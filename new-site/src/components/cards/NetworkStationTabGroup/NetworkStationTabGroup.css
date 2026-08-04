@@ -21,6 +21,32 @@
   -ms-overflow-style: none;
 }
 
+.network-station-tab-group-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+.network-station-tab-group-row .network-station-tab-group {
+  flex: 1 1 auto;
+  min-width: 0;
+  /*
+   * Keep the scrollport’s vertical shadow pad. Zeroing padding-block lets
+   * overflow-y: hidden clip tab drop shadows against the strip edges.
+   */
+  padding-block: 4px var(--network-tab-group-shadow-pad);
+  /* Toggle sits outside the scroll strip — keep left pad only for tabs after All */
+  padding-inline-start: 0;
+  scroll-padding-inline-start: 0;
+}
+
 .network-station-tab-group::-webkit-scrollbar {
   display: none;
   width: 0;
@@ -56,6 +82,29 @@
   min-width: max-content;
 }
 
+/* Desktop-only: sits before the All tab to show/hide the left panel */
+.network-station-tab-group__sidebar-toggle {
+  display: none;
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+@media (min-width: 1024px) {
+  .network-station-tab-group__sidebar-toggle.rs-button--circle {
+    display: inline-flex;
+    /* Measured from the All tab height — same value for width and height */
+    --network-sidebar-toggle-size: 40px;
+    width: var(--network-sidebar-toggle-size) !important;
+    height: var(--network-sidebar-toggle-size) !important;
+    min-width: var(--network-sidebar-toggle-size) !important;
+    min-height: var(--network-sidebar-toggle-size) !important;
+    max-width: var(--network-sidebar-toggle-size) !important;
+    max-height: var(--network-sidebar-toggle-size) !important;
+    flex-basis: var(--network-sidebar-toggle-size) !important;
+  }
+}
+
 @media (max-width: 1023px) {
   .stations-network-tabs-wrap--toolbar {
     margin-inline: calc(-1 * var(--network-tab-toolbar-bleed, var(--space-lg)));
@@ -65,6 +114,11 @@
   .network-station-tab-group {
     --network-tab-group-inline-pad: var(--network-tab-toolbar-bleed, var(--space-lg));
     scroll-padding-inline: var(--network-tab-group-inline-pad);
+  }
+
+  .network-station-tab-group-row .network-station-tab-group {
+    padding-inline-start: var(--network-tab-group-inline-pad);
+    scroll-padding-inline-start: var(--network-tab-group-inline-pad);
   }
 }
 

@@ -1,8 +1,10 @@
 'use client'
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { BUTTabButton } from '@/components/buttons'
+import { BUTOperatorChip, BUTTabButton } from '@/components/buttons'
+import { useTheme } from '@/hooks/useTheme'
 import {
+  getLightRailLineChipColors,
   LIGHT_RAIL_LINE_OPTIONS,
   type LightRailLineOption,
 } from '@/utils/lightRailStationFields'
@@ -24,6 +26,7 @@ const StationsLineFilterTabs: React.FC<StationsLineFilterTabsProps> = ({
   onChange,
   isVisible = true,
 }) => {
+  const { theme } = useTheme()
   const tabsRef = useRef<HTMLDivElement | null>(null)
   const [fades, setFades] = useState({ left: false, right: false })
   const isAllSelected = isSupertramLineFilterAll(value)
@@ -96,18 +99,32 @@ const StationsLineFilterTabs: React.FC<StationsLineFilterTabsProps> = ({
         </BUTTabButton>
         {LIGHT_RAIL_LINE_OPTIONS.map((line) => {
           const isSelected = !isAllSelected && value.includes(line)
+          const colors = getLightRailLineChipColors(line, theme)
           return (
-            <BUTTabButton
+            <BUTOperatorChip
               key={line}
               type="button"
               width="hug"
               instantAction
+              colorVariant="primary"
               pressed={isSelected}
               ariaSelected={isSelected}
+              ariaLabel={`Filter by ${line} line`}
+              title={line}
+              className="stations-line-filter-chip"
               onClick={() => handleLineClick(line)}
+              style={
+                {
+                  ['--line-chip-bg' as string]: colors.bg,
+                  ['--line-chip-pressed-bg' as string]: colors.pressedBg,
+                  backgroundColor: isSelected ? colors.pressedBg : colors.bg,
+                  color: colors.text,
+                  borderColor: isSelected ? colors.pressedBg : colors.bg,
+                } as React.CSSProperties
+              }
             >
-              <span className="network-station-tab-group__label">{line}</span>
-            </BUTTabButton>
+              {line}
+            </BUTOperatorChip>
           )
         })}
       </div>

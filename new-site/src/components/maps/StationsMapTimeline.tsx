@@ -22,6 +22,10 @@ interface StationsMapTimelineProps {
   onPlayingChange: (playing: boolean) => void
   modeEnabled: boolean
   onModeEnabledChange: (enabled: boolean) => void
+  /** When true, timeline mode cannot be turned on (e.g. a line filter is active). */
+  modeDisabled?: boolean
+  /** Sidebar section: drop the floating card chrome; section title provides the heading. */
+  embedded?: boolean
 }
 
 export function StationsMapTimeline({
@@ -32,6 +36,8 @@ export function StationsMapTimeline({
   onPlayingChange,
   modeEnabled,
   onModeEnabledChange,
+  modeDisabled = false,
+  embedded = false,
 }: StationsMapTimelineProps) {
   const steps = useMemo(() => buildSuperTramTimelineSteps(stations), [stations])
   const maxIndex = Math.max(0, steps.length - 1)
@@ -91,6 +97,7 @@ export function StationsMapTimeline({
 
   const handleModeToggle = useCallback(
     (enabled: boolean) => {
+      if (modeDisabled) return
       if (enabled) {
         onModeEnabledChange(true)
         onStepIndexChange(Math.max(0, steps.length - 1))
@@ -99,10 +106,12 @@ export function StationsMapTimeline({
       onPlayingChange(false)
       onModeEnabledChange(false)
     },
-    [onModeEnabledChange, onPlayingChange, onStepIndexChange, steps.length]
+    [modeDisabled, onModeEnabledChange, onPlayingChange, onStepIndexChange, steps.length]
   )
 
-  const subtitle = 'Watch how the network has expanded over the years, stop by stop.'
+  const subtitle = modeDisabled
+    ? 'This feature does not work when filtering by line. Select All to view the timeline.'
+    : 'Watch how the network has expanded over the years, stop by stop.'
 
   const currentLabel = currentStep?.label ?? '—'
   const currentDateMs = currentStep?.dateMs ?? null
@@ -114,9 +123,9 @@ export function StationsMapTimeline({
     <section
       className={[
         'stations-map-timeline',
-        'rs-text-card',
-        'rs-text-card--active',
+        embedded ? 'stations-map-timeline--embedded' : 'rs-text-card rs-text-card--active',
         modeEnabled ? 'stations-map-timeline--expanded' : '',
+        modeDisabled ? 'stations-map-timeline--disabled' : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -124,13 +133,33 @@ export function StationsMapTimeline({
     >
       <div className="stations-map-timeline__header">
         <div className="stations-map-timeline__header-copy rs-text-card__content">
-          <h2 className="stations-map-timeline__title rs-text-card__title">Network Timeline</h2>
-          <p className="stations-map-timeline__subtitle rs-text-card__description">{subtitle}</p>
+          {!embedded && (
+            <h2 className="stations-map-timeline__title rs-text-card__title">Network Timeline</h2>
+          )}
+          <p
+            className={[
+              'stations-map-timeline__subtitle',
+              'rs-text-card__description',
+              modeDisabled ? 'stations-map-timeline__subtitle--notice' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            role={modeDisabled ? 'status' : undefined}
+          >
+            {subtitle}
+          </p>
         </div>
         <TOGToggleVisited
           checked={modeEnabled}
           onChange={handleModeToggle}
-          ariaLabel={modeEnabled ? 'Turn off network timeline' : 'Turn on network timeline'}
+          disabled={modeDisabled}
+          ariaLabel={
+            modeDisabled
+              ? 'Network timeline unavailable while a line filter is selected'
+              : modeEnabled
+                ? 'Turn off network timeline'
+                : 'Turn on network timeline'
+          }
           className="stations-map-timeline__toggle"
         />
       </div>
@@ -197,7 +226,7 @@ export function StationsMapTimeline({
         </AutoAnimateCollapse>
       )}
 
-      <span className="rs-text-card__inner-shadow" aria-hidden="true" />
+      {!embedded && <span className="rs-text-card__inner-shadow" aria-hidden="true" />}
     </section>
   )
 }

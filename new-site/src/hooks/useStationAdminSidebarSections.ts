@@ -13,11 +13,13 @@ export function useStationAdminSidebarSections(
   sections: StationAdminSidebarSectionsState
   setSectionExpanded: (id: StationAdminSidebarSectionId, expanded: boolean) => void
 } {
-  const [sections, setSections] = useState<StationAdminSidebarSectionsState>(() =>
-    typeof window !== 'undefined' ? readStationAdminSidebarSections() : ssrFallback
-  )
+  // Always start from the SSR snapshot so server HTML and the first client render match.
+  // localStorage is applied after mount (and kept in sync via the change event).
+  const [sections, setSections] = useState<StationAdminSidebarSectionsState>(ssrFallback)
 
   useEffect(() => {
+    setSections(readStationAdminSidebarSections())
+
     const handleChange = () => {
       setSections(readStationAdminSidebarSections())
     }

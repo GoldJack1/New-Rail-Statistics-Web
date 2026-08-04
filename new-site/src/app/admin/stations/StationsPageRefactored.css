@@ -108,12 +108,22 @@
         align-self: stretch;
     }
 
+    .stations-page .stations-content--sidebar-collapsed {
+        grid-template-columns: 1fr;
+    }
+
+    .stations-page .stations-content--sidebar-collapsed .stations-sidebar {
+        display: none;
+    }
+
     /* Page-specific: top pad + content inset; shared chrome lives on .sidebar-panel */
     .stations-sidebar-panel {
+        --stations-panel-padding-right: calc(var(--stations-content-inset) / 2);
         flex: 1 1 auto;
         min-height: 100%;
         padding-top: 25px;
         padding-left: var(--stations-content-inset);
+        padding-right: var(--stations-panel-padding-right);
     }
 
     .stations-sidebar-panel .sidebar-dropdown__panel-host,
@@ -425,6 +435,33 @@
     min-width: max-content;
 }
 
+.stations-sidebar-panel .stations-line-filter-tabs .stations-line-filter-chip.rs-button--chip {
+    min-width: max-content;
+    flex: 0 0 auto;
+    /* Match All (`.rs-button--tab`) type size and control height */
+    font-size: 16px;
+    min-height: 40px;
+    padding: 12px 18px;
+}
+
+@media (max-width: 1023px) {
+    .stations-sidebar-panel .stations-line-filter-tabs .stations-line-filter-chip.rs-button--chip {
+        font-size: 15px;
+    }
+}
+
+@media (max-width: 639px) {
+    .stations-sidebar-panel .stations-line-filter-tabs .stations-line-filter-chip.rs-button--chip {
+        font-size: 14px;
+    }
+}
+
+.stations-sidebar-panel .stations-line-filter-tabs .stations-line-filter-chip.rs-button--chip:active:not(:disabled),
+.stations-sidebar-panel .stations-line-filter-tabs .stations-line-filter-chip.rs-button--pressed {
+    background-color: var(--line-chip-pressed-bg, var(--line-chip-bg)) !important;
+    border-color: var(--line-chip-pressed-bg, var(--line-chip-bg)) !important;
+}
+
 .stations-line-filter-tabs-wrap {
     --line-tabs-fade-size: calc(var(--space-md) * 4 / 3);
     position: relative;
@@ -578,6 +615,29 @@
 .stations-date-opened-checklist__item input[type='checkbox']:focus-visible + .stations-date-opened-checklist__box {
     outline: 2px solid var(--accent-color);
     outline-offset: 2px;
+}
+
+.stations-date-opened-checklist__more {
+    align-self: flex-start;
+    margin: var(--space-xs) 0 0;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--text-secondary, var(--text-primary));
+    font: inherit;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.stations-date-opened-checklist__more:hover {
+    color: var(--text-primary);
+}
+
+.stations-date-opened-checklist__more:focus-visible {
+    outline: 2px solid var(--text-secondary, var(--text-primary));
+    outline-offset: 2px;
+    border-radius: 2px;
 }
 
 .county-london-toggle {

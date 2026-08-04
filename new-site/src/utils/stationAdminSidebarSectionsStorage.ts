@@ -1,10 +1,17 @@
-export type StationAdminSidebarSectionId = 'search' | 'view' | 'sort' | 'filters' | 'admin'
+export type StationAdminSidebarSectionId =
+  | 'search'
+  | 'view'
+  | 'sort'
+  | 'filters'
+  | 'timeline'
+  | 'admin'
 
 export const STATION_ADMIN_SIDEBAR_SECTION_IDS: StationAdminSidebarSectionId[] = [
   'search',
   'view',
   'sort',
   'filters',
+  'timeline',
   'admin',
 ]
 
@@ -15,6 +22,7 @@ export const DEFAULT_STATION_ADMIN_SIDEBAR_SECTIONS: StationAdminSidebarSections
   view: true,
   sort: false,
   filters: false,
+  timeline: true,
   admin: false,
 }
 
@@ -32,14 +40,17 @@ function encodeSidebarSections(sections: StationAdminSidebarSectionsState): stri
 function decodeSidebarSections(
   encoded: string | undefined
 ): StationAdminSidebarSectionsState | null {
-  if (encoded == null || encoded.length !== STATION_ADMIN_SIDEBAR_SECTION_IDS.length) {
-    return null
-  }
+  if (encoded == null || encoded.length === 0) return null
   if (!/^[01]+$/.test(encoded)) return null
+  // Older cookies omit newer section ids (e.g. pre-timeline) — pad from defaults.
+  if (encoded.length > STATION_ADMIN_SIDEBAR_SECTION_IDS.length) return null
 
   return STATION_ADMIN_SIDEBAR_SECTION_IDS.reduce<StationAdminSidebarSectionsState>(
     (acc, id, index) => {
-      acc[id] = encoded[index] === '1'
+      acc[id] =
+        index < encoded.length
+          ? encoded[index] === '1'
+          : DEFAULT_STATION_ADMIN_SIDEBAR_SECTIONS[id]
       return acc
     },
     { ...DEFAULT_STATION_ADMIN_SIDEBAR_SECTIONS }

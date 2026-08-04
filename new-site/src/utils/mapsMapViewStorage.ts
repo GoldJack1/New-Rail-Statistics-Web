@@ -145,8 +145,6 @@ export function snapshotActiveStationsMapView(
 ): void {
   if (!activeMap) return
   try {
-    const size = activeMap.getSize()
-    if (size.x <= 0 || size.y <= 0) return
     const center = activeMap.getCenter()
     const view = {
       lat: center.lat,
@@ -159,6 +157,7 @@ export function snapshotActiveStationsMapView(
     if (networkView != null) {
       activeNetworkView = String(networkView)
     }
+    // Snapshot even when canvas size is already 0 (common during route teardown).
     writeMapsMapViewSessionState(key, view, { pinned: true })
   } catch {
     /* map mid-teardown */
