@@ -3,7 +3,7 @@ import type { Station } from '@/types'
 
 const DB_NAME = 'rail-stats-stations'
 const DB_VERSION = 2
-const CACHE_VERSION = 1
+const CACHE_VERSION = 2
 const STORE_NAME = 'collections'
 export const STATIONS_CACHE_TTL_MS = 24 * 60 * 60 * 1000
 

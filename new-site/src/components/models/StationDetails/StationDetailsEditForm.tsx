@@ -26,7 +26,6 @@ import {
   pickLightRailSandboxOnlyFields,
   readLightRailDocString,
 } from '../../../utils/lightRailStationFields'
-import { orderOfOpeningFromDateOpened } from '../../../utils/superTramTimeline'
 import { getStationFieldChanges } from '../../../utils/stationFieldDiffs'
 import {
   getPendingFieldChangesForEntry,
@@ -1306,18 +1305,8 @@ const StationDetailsEditForm: React.FC<StationDetailsEditFormProps> = ({
                       id="edit-dateOpened"
                       value={readLightRailDocString(additionalForm as Record<string, unknown>, LIGHT_RAIL_DOC_FIELDS.dateOpened)}
                       onChange={(nextValue) => {
-                        const hasOrder = readLightRailDocString(
-                          additionalForm as Record<string, unknown>,
-                          LIGHT_RAIL_DOC_FIELDS.orderOfOpening
-                        ).trim() !== ''
                         updateAdditional({
                           [LIGHT_RAIL_DOC_FIELDS.dateOpened]: nextValue,
-                          ...(hasOrder
-                            ? {}
-                            : {
-                                [LIGHT_RAIL_DOC_FIELDS.orderOfOpening]:
-                                  orderOfOpeningFromDateOpened(nextValue),
-                              }),
                         } as Partial<SandboxStationDoc>)
                       }}
                     />
