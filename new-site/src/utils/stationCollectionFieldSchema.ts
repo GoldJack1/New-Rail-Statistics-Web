@@ -341,11 +341,13 @@ export function inferStationCollectionFieldSchema(
     !force?.suppressMinConnectionTime &&
     hasPopulatedTopLevel(docs, ['min-connection-time', 'minConnectionTime'])
 
-  const showUsageTab = docs.some((d) => {
-    const yp = d.yearlyPassengers
-    if (!yp || typeof yp !== 'object' || Array.isArray(yp)) return false
-    return Object.values(yp as Record<string, unknown>).some((v) => !isEmpty(v))
-  })
+  const showUsageTab =
+    catalogSchema.showUsageTab ||
+    docs.some((d) => {
+      const yp = d.yearlyPassengers
+      if (!yp || typeof yp !== 'object' || Array.isArray(yp)) return false
+      return Object.values(yp as Record<string, unknown>).some((v) => !isEmpty(v))
+    })
 
   return {
     isLightRail: false,
@@ -367,8 +369,9 @@ export function inferStationCollectionFieldSchema(
     showUrl,
     urlFieldKey,
     urlFieldLabel: catalogSchema.urlFieldLabel,
-    showProvince: hasPopulatedTopLevel(docs, ['province']),
-    showPostEirCode: hasPopulatedTopLevel(docs, ['post-eir_code']),
+    showProvince: catalogSchema.showProvince || hasPopulatedTopLevel(docs, ['province']),
+    showPostEirCode:
+      catalogSchema.showPostEirCode || hasPopulatedTopLevel(docs, ['post-eir_code']),
     postEirCodeInLocation: catalogSchema.postEirCodeInLocation,
     showUsageTab,
     foldAdditionalIntoDetails: catalogSchema.foldAdditionalIntoDetails,

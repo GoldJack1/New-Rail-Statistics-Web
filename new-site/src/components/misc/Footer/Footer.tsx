@@ -59,24 +59,21 @@ const Footer: React.FC = () => {
             <BUTFooterLink to="/">
               Home
             </BUTFooterLink>
+            <BUTFooterLink to="/stations">
+              Stations
+            </BUTFooterLink>
+            <BUTFooterLink to="/stations/map">
+              Maps
+            </BUTFooterLink>
             <BUTFooterLink to="/migration">
               Migration
             </BUTFooterLink>
             <BUTFooterLink to="/privacy">
-              Privacy Policy
+              Privacy
             </BUTFooterLink>
             <BUTFooterLink to="/eula">
               EULA
             </BUTFooterLink>
-            {user ? (
-              <BUTFooterLink onActivate={logout} className="site-footer-logout">
-                Log out
-              </BUTFooterLink>
-            ) : (
-              <BUTFooterLink to="/log-in">
-                Log in
-              </BUTFooterLink>
-            )}
             <BUTFooterLink onActivate={toggleTheme} className="site-footer-theme-toggle" ariaLabel="Toggle theme">
               <span className="site-footer-theme-toggle__icon site-footer-theme-toggle__icon--sun" aria-hidden>
                 <Sun className="site-footer-theme-toggle__glyph site-footer-theme-toggle__glyph--bold" size={16} weight="bold" />
@@ -89,8 +86,8 @@ const Footer: React.FC = () => {
             </BUTFooterLink>
           </div>
         </div>
-        {user ? (
-          <div className="site-footer-secondary-row">
+        <div className="site-footer-secondary-row">
+          {user ? (
             <div className="site-footer-admin-toggle">
               <span className="site-footer-admin-toggle__label">Admin</span>
               <TOGToggleVisited
@@ -100,19 +97,28 @@ const Footer: React.FC = () => {
                 className="site-footer-admin-toggle__control"
               />
             </div>
-            <div className="site-footer-links site-footer-links--logged-in-row">
-              <BUTFooterLink to="/admin/stations">
-                Stations
+          ) : null}
+          <div className="site-footer-links site-footer-links--logged-in-row">
+            <BUTFooterLink to="/admin/messages">
+              Messages
+            </BUTFooterLink>
+            <BUTFooterLink to="/admin/api-status">
+              API Status
+            </BUTFooterLink>
+            <BUTFooterLink to="/admin/design-system">
+              Design System
+            </BUTFooterLink>
+            {user ? (
+              <BUTFooterLink onActivate={logout} className="site-footer-logout">
+                Log out
               </BUTFooterLink>
-              <BUTFooterLink to="/admin/api-status">
-                API Status
+            ) : (
+              <BUTFooterLink to="/log-in">
+                Log in
               </BUTFooterLink>
-              <BUTFooterLink to="/admin/design-system">
-                Design System
-              </BUTFooterLink>
-            </div>
+            )}
           </div>
-        ) : null}
+        </div>
       </div>
     </footer>
   )

@@ -15,10 +15,23 @@
 }
 
 .rs-station-text-card--light-rail .rs-station-name,
-.rs-station-text-card--light-rail .rs-station-location {
+.rs-station-text-card--light-rail .rs-station-location,
+.rs-station-text-card--light-rail .rs-station-opened-on {
   flex-shrink: 0;
   padding-left: 12px;
   padding-right: 12px;
+}
+
+.rs-station-opened-on {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 300;
+  line-height: 1.35;
+  color: var(--text-secondary, inherit);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .rs-station-operator--light-rail-hidden {

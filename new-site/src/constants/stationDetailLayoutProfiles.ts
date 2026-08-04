@@ -201,7 +201,10 @@ export const STATION_DETAIL_LAYOUT_PRESETS: Record<
     showTiploc: false,
     requireTiploc: false,
     showAdminUrlSlug: true,
+    showProvince: true,
+    showPostEirCode: true,
     postEirCodeInLocation: true,
+    showOperatorCode: true,
   },
 
   /** Based on GB Heritage — URL, NLC, gauge, staffing, service, step-free section. */
@@ -285,6 +288,8 @@ export const STATION_DETAIL_LAYOUT_PROFILES: Record<
       // Show from first paint so sampling does not pop empty --- rows in after load.
       showBorough: true,
       showFareZone: true,
+      // Native Firebase yearly passengers (not Knowledgebase).
+      showUsageTab: true,
       showUrl: false,
       // Knowledgebase is source of truth for these — hide from Firebase UI (data retained).
       suppressStaffingLevel: true,

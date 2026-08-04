@@ -1,11 +1,11 @@
 'use client'
 
-import React, { useEffect, useId } from 'react'
+import React, { useCallback, useEffect, useId, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { useAuth } from '../../../contexts/AuthContext'
 import { useAppHeaderOffset } from '@/hooks/useAppHeaderOffset'
-import { BUTHeaderLink } from '../../buttons'
-import BetaTag from '../BetaTag/BetaTag'
+import { resolveAppDownloadAction } from '@/utils/appDownload'
+import { BUTBaseButton, BUTHeaderLink, BUTWideButton } from '../../buttons'
+import HomeDownloadPlatformModal from '../../models/HomeDownloadPlatformModal/HomeDownloadPlatformModal'
 import {
   MobileHeaderPanel,
   MobileHeaderTitle,
@@ -24,7 +24,7 @@ function getHeaderPageTitle(pathname: string): string {
   if (pathname === '/buttons') return 'Buttons'
   if (pathname.startsWith('/admin/stations/new')) return 'New station'
   if (pathname.startsWith('/admin/stations/pending-review')) return 'Pending review'
-  if (pathname === '/stations/map') return 'Map'
+  if (pathname === '/stations/map') return 'Maps'
   if (pathname.startsWith('/stations/')) return 'Station'
   if (pathname === '/stations') return 'Stations'
   if (pathname.startsWith('/admin/design-system/colours')) return 'Colours'
@@ -43,33 +43,36 @@ function getHeaderPageTitle(pathname: string): string {
 }
 
 const Header: React.FC = () => {
-  const { user } = useAuth()
   const pathname = usePathname() ?? '/'
   const mobileNavId = useId()
   /** Don’t stack “log-in → migration” in history, or browser Back from migration returns to login. */
   const logoNavReplace = pathname === '/log-in'
 
-  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [downloadModalOpen, setDownloadModalOpen] = useState(false)
   const headerRef = useAppHeaderOffset<HTMLElement>(mobileMenuOpen)
 
   const isHomeActive = pathname === '/' || pathname === '/home'
-  const isMigrationActive = pathname === '/migration'
   const isStationsActive = pathname === '/stations' || pathname.startsWith('/admin/stations')
-  const isMapActive = pathname === '/stations/map'
-  const isMessagesActive = pathname.startsWith('/admin/messages')
+  const isMapActive = pathname === '/stations/map' || pathname === '/admin/map'
 
   const pageTitle = getHeaderPageTitle(pathname)
 
   const navItems: MobileHeaderNavItem[] = [
-    { to: '/' as const, label: 'Home', active: isHomeActive, showBeta: false },
-    { to: '/migration' as const, label: 'Migration', active: isMigrationActive, showBeta: false },
-    { to: '/stations' as const, label: 'Stations', active: isStationsActive && !isMapActive, showBeta: false },
-    { to: '/stations/map' as const, label: 'Map', active: isMapActive, showBeta: true },
-    { to: '/admin/messages' as const, label: 'Messages', active: isMessagesActive, showBeta: false },
-  ].filter((item) => {
-    if (item.to === '/admin/messages') return Boolean(user)
-    return true
-  })
+    { to: '/', label: 'Home', active: isHomeActive },
+    { to: '/stations', label: 'Stations', active: isStationsActive && !isMapActive },
+    { to: '/stations/map', label: 'Maps', active: isMapActive },
+  ]
+
+  const onDownloadApp = useCallback(() => {
+    const action = resolveAppDownloadAction()
+    if (action.type === 'redirect') {
+      window.location.href = action.url
+      return
+    }
+    setDownloadModalOpen(true)
+    setMobileMenuOpen(false)
+  }, [])
 
   useEffect(() => {
     setMobileMenuOpen(false)
@@ -111,24 +114,28 @@ const Header: React.FC = () => {
                 <span className="logo-text">Rail Statistics</span>
               </div>
             </BUTHeaderLink>
-            <MobileHeaderTitle
-              pageTitle={pageTitle}
-              showBeta={isMapActive}
-              logoNavReplace={logoNavReplace}
-            />
+            <MobileHeaderTitle pageTitle={pageTitle} logoNavReplace={logoNavReplace} />
           </div>
 
           <div className="header-right">
             <nav className="header-nav header-nav--desktop" aria-label="Main">
               <div className="header-nav-links">
-                {navItems.map(({ to, label, active, showBeta }) => (
+                {navItems.map(({ to, label, active }) => (
                   <BUTHeaderLink key={to} to={to} active={active}>
                     <span className="header-nav-link__label">{label}</span>
-                    {showBeta ? <BetaTag /> : null}
                   </BUTHeaderLink>
                 ))}
               </div>
             </nav>
+            <BUTWideButton
+              type="button"
+              width="hug"
+              colorVariant="accent"
+              className="header-download-app-button header-download-app-button--desktop"
+              onClick={onDownloadApp}
+            >
+              Download app
+            </BUTWideButton>
             <MobileHeaderToggle
               menuOpen={mobileMenuOpen}
               navId={mobileNavId}
@@ -137,13 +144,38 @@ const Header: React.FC = () => {
           </div>
         </div>
 
-        <MobileHeaderPanel
-          menuOpen={mobileMenuOpen}
-          navId={mobileNavId}
-          navItems={navItems}
-          onClose={closeMobileMenu}
-        />
+        <MobileHeaderPanel menuOpen={mobileMenuOpen} navId={mobileNavId} onClose={closeMobileMenu}>
+          <nav className="header-nav header-nav--mobile" aria-label="Main">
+            <ul className="header-mobile-nav-list">
+              {navItems.map(({ to, label, active }) => (
+                <li key={to}>
+                  <BUTHeaderLink to={to} active={active} onClick={closeMobileMenu}>
+                    <span className="header-nav-link__label">{label}</span>
+                  </BUTHeaderLink>
+                </li>
+              ))}
+              <li className="header-mobile-nav-list__download">
+                <BUTBaseButton
+                  type="button"
+                  variant="wide"
+                  shape="squared"
+                  width="fill"
+                  colorVariant="accent"
+                  className="header-download-app-button--menu"
+                  onClick={onDownloadApp}
+                >
+                  Download app
+                </BUTBaseButton>
+              </li>
+            </ul>
+          </nav>
+        </MobileHeaderPanel>
       </div>
+
+      <HomeDownloadPlatformModal
+        open={downloadModalOpen}
+        onClose={() => setDownloadModalOpen(false)}
+      />
     </header>
   )
 }

@@ -97,6 +97,47 @@ export function getLatestYearlyPassengerDisplay(
   return entry.year ? `(${entry.year}) ${formattedCount}` : formattedCount
 }
 
+export function getYearlyPassengerCountForYear(
+  passengers: Station['yearlyPassengers'] | YearlyPassengers | number | string | null | undefined,
+  year: string
+): number | null {
+  if (passengers == null || !/^\d{4}$/.test(year)) return null
+
+  if (typeof passengers === 'number' || typeof passengers === 'string') {
+    return null
+  }
+
+  if (typeof passengers !== 'object' || Array.isArray(passengers)) return null
+  return parseYearlyPassengerCount(passengers[year])
+}
+
+export function getYearlyPassengerDisplayForYear(
+  passengers: Station['yearlyPassengers'] | YearlyPassengers | number | string | null | undefined,
+  year: string
+): string {
+  const count = getYearlyPassengerCountForYear(passengers, year)
+  return count != null ? count.toLocaleString() : ''
+}
+
+/** Distinct years with at least one numeric count across stations, newest first. */
+export function collectYearlyPassengerYears(
+  stations: Array<{ yearlyPassengers?: Station['yearlyPassengers'] | null }>
+): string[] {
+  const years = new Set<string>()
+
+  for (const station of stations) {
+    const passengers = station.yearlyPassengers
+    if (!passengers || typeof passengers !== 'object' || Array.isArray(passengers)) continue
+
+    for (const [year, value] of Object.entries(passengers)) {
+      if (!/^\d{4}$/.test(year)) continue
+      if (parseYearlyPassengerCount(value) != null) years.add(year)
+    }
+  }
+
+  return [...years].sort((a, b) => parseInt(b, 10) - parseInt(a, 10))
+}
+
 export type YearlyPassengerChartPoint = {
   year: string
   value: number

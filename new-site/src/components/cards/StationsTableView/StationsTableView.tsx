@@ -15,7 +15,14 @@ import {
   type StationsTableColumnSlot,
   type StationsTableSort,
 } from '../../../utils/stationsTableColumns'
-import { getLatestYearlyPassengerDisplay } from '../../../utils/yearlyPassengers'
+import {
+  getLatestYearlyPassengerDisplay,
+  getYearlyPassengerDisplayForYear,
+} from '../../../utils/yearlyPassengers'
+import {
+  getYearFromPassengerYearColumnKey,
+  isPassengerYearColumnKey,
+} from '../../../utils/stationsTableColumnCatalog'
 import { getStationMapKey } from '../../../utils/stationAreaSlug'
 import './StationsTableView.css'
 
@@ -29,6 +36,8 @@ interface StationsTableViewProps {
   onSortChange: (sort: StationsTableSort) => void
   onRowClick: (station: Station) => void
   columnSlots: StationsTableColumnSlot[]
+  /** Years used when a Yearly passengers slot expands to per-year columns. */
+  passengerYears?: string[]
   isLoading?: boolean
   skeletonRowCount?: number
 }
@@ -56,7 +65,12 @@ function skeletonCellSize(
       return { width: `${5 + bump}rem`, height: '14px' }
     case 'latestPassengers':
       return { width: `${3.75 + bump}rem`, height: '14px' }
+    case 'yearlyPassengers':
+      return { width: `${5 + bump}rem`, height: '14px' }
     default:
+      if (isPassengerYearColumnKey(columnKey)) {
+        return { width: `${3.5 + bump * 0.5}rem`, height: '14px' }
+      }
       return { width: `${4.75 + bump}rem`, height: '14px' }
   }
 }
@@ -110,7 +124,7 @@ function StationTableSkeletonRow({
     >
       {visibleColumns.map((column, columnIndex) => (
         <td
-          key={`skeleton-cell-${rowIndex}-${column.slotIndex}`}
+          key={`skeleton-cell-${rowIndex}-${column.key}-${column.slotIndex}`}
           className={[
             column.cellClassName,
             column.renderAsLinesChips ? 'stations-table__lines-cell' : '',
@@ -128,6 +142,12 @@ function StationTableSkeletonRow({
 function renderTableCell(station: Station, column: StationsTableColumnDefinition): React.ReactNode {
   if (column.key === 'latestPassengers') {
     const display = getLatestYearlyPassengerDisplay(station.yearlyPassengers)
+    return display || '—'
+  }
+
+  if (isPassengerYearColumnKey(column.key)) {
+    const year = getYearFromPassengerYearColumnKey(column.key)
+    const display = getYearlyPassengerDisplayForYear(station.yearlyPassengers, year)
     return display || '—'
   }
 
@@ -181,7 +201,7 @@ function StationTableRow({
     >
       {visibleColumns.map((column) => (
         <td
-          key={`cell-${rowKey}-${column.slotIndex}`}
+          key={`cell-${rowKey}-${column.key}-${column.slotIndex}`}
           className={[
             column.cellClassName,
             column.renderAsLinesChips ? 'stations-table__lines-cell' : '',
@@ -202,13 +222,14 @@ const StationsTableView: React.FC<StationsTableViewProps> = ({
   onSortChange,
   onRowClick,
   columnSlots,
+  passengerYears = [],
   isLoading = false,
   skeletonRowCount = 25,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null)
   const visibleColumns = useMemo(
-    () => resolveTableColumnsFromSlots(columnSlots),
-    [columnSlots]
+    () => resolveTableColumnsFromSlots(columnSlots, { passengerYears }),
+    [columnSlots, passengerYears]
   )
   const visibleColumnKeys = useMemo(
     () => visibleColumns.map((column) => column.key),
@@ -271,10 +292,11 @@ const StationsTableView: React.FC<StationsTableViewProps> = ({
                     : 'descending'
                   : 'none'
 
-                return (
+                  return (
                   <th
-                    key={`header-${column.slotIndex}`}
+                    key={`header-${column.key}-${column.slotIndex}`}
                     scope="col"
+                    className={column.cellClassName}
                     aria-sort={isLoading ? undefined : ariaSort}
                     aria-label={isLoading ? column.label : undefined}
                   >

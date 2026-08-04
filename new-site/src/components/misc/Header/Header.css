@@ -149,7 +149,7 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: var(--space-sm);
+    gap: var(--space-2xl);
     min-width: 0;
 }
 
@@ -163,10 +163,14 @@
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
-    gap: var(--space-md);
+    gap: var(--space-xl);
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+}
+
+.header-download-app-button {
+    flex-shrink: 0;
 }
 
 .header-nav-links::-webkit-scrollbar {
@@ -286,36 +290,13 @@
     .header-nav-links {
         gap: var(--space-sm);
     }
-}
 
-@media (max-width: 639px) {
-    .header-container {
-        padding: 0 var(--space-lg);
+    /* Tablet + mobile: nav in hamburger; Download app is desktop-only */
+    .header-nav--desktop,
+    .header-download-app-button--desktop {
+        display: none !important;
     }
 
-    .logo {
-        font-size: var(--text-base);
-        min-height: 40px;
-    }
-
-    .header-nav-links {
-        gap: var(--space-sm);
-    }
-
-    /* Narrow: page title + hamburger; inline nav hidden */
-    .logo-link--full {
-        display: none;
-    }
-
-    .logo.logo--mobile {
-        display: flex;
-    }
-
-    .header-nav--desktop {
-        display: none;
-    }
-
-    /* Site header: reveal shared MobileHeader toggle + panel */
     .universal-header .header-menu-toggle {
         display: inline-flex;
         min-height: 44px;
@@ -335,5 +316,29 @@
 
     .universal-header .header-mobile-panel-inner {
         min-height: 0;
+    }
+}
+
+@media (max-width: 639px) {
+    .header-container {
+        padding: 0 var(--space-lg);
+    }
+
+    .logo {
+        font-size: var(--text-base);
+        min-height: 40px;
+    }
+
+    .header-nav-links {
+        gap: var(--space-sm);
+    }
+
+    /* Narrow: page title in bar; brand wordmark hidden */
+    .logo-link--full {
+        display: none;
+    }
+
+    .logo.logo--mobile {
+        display: flex;
     }
 }

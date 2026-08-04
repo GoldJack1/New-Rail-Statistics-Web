@@ -32,6 +32,7 @@ describe('inferStationCollectionFieldSchema from layout profiles', () => {
     // Optional detail rows stay visible from first paint (avoids sample-load flicker).
     expect(schema.showBorough).toBe(true)
     expect(schema.showFareZone).toBe(true)
+    expect(schema.showUsageTab).toBe(true)
     expect(schema.showUrl).toBe(false)
     expect(schema.isLightRail).toBe(false)
     expect(getVisibleStationDetailsTabs(schema)).not.toContain('knowledgebase')
@@ -67,7 +68,10 @@ describe('inferStationCollectionFieldSchema from layout profiles', () => {
       expect(schema.showTiploc).toBe(false)
       expect(schema.requireTiploc).toBe(false)
       expect(schema.showAdminUrlSlug).toBe(true)
+      expect(schema.showProvince).toBe(true)
+      expect(schema.showPostEirCode).toBe(true)
       expect(schema.postEirCodeInLocation).toBe(true)
+      expect(schema.showOperatorCode).toBe(true)
       expect(stationDetailsShowsAdditionalTab(schema)).toBe(false)
       expect(getVisibleStationDetailsTabs(schema)).not.toContain('additional')
       expect(getVisibleStationDetailsTabs(schema)).toContain('admin')
@@ -85,6 +89,27 @@ describe('inferStationCollectionFieldSchema from layout profiles', () => {
     expect(schema.showPostEirCode).toBe(true)
     expect(schema.postEirCodeInLocation).toBe(true)
     expect(stationDetailsShowsAdditionalTab(schema)).toBe(false)
+  })
+
+  it('keeps lean regional province / postcode floors when sampled docs omit them', () => {
+    const schema = inferStationCollectionFieldSchema(
+      [{ stationName: 'Belfast Central' }],
+      'stations_nitranslink'
+    )
+    expect(schema.showProvince).toBe(true)
+    expect(schema.showPostEirCode).toBe(true)
+    expect(schema.showOperatorCode).toBe(true)
+    expect(schema.showTiploc).toBe(false)
+  })
+
+  it('keeps GBNR usage tab floor when sampled docs omit yearly passengers', () => {
+    const schema = inferStationCollectionFieldSchema(
+      [{ stationName: 'York', crsCode: 'YRK' }],
+      'stations_gbnr'
+    )
+    expect(schema.showUsageTab).toBe(true)
+    expect(schema.showFareZone).toBe(true)
+    expect(schema.showBorough).toBe(true)
   })
 
   it('hides Knowledgebase-covered Firebase fields for GBNR even when docs have data', () => {

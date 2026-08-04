@@ -30,6 +30,7 @@ import {
 } from '@/services/stationsIndexedDb'
 import type { Station } from '@/types'
 import { isLightRailStop } from '@/utils/stationCardForNetwork'
+import { LIGHTRAIL_COLLECTION_ID } from '@/utils/lightRailStationFields'
 import { mergeNetworkCollections, toMapLeanStation, buildFullStationIndex } from '@/utils/mapLeanStation'
 import { getStationMapKey, getStationNetworkCollectionId } from '@/utils/stationAreaSlug'
 
@@ -105,19 +106,51 @@ export function shouldReplaceFullWithList(full: Station[], list: Station[]): boo
   return listHasLocale && !fullHasLocale
 }
 
+/**
+ * Older list CDN/IDB rows included SuperTram linesServed but omitted platforms.
+ * Detect that shape so we can upgrade to full detail for the table Platforms column.
+ */
+export function lightRailStationsMissingPlatforms(stations: Station[]): boolean {
+  const lightRail = stations.filter(isLightRailStop)
+  if (lightRail.length === 0) return false
+  if (lightRail.some((station) => Boolean(station.platforms?.trim()))) return false
+  return lightRail.some((station) => Boolean(station.linesServed?.trim()))
+}
+
+const lightRailPlatformsUpgradeAttempted = new Set<StationCollectionId>()
+
+function maybeUpgradeLightRailListForPlatforms(
+  collectionId: StationCollectionId,
+  stations: Station[]
+): void {
+  if (collectionId !== LIGHTRAIL_COLLECTION_ID) return
+  if (!lightRailStationsMissingPlatforms(stations)) return
+  if (lightRailPlatformsUpgradeAttempted.has(collectionId)) return
+  lightRailPlatformsUpgradeAttempted.add(collectionId)
+  void ensureCollectionLoaded(collectionId, {
+    detailLevel: 'full',
+    force: true,
+    preferCache: false,
+  })
+}
+
 function patchListCollectionState(
   collectionId: StationCollectionId,
   stations: Station[],
   fetchedAt: number
 ): void {
   const state = getState(collectionId)
+  const missingPlatforms = lightRailStationsMissingPlatforms(stations)
   patchState(collectionId, {
     list: stations,
     lean: stations.map(toMapLeanStation),
-    ...(shouldReplaceFullWithList(state.full, stations) ? { full: stations } : {}),
+    ...(shouldReplaceFullWithList(state.full, stations) && !missingPlatforms
+      ? { full: stations }
+      : {}),
     fetchedAt,
     error: null,
   })
+  maybeUpgradeLightRailListForPlatforms(collectionId, stations)
 }
 
 function getState(collectionId: StationCollectionId): CollectionLoadState {
@@ -455,13 +488,17 @@ async function hydrateFromIndexedDb(collectionId: StationCollectionId): Promise<
   const entry = await readStationsFromIndexedDb(collectionId)
   if (!entry || entry.stations.length === 0) return false
 
+  const missingPlatforms = lightRailStationsMissingPlatforms(entry.stations)
   patchState(collectionId, {
-    full: entry.stations,
+    // Avoid treating incomplete list-shaped SuperTram rows as full detail —
+    // that blocked platform upgrades from the full CDN/Firestore payload.
+    ...(missingPlatforms ? {} : { full: entry.stations }),
     list: entry.stations,
     lean: entry.stations.map(toMapLeanStation),
     fetchedAt: entry.fetchedAt,
     error: null,
   })
+  maybeUpgradeLightRailListForPlatforms(collectionId, entry.stations)
   return true
 }
 
@@ -748,6 +785,7 @@ export function invalidateStationsCache(): void {
   collectionState.clear()
   inflightLoads.clear()
   inflightMergedBundleLoads.clear()
+  lightRailPlatformsUpgradeAttempted.clear()
   invalidateStationsCdnManifestCache()
   beginStationsInitialSync()
   notify()

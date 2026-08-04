@@ -470,9 +470,9 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
                   colorVariant="primary"
                   width="hug"
                   className="station-details-code-chip"
-                  ariaLabel={`TIPLOC: ${formatOptionalText(station.tiploc)}`}
+                  ariaLabel={`TIPLOC: ${formatOptionalText(station.tiploc?.toUpperCase())}`}
                 >
-                  {`TIPLOC: ${formatOptionalText(station.tiploc)}`}
+                  {`TIPLOC: ${formatOptionalText(station.tiploc?.toUpperCase())}`}
                 </BUTOperatorChip>
               )}
               {fieldSchema.showKnowledgebaseTab ? (

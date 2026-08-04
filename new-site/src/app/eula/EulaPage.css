@@ -1,131 +1,14 @@
-.eula-page {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  padding-top: var(--space-lg);
-  padding-left: var(--space-2xl);
-  padding-right: var(--space-2xl);
-}
-
-.eula-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  max-width: none;
-  margin: 0;
-  width: 100%;
-  padding: 0 0 var(--space-xl) 0;
-  gap: var(--space-lg);
-}
-
-.eula-header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.eula-layout {
-  display: flex;
-  gap: var(--space-xl);
-  align-items: flex-start;
-  width: 100%;
-}
-
-.eula-sidebar {
-  width: 260px;
-  flex-shrink: 0;
+.eula-intro-block {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-}
-
-.eula-sidebar-actions {
-  display: flex;
-  margin-bottom: var(--space-xs);
-}
-
-.eula-tabs {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  position: sticky;
-  top: calc(5rem + env(safe-area-inset-top, 0px));
-}
-
-.eula-tab {
-  width: 100%;
-  justify-content: flex-start;
-  align-items: flex-start;
-  text-align: left;
-  height: auto;
-}
-
-.eula-tab .rs-button__text {
-  white-space: normal;
-  line-height: 1.25;
-  overflow-wrap: anywhere;
-}
-
-.eula-tab.rs-button--pressed {
-  background: transparent !important;
-  box-shadow: none !important;
-  color: var(--text-primary) !important;
-}
-
-.eula-tab.rs-button--pressed .rs-button__inner-shadow {
-  box-shadow: none !important;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .eula-tab.rs-button--pressed:not(:disabled):hover {
-    background-color: var(--button-bg-inactive) !important;
-    color: var(--button-text-inactive) !important;
-  }
-
-  .eula-tab.rs-button--pressed:not(:disabled):hover .rs-button__inner-shadow {
-    box-shadow: var(--button-inner-shadow-pressed) !important;
-  }
-}
-
-.eula-content {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-}
-
-.eula-card {
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  background: var(--bg-secondary);
-  padding: var(--space-xl);
-}
-
-.eula-content > .eula-section {
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  background: var(--bg-secondary);
-  padding: var(--space-xl);
-}
-
-.eula-title {
-  font-size: clamp(var(--text-3xl), 4vw, var(--text-4xl));
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: var(--space-sm);
-}
-
-.eula-updated {
-  font-size: var(--text-sm);
-  color: var(--text-disabled);
-  margin-bottom: var(--space-2xl);
+  margin-top: var(--space-2xl);
 }
 
 .eula-intro {
   font-size: var(--text-base);
   color: var(--text-secondary);
-  line-height: normal;
+  line-height: 1.45;
   margin: 0;
 }
 
@@ -137,7 +20,8 @@
   font-size: var(--text-xl);
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: var(--space-md);
+  margin: 0 0 var(--space-lg);
+  letter-spacing: -0.01em;
 }
 
 .eula-section h3 {
@@ -148,21 +32,14 @@
   margin-bottom: var(--space-sm);
 }
 
-.eula-section h3:first-of-type {
-  margin-top: var(--space-sm);
-}
-
 .eula-section p {
   font-size: var(--text-base);
   color: var(--text-secondary);
-  line-height: normal;
+  line-height: 1.45;
+  margin: 0 0 var(--space-md);
 }
 
-.eula-toc {
-  font-size: var(--text-base);
-  color: var(--text-secondary);
-  line-height: normal;
-  padding-left: var(--space-xl);
+.eula-section p:last-child {
   margin-bottom: 0;
 }
 
@@ -170,15 +47,26 @@
 .eula-section ol {
   font-size: var(--text-base);
   color: var(--text-secondary);
-  line-height: normal;
+  line-height: 1.45;
   padding-left: var(--space-xl);
-  margin-top: var(--space-sm);
+  margin-top: 0;
   margin-bottom: var(--space-md);
+}
+
+.eula-section ul:last-child,
+.eula-section ol:last-child {
+  margin-bottom: 0;
 }
 
 .eula-section ul li,
 .eula-section ol li {
   margin-bottom: var(--space-sm);
+  scroll-margin-top: calc(5rem + env(safe-area-inset-top, 0px));
+}
+
+.eula-section ul li:last-child,
+.eula-section ol li:last-child {
+  margin-bottom: 0;
 }
 
 .eula-address {
@@ -193,50 +81,4 @@
 
 .eula-section a:hover {
   text-decoration: underline;
-}
-
-.eula-back {
-  margin-top: var(--space-3xl);
-  font-size: var(--text-base);
-}
-
-.eula-back a {
-  color: var(--accent-color);
-  text-decoration: none;
-}
-
-.eula-back a:hover {
-  text-decoration: underline;
-}
-
-@media (max-width: 1023px) {
-  .eula-layout {
-    flex-direction: column;
-  }
-
-  .eula-sidebar {
-    width: 100%;
-  }
-
-  .eula-tabs {
-    position: static;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overflow-y: hidden;
-    gap: var(--space-sm);
-    padding-bottom: var(--space-xs);
-  }
-
-  .eula-tab {
-    flex: 0 0 auto;
-    width: auto;
-  }
-}
-
-@media (max-width: 768px) {
-  .eula-page {
-    padding-left: var(--space-lg);
-    padding-right: var(--space-lg);
-  }
 }

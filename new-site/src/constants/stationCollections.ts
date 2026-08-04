@@ -37,6 +37,11 @@ export const NETWORK_VIEW_TABS: Array<{ label: string; value: NetworkViewFilter 
 /** Networks only shown in the network tab strip when admin mode is on. */
 export const ADMIN_ONLY_NETWORK_VIEW_IDS = ['stations_gbheritage'] as const
 
+/** Networks included in the All tab (excludes admin-only networks like GB Heritage). */
+export const ALL_VIEW_NETWORK_COLLECTION_IDS = NETWORK_COLLECTION_IDS.filter(
+  (id) => !(ADMIN_ONLY_NETWORK_VIEW_IDS as readonly string[]).includes(id)
+)
+
 export function getVisibleNetworkViewTabs(
   isAdminMode: boolean
 ): Array<{ label: string; value: NetworkViewFilter }> {
@@ -48,6 +53,14 @@ export function getVisibleNetworkViewTabs(
 
 export function isAdminOnlyNetworkView(view: NetworkViewFilter): boolean {
   return (ADMIN_ONLY_NETWORK_VIEW_IDS as readonly string[]).includes(view)
+}
+
+/** Whether a station belongs in the All network list (not admin-only networks). */
+export function isStationIncludedInAllNetworkView(
+  sourceCollectionId: string | null | undefined
+): boolean {
+  if (!sourceCollectionId) return true
+  return !(ADMIN_ONLY_NETWORK_VIEW_IDS as readonly string[]).includes(sourceCollectionId)
 }
 
 export const SANDBOX_COLLECTION_ID = 'newsandboxstations1' as const

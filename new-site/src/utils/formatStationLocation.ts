@@ -16,7 +16,7 @@ export type StationLocaleParts = {
   stnarea?: string | null
 }
 
-function resolveProvinceForDisplay(station: StationLocaleParts): string {
+export function resolveProvinceForDisplay(station: StationLocaleParts): string {
   const direct = (station.province ?? '').trim()
   if (direct) return direct
   if (!usesProvinceLocaleFormat(station)) return ''

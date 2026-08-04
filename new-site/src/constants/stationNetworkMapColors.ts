@@ -13,5 +13,5 @@ export const NETWORK_MAP_FALLBACK_COLOR = '#64748b'
 /** Unsaved new stations staged via pending changes (not yet published). */
 export const PENDING_NEW_STATION_MAP_COLOR = '#111111'
 
-/** Border colour for the currently selected map pin. */
-export const SELECTED_MARKER_BORDER_COLOR = '#2563eb'
+/** Border colour for the currently selected map pin (matches `--accent-base`). */
+export const SELECTED_MARKER_BORDER_COLOR = '#B20016'

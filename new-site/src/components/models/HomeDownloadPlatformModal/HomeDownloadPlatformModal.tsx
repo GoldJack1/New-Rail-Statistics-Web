@@ -1,14 +1,12 @@
 'use client'
 
 import React, { useCallback, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Check, Copy, X } from '@phosphor-icons/react'
+import { ANDROID_APP_URL, IOS_APP_URL } from '@/utils/appDownload'
 import { BUTBaseButton as Button } from '../../buttons'
 import { BUTSharedNativeButton } from '../../buttons'
 import './HomeDownloadPlatformModal.css'
-
-const IOS_URL = 'https://apps.apple.com/gb/app/rail-statistics/id6759503043'
-const ANDROID_URL =
-  'https://play.google.com/store/apps/details?id=com.jw.railstatisticsandroid.beta&pli=1'
 
 export interface HomeDownloadPlatformModalProps {
   open: boolean
@@ -35,6 +33,11 @@ const getCopyIcon = (isCopied: boolean) => (
 /** Desktop “choose platform” dialog for the home download CTA. */
 const HomeDownloadPlatformModal: React.FC<HomeDownloadPlatformModalProps> = ({ open, onClose }) => {
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const copyLink = useCallback(async (url: string) => {
     await navigator.clipboard.writeText(url)
@@ -51,9 +54,9 @@ const HomeDownloadPlatformModal: React.FC<HomeDownloadPlatformModalProps> = ({ o
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
-  if (!open) return null
+  if (!open || !mounted) return null
 
-  return (
+  return createPortal(
     <div
       className="rs-download-platform-modal__backdrop"
       role="dialog"
@@ -78,7 +81,7 @@ const HomeDownloadPlatformModal: React.FC<HomeDownloadPlatformModalProps> = ({ o
               colorVariant="accent"
               type="button"
               onClick={() => {
-                window.location.href = IOS_URL
+                window.location.href = IOS_APP_URL
               }}
             >
               Download on iOS
@@ -89,8 +92,8 @@ const HomeDownloadPlatformModal: React.FC<HomeDownloadPlatformModalProps> = ({ o
               type="button"
               colorVariant="secondary"
               ariaLabel="Copy iOS link"
-              onClick={() => copyLink(IOS_URL)}
-              icon={getCopyIcon(copiedUrl === IOS_URL)}
+              onClick={() => copyLink(IOS_APP_URL)}
+              icon={getCopyIcon(copiedUrl === IOS_APP_URL)}
             />
           </div>
           <div className="rs-download-platform-modal__row">
@@ -101,7 +104,7 @@ const HomeDownloadPlatformModal: React.FC<HomeDownloadPlatformModalProps> = ({ o
               colorVariant="accent"
               type="button"
               onClick={() => {
-                window.location.href = ANDROID_URL
+                window.location.href = ANDROID_APP_URL
               }}
             >
               Download on Android
@@ -112,13 +115,14 @@ const HomeDownloadPlatformModal: React.FC<HomeDownloadPlatformModalProps> = ({ o
               type="button"
               colorVariant="secondary"
               ariaLabel="Copy Android link"
-              onClick={() => copyLink(ANDROID_URL)}
-              icon={getCopyIcon(copiedUrl === ANDROID_URL)}
+              onClick={() => copyLink(ANDROID_APP_URL)}
+              icon={getCopyIcon(copiedUrl === ANDROID_APP_URL)}
             />
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

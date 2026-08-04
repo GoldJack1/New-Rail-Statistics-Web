@@ -6,19 +6,7 @@ import CarouselHero, { type CarouselHeroSlide } from '@/components/heros/Carouse
 import HomeDownloadPlatformModal from '@/components/models/HomeDownloadPlatformModal/HomeDownloadPlatformModal'
 import StaticHero from '@/components/heros/StaticHero/StaticHero'
 import { preventSingleWordWidow } from '@/utils/textWidow'
-
-const IOS_APP_URL = 'https://apps.apple.com/gb/app/rail-statistics/id6759503043'
-const ANDROID_APP_URL =
-  'https://play.google.com/store/apps/details?id=com.jw.railstatisticsandroid.beta&pli=1'
-
-type Platform = 'ios' | 'android' | 'desktop'
-
-function detectPlatform(): Platform {
-  const ua = navigator.userAgent
-  if (/iPad|iPhone|iPod/.test(ua)) return 'ios'
-  if (/Android/.test(ua)) return 'android'
-  return 'desktop'
-}
+import { resolveAppDownloadAction } from '@/utils/appDownload'
 
 const HOME_PRIMARY_SUBTITLE =
   "Start building a map of where you've been, one station at a time."
@@ -391,14 +379,12 @@ export default function HomePage() {
   const [downloadModalOpen, setDownloadModalOpen] = useState(false)
 
   const onDownloadCta = useCallback(() => {
-    const platform = detectPlatform()
-    if (platform === 'ios') {
-      window.location.href = IOS_APP_URL
-    } else if (platform === 'android') {
-      window.location.href = ANDROID_APP_URL
-    } else {
-      setDownloadModalOpen(true)
+    const action = resolveAppDownloadAction()
+    if (action.type === 'redirect') {
+      window.location.href = action.url
+      return
     }
+    setDownloadModalOpen(true)
   }, [])
 
   const homePrimaryHero1Slide = useMemo(

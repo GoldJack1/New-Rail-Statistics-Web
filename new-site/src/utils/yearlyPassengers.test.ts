@@ -4,6 +4,8 @@ import {
   formatPassengerAxisTick,
   getLatestYearlyPassengerCount,
   getLatestYearlyPassengerDisplay,
+  getYearlyPassengerDisplayForYear,
+  collectYearlyPassengerYears,
   getYearlyPassengerChartPoints,
   parseYearlyPassengerCount,
   trimLeadingTrailingChartZeros,
@@ -24,6 +26,25 @@ describe('yearlyPassengers', () => {
 
     expect(count).toBe(2500)
     expect(getLatestYearlyPassengerDisplay({ '2023': 2500 })).toBe('(2023) 2,500')
+  })
+
+  it('formats all yearly passengers newest first', () => {
+    expect(
+      getYearlyPassengerDisplayForYear(
+        {
+          '2022': 1000,
+          '2024': null,
+          '2023': 2500,
+        },
+        '2023'
+      )
+    ).toBe('2,500')
+    expect(
+      collectYearlyPassengerYears([
+        { yearlyPassengers: { '2022': 1000, '2024': null, '2023': 2500 } },
+        { yearlyPassengers: { '2021': 900, '2023': 1 } },
+      ])
+    ).toEqual(['2023', '2022', '2021'])
   })
 
   it('extracts yearly passengers from top-level Firestore year keys', () => {

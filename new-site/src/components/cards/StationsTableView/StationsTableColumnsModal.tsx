@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { CloseIcon } from '@/components/icons'
+import { CloseIcon, Minus, Plus } from '@/components/icons'
 import { BUTLeftIconWideButton, BUTOperatorChip, BUTWideButton } from '../../buttons'
 import TextCard from '../TextCard/TextCard'
 import {
@@ -26,6 +26,7 @@ interface StationsTableColumnsModalProps {
   slots: StationsTableColumnSlot[]
   networkView: NetworkViewFilter
   fieldSchema: StationCollectionFieldSchema
+  isAdminMode?: boolean
   onApply: (slots: StationsTableColumnSlot[]) => void
   onClose: () => void
 }
@@ -35,18 +36,23 @@ const StationsTableColumnsModal: React.FC<StationsTableColumnsModalProps> = ({
   slots,
   networkView,
   fieldSchema,
+  isAdminMode = true,
   onApply,
   onClose,
 }) => {
   const [draftSlots, setDraftSlots] = useState<StationsTableColumnSlot[]>(slots)
   const [selectedSlotIndex, setSelectedSlotIndex] = useState(0)
+  const columnOptions = useMemo(
+    () => ({ isAdminMode }),
+    [isAdminMode]
+  )
   const fieldOptions = useMemo(
-    () => getTableFieldOptionLabelsForNetwork(networkView, fieldSchema),
-    [networkView, fieldSchema]
+    () => getTableFieldOptionLabelsForNetwork(networkView, fieldSchema, columnOptions),
+    [networkView, fieldSchema, columnOptions]
   )
   const allowedFields = useMemo(
-    () => getAvailableTableColumnKeys(networkView, fieldSchema),
-    [networkView, fieldSchema]
+    () => getAvailableTableColumnKeys(networkView, fieldSchema, columnOptions),
+    [networkView, fieldSchema, columnOptions]
   )
 
   const getFieldOptionsForSlot = (slot: StationsTableColumnSlot): string[] => {
@@ -237,24 +243,28 @@ const StationsTableColumnsModal: React.FC<StationsTableColumnsModalProps> = ({
 
         <div className="stations-table-columns-modal__footer">
           <div className="stations-table-columns-modal__footer-column-actions">
-            <BUTWideButton
+            <BUTLeftIconWideButton
               type="button"
               width="hug"
               colorVariant="primary"
               onClick={handleAddColumn}
               disabled={!canAddColumn}
+              icon={<Plus size={16} weight="bold" aria-hidden />}
             >
               Add
-            </BUTWideButton>
-            <BUTWideButton
+            </BUTLeftIconWideButton>
+            <BUTLeftIconWideButton
               type="button"
               width="hug"
               colorVariant="primary"
               onClick={handleRemoveColumn}
               disabled={!canRemoveColumn}
+              icon={<Minus size={16} weight="bold" aria-hidden />}
             >
               Remove
-            </BUTWideButton>
+            </BUTLeftIconWideButton>
+          </div>
+          <div className="stations-table-columns-modal__footer-actions">
             <BUTWideButton
               type="button"
               width="hug"
@@ -262,11 +272,6 @@ const StationsTableColumnsModal: React.FC<StationsTableColumnsModalProps> = ({
               onClick={handleResetDefaults}
             >
               Reset defaults
-            </BUTWideButton>
-          </div>
-          <div className="stations-table-columns-modal__footer-actions">
-            <BUTWideButton type="button" width="hug" colorVariant="primary" onClick={onClose}>
-              Cancel
             </BUTWideButton>
             <BUTWideButton type="button" width="hug" colorVariant="green-action" onClick={handleApply}>
               Apply headers

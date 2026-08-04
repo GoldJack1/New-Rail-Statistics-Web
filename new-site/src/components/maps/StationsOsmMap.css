@@ -146,6 +146,14 @@
     pointer-events: auto;
 }
 
+.stations-osm-map__supertram-marker-hit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    pointer-events: auto;
+}
+
 .stations-osm-map__supertram-marker {
     display: flex;
     align-items: center;
@@ -156,7 +164,7 @@
     border-radius: 50%;
     background-color: #000000;
     opacity: 0.95;
-    pointer-events: auto;
+    pointer-events: none;
 }
 
 .stations-osm-map__supertram-marker__svg {

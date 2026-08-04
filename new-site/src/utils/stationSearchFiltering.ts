@@ -1,8 +1,14 @@
 import type { Station } from '@/types'
 import type { NetworkViewFilter } from '@/constants/stationCollections'
-import { isGreaterLondonCounty } from '@/utils/formatStationLocation'
+import { parseStoredDateForSort } from '@/utils/dateDdMmYyyy'
+import { isGreaterLondonCounty, resolveProvinceForDisplay, usesProvinceLocaleFormat } from '@/utils/formatStationLocation'
 import { boroughLabelMatchesSelection } from '@/utils/londonBoroughs'
-import { getLatestYearlyPassengerCount } from '@/utils/yearlyPassengers'
+import {
+  getLatestYearlyPassengerCount,
+  getYearlyPassengerCountForYear,
+} from '@/utils/yearlyPassengers'
+import { compareStationsByDateOpened } from '@/utils/stationDateOpenedSort'
+import { getStationTocForDisplay } from '@/utils/stationCardForNetwork'
 import type { StationsTableSort } from '@/utils/stationsTableColumns'
 
 export type SortOption =
@@ -12,6 +18,15 @@ export type SortOption =
   | 'passengers-desc'
   | 'toc-asc'
   | 'toc-desc'
+  | 'date-opened-asc'
+  | 'date-opened-desc'
+
+/** Card-mode passenger sort: per-station latest year, or a specific YYYY. */
+export type PassengerSortYear = 'latest' | string
+
+export function isPassengerSortYear(value: unknown): value is PassengerSortYear {
+  return value === 'latest' || (typeof value === 'string' && /^\d{4}$/.test(value))
+}
 
 export interface StationFilterOptions {
   tocs: string[]
@@ -19,6 +34,10 @@ export interface StationFilterOptions {
   counties: string[]
   /** All borough values shown in the Borough filter DDM. */
   allBoroughs: string[]
+  /** Unique provinces for Irish Rail / NI Translink stops. */
+  provinces: string[]
+  /** Unique Date Opened values (chronological), mainly SuperTram. */
+  dateOpened: string[]
   fareZones: string[]
 }
 
@@ -28,6 +47,10 @@ export interface StationFilterSelections {
   counties: string[]
   /** Selected boroughs in the Borough filter DDM. */
   boroughs: string[]
+  /** Selected provinces (Irish Rail / NI Translink). */
+  provinces: string[]
+  /** Selected Date Opened values. */
+  dateOpened: string[]
   fareZones: string[]
 }
 
@@ -94,11 +117,31 @@ const isNonEmptyString = (value: string | null | undefined): value is string =>
 const sortAlphabetically = (values: string[]) =>
   [...values].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
 
+const sortDateOpenedChronologically = (values: string[]) =>
+  [...values].sort((a, b) => {
+    const aMs = parseStoredDateForSort(a)
+    const bMs = parseStoredDateForSort(b)
+    if (aMs == null && bMs == null) return a.localeCompare(b, undefined, { sensitivity: 'base' })
+    if (aMs == null) return 1
+    if (bMs == null) return -1
+    return aMs - bMs
+  })
+
 const shouldApplyCategoryFilter = (selected: string[], allOptions: string[]) =>
   selected.length !== allOptions.length
 
 const getLatestPassengers = (station: Station): number =>
   getLatestYearlyPassengerCount(station.yearlyPassengers) ?? 0
+
+const getPassengersForCardSort = (
+  station: Station,
+  passengerYear: PassengerSortYear
+): number => {
+  if (passengerYear !== 'latest') {
+    return getYearlyPassengerCountForYear(station.yearlyPassengers, passengerYear) ?? 0
+  }
+  return getLatestPassengers(station)
+}
 
 export const sortOptionToTableSort = (sortOption: SortOption): StationsTableSort => {
   switch (sortOption) {
@@ -112,6 +155,10 @@ export const sortOptionToTableSort = (sortOption: SortOption): StationsTableSort
       return { column: 'latestPassengers', direction: 'asc' }
     case 'passengers-desc':
       return { column: 'latestPassengers', direction: 'desc' }
+    case 'date-opened-asc':
+      return { column: 'dateOpened', direction: 'asc' }
+    case 'date-opened-desc':
+      return { column: 'dateOpened', direction: 'desc' }
     case 'name-asc':
     default:
       return { column: 'name', direction: 'asc' }
@@ -128,6 +175,9 @@ export const tableSortToSortOption = (sort: StationsTableSort): SortOption | nul
   if (sort.column === 'latestPassengers') {
     return sort.direction === 'desc' ? 'passengers-desc' : 'passengers-asc'
   }
+  if (sort.column === 'dateOpened') {
+    return sort.direction === 'desc' ? 'date-opened-desc' : 'date-opened-asc'
+  }
   return null
 }
 
@@ -136,13 +186,21 @@ export const getStationFilterOptions = (stations: Station[]): StationFilterOptio
   const countries = new Set<string>()
   const counties = new Set<string>()
   const allBoroughs = new Set<string>()
+  const provinces = new Set<string>()
+  const dateOpened = new Set<string>()
   const fareZones = new Set<string>()
 
   for (const station of stations) {
-    if (isNonEmptyString(station.toc)) tocs.add(station.toc)
+    const toc = getStationTocForDisplay(station)
+    if (isNonEmptyString(toc)) tocs.add(toc)
     if (isNonEmptyString(station.country)) countries.add(station.country)
     if (isNonEmptyString(station.county)) counties.add(station.county)
     if (isNonEmptyString(station.borough)) allBoroughs.add(station.borough)
+    if (usesProvinceLocaleFormat(station)) {
+      const province = resolveProvinceForDisplay(station)
+      if (province) provinces.add(province)
+    }
+    if (isNonEmptyString(station.dateOpened)) dateOpened.add(station.dateOpened.trim())
     if (isNonEmptyString(station.fareZone)) fareZones.add(station.fareZone)
   }
 
@@ -151,6 +209,8 @@ export const getStationFilterOptions = (stations: Station[]): StationFilterOptio
     countries: sortAlphabetically([...countries]),
     counties: sortAlphabetically([...counties]),
     allBoroughs: sortAlphabetically([...allBoroughs]),
+    provinces: sortAlphabetically([...provinces]),
+    dateOpened: sortDateOpenedChronologically([...dateOpened]),
     fareZones: sortAlphabetically([...fareZones]),
   }
 }
@@ -217,6 +277,8 @@ export const getDefaultStationFilterSelections = (
   countries: options.countries,
   counties: options.counties,
   boroughs: options.allBoroughs,
+  provinces: options.provinces,
+  dateOpened: options.dateOpened,
   fareZones: options.fareZones,
 })
 
@@ -234,6 +296,8 @@ export const filterStations = (
     !shouldApplyCategoryFilter(selections.countries, options.countries) &&
     !shouldApplyCategoryFilter(selections.counties, options.counties) &&
     !shouldApplyCategoryFilter(selections.boroughs, options.allBoroughs) &&
+    !shouldApplyCategoryFilter(selections.provinces, options.provinces) &&
+    !shouldApplyCategoryFilter(selections.dateOpened, options.dateOpened) &&
     !shouldApplyCategoryFilter(selections.fareZones, options.fareZones)
 
   // Default “all selected” + empty search — skip O(n) scan on large lists.
@@ -250,7 +314,7 @@ export const filterStations = (
 
     const tocMatch =
       !shouldApplyCategoryFilter(selections.tocs, options.tocs) ||
-      selections.tocs.includes(station.toc || '')
+      selections.tocs.includes(getStationTocForDisplay(station))
     const countryMatch =
       !shouldApplyCategoryFilter(selections.countries, options.countries) ||
       selections.countries.includes(station.country || '')
@@ -263,6 +327,14 @@ export const filterStations = (
       (isNonEmptyString(station.borough) &&
         boroughLabelMatchesSelection(station.borough, selections.boroughs))
 
+    const provinceMatch =
+      !shouldApplyCategoryFilter(selections.provinces, options.provinces) ||
+      selections.provinces.includes(resolveProvinceForDisplay(station))
+
+    const dateOpenedMatch =
+      !shouldApplyCategoryFilter(selections.dateOpened, options.dateOpened) ||
+      selections.dateOpened.includes((station.dateOpened || '').trim())
+
     const fareZoneMatch =
       !shouldApplyCategoryFilter(selections.fareZones, options.fareZones) ||
       selections.fareZones.includes(station.fareZone || '')
@@ -273,12 +345,18 @@ export const filterStations = (
       countryMatch &&
       countyMatch &&
       boroughMatch &&
+      provinceMatch &&
+      dateOpenedMatch &&
       fareZoneMatch
     )
   })
 }
 
-export const sortStations = (stations: Station[], sortOption: SortOption): Station[] => {
+export const sortStations = (
+  stations: Station[],
+  sortOption: SortOption,
+  options: { passengerYear?: PassengerSortYear } = {}
+): Station[] => {
   if (stations.length <= 1) return stations
 
   // CDN list rows are typically name-asc already — avoid a full copy+sort when possible.
@@ -295,20 +373,37 @@ export const sortStations = (stations: Station[], sortOption: SortOption): Stati
     if (alreadySorted) return stations
   }
 
-  return [...stations].sort((a, b) => {
+  const passengerYear = options.passengerYear ?? 'latest'
+  const isPassengerSort =
+    sortOption === 'passengers-asc' || sortOption === 'passengers-desc'
+  const list =
+    isPassengerSort && passengerYear !== 'latest'
+      ? stations.filter(
+          (station) =>
+            getYearlyPassengerCountForYear(station.yearlyPassengers, passengerYear) != null
+        )
+      : stations
+
+  if (list.length <= 1) return list
+
+  return [...list].sort((a, b) => {
     switch (sortOption) {
       case 'name-asc':
         return (a.stationName || '').localeCompare(b.stationName || '')
       case 'name-desc':
         return (b.stationName || '').localeCompare(a.stationName || '')
       case 'toc-asc':
-        return (a.toc || '').localeCompare(b.toc || '')
+        return getStationTocForDisplay(a).localeCompare(getStationTocForDisplay(b))
       case 'toc-desc':
-        return (b.toc || '').localeCompare(a.toc || '')
+        return getStationTocForDisplay(b).localeCompare(getStationTocForDisplay(a))
       case 'passengers-asc':
-        return getLatestPassengers(a) - getLatestPassengers(b)
+        return getPassengersForCardSort(a, passengerYear) - getPassengersForCardSort(b, passengerYear)
       case 'passengers-desc':
-        return getLatestPassengers(b) - getLatestPassengers(a)
+        return getPassengersForCardSort(b, passengerYear) - getPassengersForCardSort(a, passengerYear)
+      case 'date-opened-asc':
+        return compareStationsByDateOpened(a, b, 'asc')
+      case 'date-opened-desc':
+        return compareStationsByDateOpened(a, b, 'desc')
       default:
         return 0
     }

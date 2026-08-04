@@ -165,14 +165,41 @@ html[data-theme='dark'] .stations-table-wrap {
 }
 
 .stations-table__name {
+  position: sticky;
+  left: 0;
+  z-index: 2;
   font-weight: 600;
   color: var(--text-primary);
   min-width: 10rem;
+  /* Opaque fill so cells scrolling underneath don’t bleed through */
+  background-color: var(--stations-table-row-bg, var(--stations-table-row-default, var(--bg-table-a)));
+  border-right: 1px solid var(--stations-table-cell-border, var(--border-color));
+}
+
+.stations-table th.stations-table__name {
+  z-index: 3;
+  background-color: var(--stations-table-header-bg, var(--bg-table-a));
 }
 
 .stations-table__locale {
   min-width: 16rem;
   color: var(--text-secondary);
+}
+
+.stations-table__yearly-passengers {
+  min-width: 12rem;
+  max-width: 28rem;
+  white-space: normal;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+.stations-table__passenger-year {
+  min-width: 4.5rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .stations-table__lines-cell {

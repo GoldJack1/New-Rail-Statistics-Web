@@ -22,8 +22,25 @@ describe('stationFirestoreMapper', () => {
 
     expect(station.stationName).toBe('Test')
     expect(station.yearlyPassengers).toEqual({ '2023': 1200 })
-    expect(station.platforms).toBeUndefined()
+    expect(station.platforms).toBe('2')
     expect(station.stepFreeCode).toBeUndefined()
+  })
+
+  it('maps Platforms on list detail for SuperTram stops', () => {
+    const station = mapFirestoreDocToStation(
+      'st-1',
+      {
+        StopName: 'Cathedral',
+        Platforms: 'A, B',
+        'Lines Served': 'Blue, Yellow',
+        location: [53.38, -1.47],
+      },
+      'lightrail_GBSHEFFSUPERTRAM',
+      'list'
+    )
+
+    expect(station.platforms).toBe('A, B')
+    expect(station.linesServed).toBe('Blue, Yellow')
   })
 
   it('maps full detail with sandbox fields', () => {

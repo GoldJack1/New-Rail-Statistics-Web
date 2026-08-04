@@ -1,5 +1,6 @@
 import L from 'leaflet'
 import {
+  getMarkerHitDiameter,
   getMarkerStrokeWeight,
   getMarkerVisualDiameter,
   getSuperTramIconOuterDiameter,
@@ -30,7 +31,9 @@ export function createSuperTramMapDivIcon(
   isPendingNew: boolean
 ): L.DivIcon {
   const innerSize = getMarkerVisualDiameter(isSelected, mobile)
-  const iconSize = getSuperTramIconOuterDiameter(isSelected, mobile)
+  const visualOuter = getSuperTramIconOuterDiameter(isSelected, mobile)
+  // Pad the icon box to the shared hit diameter so mobile taps match circle pins.
+  const hitSize = Math.max(visualOuter, getMarkerHitDiameter(isSelected, mobile))
   const strokeWeight = getMarkerStrokeWeight(isSelected)
   const strokeColor = isSelected ? MARKER_STROKE.color.selected : MARKER_STROKE.color.normal
   const classes = [
@@ -44,8 +47,8 @@ export function createSuperTramMapDivIcon(
 
   return L.divIcon({
     className: 'stations-osm-map__supertram-marker-shell',
-    html: `<div class="${classes}" style="width:${innerSize}px;height:${innerSize}px;border-width:${strokeWeight}px;border-color:${strokeColor}" aria-hidden="true">${SUPERTRAM_LOGO_SVGMarkup}</div>`,
-    iconSize: [iconSize, iconSize],
-    iconAnchor: [iconSize / 2, iconSize / 2],
+    html: `<div class="stations-osm-map__supertram-marker-hit" style="width:${hitSize}px;height:${hitSize}px" aria-hidden="true"><div class="${classes}" style="width:${innerSize}px;height:${innerSize}px;border-width:${strokeWeight}px;border-color:${strokeColor}">${SUPERTRAM_LOGO_SVGMarkup}</div></div>`,
+    iconSize: [hitSize, hitSize],
+    iconAnchor: [hitSize / 2, hitSize / 2],
   })
 }

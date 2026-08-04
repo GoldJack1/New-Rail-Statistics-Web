@@ -275,7 +275,7 @@
   max-width: 100%;
 }
 
-.stations-table-columns-modal__footer-column-actions .rs-button:last-child {
+.stations-table-columns-modal__footer-column-actions .rs-button {
   flex: 1 1 auto;
 }
 
@@ -340,7 +340,7 @@
     width: auto;
   }
 
-  .stations-table-columns-modal__footer-column-actions .rs-button:last-child {
+  .stations-table-columns-modal__footer-column-actions .rs-button {
     flex: 0 0 auto;
   }
 }

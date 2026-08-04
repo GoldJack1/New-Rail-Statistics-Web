@@ -35,6 +35,7 @@ export type StationsTableColumnKey =
   | 'liftNotes'
   | 'liftDetails'
   | 'dateOpened'
+  | 'orderOfOpening'
   | 'limitedService'
   | 'staffed'
   | 'staffingLevel'
@@ -49,12 +50,19 @@ export type StationsTableColumnKey =
   | 'toiletsChangingPlace'
   | 'toiletsBabyChanging'
   | 'latestPassengers'
+  /** Assign Headers option — expands to one column per year at render time. */
+  | 'yearlyPassengers'
+  /** Resolved year column, e.g. passengers:2024 */
+  | `passengers:${string}`
   | 'network'
+
+/** Keys that can appear in Assign Headers slots (not expanded year columns). */
+export type StationsTableCatalogColumnKey = Exclude<StationsTableColumnKey, `passengers:${string}`>
 
 export type StationsTableColumnSortMode = 'numeric' | 'text' | 'date'
 
 export interface StationsTableColumnCatalogEntry {
-  key: StationsTableColumnKey
+  key: StationsTableCatalogColumnKey
   defaultLabel: string
   sortMode: StationsTableColumnSortMode
   cellClassName?: string
@@ -62,7 +70,7 @@ export interface StationsTableColumnCatalogEntry {
 }
 
 export interface StationsTableColumnSlot {
-  field: StationsTableColumnKey
+  field: StationsTableCatalogColumnKey
 }
 
 export const DEFAULT_TABLE_COLUMN_SLOT_COUNT = 5
@@ -75,11 +83,30 @@ const LOCALE_COMBINED_COLUMN_KEYS = new Set<StationsTableColumnKey>([
   'province',
 ])
 
+/** Never offered in Assign Headers (detail-only / not useful as list columns). */
+const ASSIGN_HEADERS_EXCLUDED_COLUMN_KEYS = new Set<StationsTableColumnKey>([
+  'operatorCode',
+  'postEirCode',
+])
+
+/** Fields shown in Assign Headers only while admin mode is on (all networks). */
+const ADMIN_ONLY_TABLE_COLUMN_KEYS = new Set<StationsTableColumnKey>([
+  'id',
+  'stnarea',
+  'fareZone',
+  /** SuperTram opening sequence — admin-only when that network offers it. */
+  'orderOfOpening',
+])
+
+export type AvailableTableColumnOptions = {
+  isAdminMode?: boolean
+}
+
 export const STATIONS_TABLE_COLUMN_CATALOG: StationsTableColumnCatalogEntry[] = [
   { key: 'id', defaultLabel: 'Station ID', sortMode: 'numeric', cellClassName: 'stations-table__id' },
   { key: 'name', defaultLabel: 'Station name', sortMode: 'text', cellClassName: 'stations-table__name' },
   { key: 'crs', defaultLabel: 'CRS code', sortMode: 'text' },
-  { key: 'tiploc', defaultLabel: 'Tiploc', sortMode: 'text' },
+  { key: 'tiploc', defaultLabel: 'TIPLOC', sortMode: 'text' },
   { key: 'toc', defaultLabel: 'TOC', sortMode: 'text' },
   { key: 'country', defaultLabel: 'Country', sortMode: 'text' },
   { key: 'county', defaultLabel: 'County', sortMode: 'text' },
@@ -105,6 +132,7 @@ export const STATIONS_TABLE_COLUMN_CATALOG: StationsTableColumnCatalogEntry[] = 
   { key: 'liftNotes', defaultLabel: 'Lift notes', sortMode: 'text' },
   { key: 'liftDetails', defaultLabel: 'Lift details', sortMode: 'text' },
   { key: 'dateOpened', defaultLabel: 'Date opened', sortMode: 'date' },
+  { key: 'orderOfOpening', defaultLabel: 'Order of opening', sortMode: 'numeric' },
   { key: 'limitedService', defaultLabel: 'Limited service', sortMode: 'text' },
   { key: 'staffed', defaultLabel: 'Staffed', sortMode: 'text' },
   { key: 'staffingLevel', defaultLabel: 'Staffing level', sortMode: 'text' },
@@ -119,12 +147,33 @@ export const STATIONS_TABLE_COLUMN_CATALOG: StationsTableColumnCatalogEntry[] = 
   { key: 'toiletsChangingPlace', defaultLabel: 'Changing place', sortMode: 'text' },
   { key: 'toiletsBabyChanging', defaultLabel: 'Baby changing', sortMode: 'text' },
   { key: 'latestPassengers', defaultLabel: 'Latest passengers', sortMode: 'numeric' },
+  {
+    key: 'yearlyPassengers',
+    defaultLabel: 'Yearly passengers',
+    sortMode: 'numeric',
+  },
   { key: 'network', defaultLabel: 'Network', sortMode: 'text' },
 ]
 
 export const STATIONS_TABLE_COLUMN_CATALOG_BY_KEY = Object.fromEntries(
   STATIONS_TABLE_COLUMN_CATALOG.map((entry) => [entry.key, entry])
-) as Record<StationsTableColumnKey, StationsTableColumnCatalogEntry>
+) as Record<StationsTableCatalogColumnKey, StationsTableColumnCatalogEntry>
+
+const PASSENGER_YEAR_COLUMN_KEY_PATTERN = /^passengers:(\d{4})$/
+
+export function isPassengerYearColumnKey(
+  key: string
+): key is `passengers:${string}` {
+  return PASSENGER_YEAR_COLUMN_KEY_PATTERN.test(key)
+}
+
+export function makePassengerYearColumnKey(year: string): `passengers:${string}` {
+  return `passengers:${year}`
+}
+
+export function getYearFromPassengerYearColumnKey(key: `passengers:${string}`): string {
+  return key.slice('passengers:'.length)
+}
 
 const DEFAULT_TABLE_COLUMN_SLOTS: StationsTableColumnSlot[] = [
   { field: 'stnarea' },
@@ -155,10 +204,9 @@ const GB_HERITAGE_DEFAULT_TABLE_COLUMN_SLOTS: StationsTableColumnSlot[] = [
 ]
 
 const IRISH_RAIL_DEFAULT_TABLE_COLUMN_SLOTS: StationsTableColumnSlot[] = [
-  { field: 'id' },
+  { field: 'crs' },
   { field: 'name' },
   { field: 'locale' },
-  { field: 'crs' },
   { field: 'toc' },
 ]
 
@@ -195,79 +243,102 @@ export function getDefaultTableColumnSlots(
 
 export function getAvailableTableColumnKeys(
   networkView: NetworkViewFilter,
-  fieldSchema: StationCollectionFieldSchema
-): StationsTableColumnKey[] {
+  fieldSchema: StationCollectionFieldSchema,
+  options: AvailableTableColumnOptions = {}
+): StationsTableCatalogColumnKey[] {
+  const isAdminMode = options.isAdminMode !== false
+
+  let keys: StationsTableCatalogColumnKey[]
+
   if (networkView === 'all') {
-    return STATIONS_TABLE_COLUMN_CATALOG.filter(
-      (entry) => !LOCALE_COMBINED_COLUMN_KEYS.has(entry.key)
+    keys = STATIONS_TABLE_COLUMN_CATALOG.filter(
+      (entry) =>
+        !LOCALE_COMBINED_COLUMN_KEYS.has(entry.key) &&
+        !ASSIGN_HEADERS_EXCLUDED_COLUMN_KEYS.has(entry.key)
     ).map((entry) => entry.key)
+  } else {
+    keys = [
+      'id',
+      'name',
+      'locale',
+      'stnarea',
+      'latitude',
+      'longitude',
+    ]
+
+    if (!fieldSchema.isLightRail) {
+      keys.push('crs', 'toc')
+      if (fieldSchema.showTiploc) keys.push('tiploc')
+    }
+
+    if (fieldSchema.showFareZone) keys.push('fareZone')
+    if (fieldSchema.showLinesServed) keys.push('lines')
+    if (fieldSchema.showPlatforms) keys.push('platforms')
+    if (fieldSchema.showNlc) keys.push('nlc')
+    if (fieldSchema.showGauge) keys.push('gauge')
+    if (fieldSchema.showUrl) keys.push('url')
+    if (fieldSchema.showMinConnectionTime) keys.push('minConnectionTime')
+
+    if (fieldSchema.showStepFreeSection) {
+      keys.push('stepFreeStatus')
+      if (fieldSchema.isLightRail) keys.push('hasLift')
+    }
+    if (fieldSchema.showStepFreeNote) keys.push('stepFreeNote')
+    // SuperTram uses a single Has Lift field; nested lift available/notes/details are heavy-rail only.
+    if (fieldSchema.showLiftSection && !fieldSchema.isLightRail) {
+      keys.push('liftAvailable', 'liftNotes', 'liftDetails')
+    }
+
+    if (fieldSchema.showDateOpened) keys.push('dateOpened')
+    if (fieldSchema.showOrderOfOpening) keys.push('orderOfOpening')
+    if (fieldSchema.showLimitedService) keys.push('limitedService')
+
+    if (fieldSchema.isLightRail && fieldSchema.showStaffingLevel) {
+      keys.push('staffed')
+    } else if (fieldSchema.showStaffingLevel) {
+      keys.push('staffingLevel')
+    }
+
+    if (fieldSchema.showConnectionBus) keys.push('connectionBus')
+    if (fieldSchema.showConnectionTaxi) keys.push('connectionTaxi')
+    if (fieldSchema.showConnectionUnderground) keys.push('connectionUnderground')
+    if (fieldSchema.showConnectionTrain) keys.push('connectionTrain')
+
+    if (fieldSchema.showStationStatusSection) {
+      keys.push('stationStatus', 'operationalPeriod')
+    }
+    if (fieldSchema.showRequestStop) keys.push('requestStop')
+
+    if (fieldSchema.showToiletsSection) {
+      keys.push('toiletsAccessible', 'toiletsChangingPlace', 'toiletsBabyChanging')
+    }
+
+    if (fieldSchema.showUsageTab) {
+      keys.push('latestPassengers', 'yearlyPassengers')
+    }
   }
 
-  const keys: StationsTableColumnKey[] = [
-    'id',
-    'name',
-    'locale',
-    'stnarea',
-    'latitude',
-    'longitude',
-  ]
-
-  if (!fieldSchema.isLightRail) {
-    keys.push('crs', 'tiploc', 'toc')
+  if (!isAdminMode) {
+    return keys.filter((key) => !ADMIN_ONLY_TABLE_COLUMN_KEYS.has(key))
   }
-
-  if (fieldSchema.showFareZone) keys.push('fareZone')
-  if (fieldSchema.showLinesServed) keys.push('lines')
-  if (fieldSchema.showPlatforms) keys.push('platforms')
-  if (fieldSchema.showNlc) keys.push('nlc')
-  if (fieldSchema.showGauge) keys.push('gauge')
-  if (fieldSchema.showUrl) keys.push('url')
-  if (fieldSchema.showOperatorCode) keys.push('operatorCode')
-  if (fieldSchema.showMinConnectionTime) keys.push('minConnectionTime')
-  if (fieldSchema.showPostEirCode) keys.push('postEirCode')
-
-  if (fieldSchema.showStepFreeSection) {
-    keys.push('stepFreeStatus')
-    if (fieldSchema.isLightRail) keys.push('hasLift')
-  }
-  if (fieldSchema.showStepFreeNote) keys.push('stepFreeNote')
-  if (fieldSchema.showLiftSection) {
-    keys.push('liftAvailable', 'liftNotes', 'liftDetails')
-  }
-
-  if (fieldSchema.showDateOpened) keys.push('dateOpened')
-  if (fieldSchema.showLimitedService) keys.push('limitedService')
-
-  if (fieldSchema.isLightRail && fieldSchema.showStaffingLevel) {
-    keys.push('staffed')
-  } else if (fieldSchema.showStaffingLevel) {
-    keys.push('staffingLevel')
-  }
-
-  if (fieldSchema.showConnectionBus) keys.push('connectionBus')
-  if (fieldSchema.showConnectionTaxi) keys.push('connectionTaxi')
-  if (fieldSchema.showConnectionUnderground) keys.push('connectionUnderground')
-  if (fieldSchema.showConnectionTrain) keys.push('connectionTrain')
-
-  if (fieldSchema.showStationStatusSection) {
-    keys.push('stationStatus', 'operationalPeriod')
-  }
-  if (fieldSchema.showRequestStop) keys.push('requestStop')
-
-  if (fieldSchema.showToiletsSection) {
-    keys.push('toiletsAccessible', 'toiletsChangingPlace', 'toiletsBabyChanging')
-  }
-
-  if (fieldSchema.showUsageTab) keys.push('latestPassengers')
 
   return keys
 }
 
+export function filterTableColumnSlotsToAllowedKeys(
+  slots: StationsTableColumnSlot[],
+  allowedKeys: StationsTableCatalogColumnKey[]
+): StationsTableColumnSlot[] {
+  const allowed = new Set(allowedKeys)
+  return slots.filter((slot) => allowed.has(slot.field))
+}
+
 export function getTableFieldOptionLabelsForNetwork(
   networkView: NetworkViewFilter,
-  fieldSchema: StationCollectionFieldSchema
+  fieldSchema: StationCollectionFieldSchema,
+  options: AvailableTableColumnOptions = {}
 ): string[] {
-  const allowedKeys = new Set(getAvailableTableColumnKeys(networkView, fieldSchema))
+  const allowedKeys = new Set(getAvailableTableColumnKeys(networkView, fieldSchema, options))
   return STATIONS_TABLE_COLUMN_CATALOG.filter((entry) => allowedKeys.has(entry.key)).map(
     (entry) => entry.defaultLabel
   )
@@ -281,9 +352,9 @@ export function getTableFieldSchemaForNetworkView(networkView: NetworkViewFilter
 }
 
 export function getSuggestedTableColumnField(
-  usedFields: StationsTableColumnKey[],
-  allowedFields?: StationsTableColumnKey[]
-): StationsTableColumnKey {
+  usedFields: StationsTableCatalogColumnKey[],
+  allowedFields?: StationsTableCatalogColumnKey[]
+): StationsTableCatalogColumnKey {
   const catalog = allowedFields
     ? STATIONS_TABLE_COLUMN_CATALOG.filter((entry) => allowedFields.includes(entry.key))
     : STATIONS_TABLE_COLUMN_CATALOG
@@ -293,7 +364,7 @@ export function getSuggestedTableColumnField(
 
 export function addTableColumnSlot(
   slots: StationsTableColumnSlot[],
-  allowedFields?: StationsTableColumnKey[]
+  allowedFields?: StationsTableCatalogColumnKey[]
 ): StationsTableColumnSlot[] {
   if (slots.length >= MAX_TABLE_COLUMN_SLOT_COUNT) return slots
 
@@ -310,12 +381,15 @@ export function getTableFieldOptionLabels(): string[] {
   return STATIONS_TABLE_COLUMN_CATALOG.map((entry) => entry.defaultLabel)
 }
 
-export function getTableFieldKeyFromLabel(label: string): StationsTableColumnKey | null {
+export function getTableFieldKeyFromLabel(label: string): StationsTableCatalogColumnKey | null {
   const match = STATIONS_TABLE_COLUMN_CATALOG.find((entry) => entry.defaultLabel === label)
   return match?.key ?? null
 }
 
 export function getTableFieldLabel(field: StationsTableColumnKey): string {
+  if (isPassengerYearColumnKey(field)) {
+    return getYearFromPassengerYearColumnKey(field)
+  }
   return STATIONS_TABLE_COLUMN_CATALOG_BY_KEY[field].defaultLabel
 }
 

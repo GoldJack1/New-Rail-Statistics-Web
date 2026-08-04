@@ -28,6 +28,10 @@ const makeStation = (overrides: Partial<Station>): Station => ({
   borough: overrides.borough ?? null,
   fareZone: overrides.fareZone ?? null,
   yearlyPassengers: overrides.yearlyPassengers ?? null,
+  dateOpened: overrides.dateOpened ?? null,
+  orderOfOpening: overrides.orderOfOpening ?? null,
+  province: overrides.province ?? null,
+  sourceCollectionId: overrides.sourceCollectionId,
 })
 
 describe('stationSearchFiltering', () => {
@@ -67,9 +71,68 @@ describe('stationSearchFiltering', () => {
     }),
   ]
 
-  it('exposes all boroughs in the DDM', () => {
-    const options = getStationFilterOptions(stations)
-    expect(options.allBoroughs).toEqual(['Cardiff', 'Westminster', 'York'])
+  it('includes SYSupertram in TOC options and filters SuperTram stops by it', () => {
+    const mixed: Station[] = [
+      makeStation({ id: 'rail', stationName: 'York', toc: 'LNER' }),
+      makeStation({
+        id: 'tram',
+        stationName: 'Cathedral',
+        toc: null,
+        sourceCollectionId: 'lightrail_GBSHEFFSUPERTRAM',
+        stnarea: 'GBSHEFFSUPERTRAM',
+      }),
+    ]
+
+    const options = getStationFilterOptions(mixed)
+    expect(options.tocs).toEqual(['LNER', 'SYSupertram'])
+
+    const filtered = filterStations(
+      mixed,
+      '',
+      { ...getDefaultStationFilterSelections(options), tocs: ['SYSupertram'] },
+      options
+    )
+    expect(filtered.map((station) => station.id)).toEqual(['tram'])
+  })
+
+  it('exposes provinces from Irish / NI stations and filters by them', () => {
+    const irishStations: Station[] = [
+      makeStation({
+        id: 'cork',
+        stationName: 'Cork',
+        county: 'Cork',
+        country: 'Ireland',
+        province: 'Munster',
+        sourceCollectionId: 'stations_roiirerail',
+      }),
+      makeStation({
+        id: 'belfast',
+        stationName: 'Belfast Central',
+        county: 'Antrim',
+        country: 'Northern Ireland',
+        province: 'Ulster',
+        sourceCollectionId: 'stations_nitranslink',
+      }),
+      makeStation({
+        id: 'york',
+        stationName: 'York',
+        county: 'North Yorkshire',
+        country: 'England',
+        sourceCollectionId: 'stations_gbnr',
+      }),
+    ]
+
+    const options = getStationFilterOptions(irishStations)
+    expect(options.provinces).toEqual(['Munster', 'Ulster'])
+
+    const defaults = getDefaultStationFilterSelections(options)
+    const filtered = filterStations(
+      irishStations,
+      '',
+      { ...defaults, provinces: ['Ulster'] },
+      options
+    )
+    expect(filtered.map((station) => station.id)).toEqual(['belfast'])
   })
 
   it('scopes borough options to the selected county', () => {
@@ -142,6 +205,34 @@ describe('stationSearchFiltering', () => {
     }
     const results = filterStations(londonStations, '', londonSelections, options)
     expect(results.map((station) => station.id)).toEqual(['1', '2'])
+  })
+
+  it('exposes date opened values in chronological order', () => {
+    const withDates: Station[] = [
+      makeStation({ id: '1', dateOpened: '22/08/1994' }),
+      makeStation({ id: '2', dateOpened: '21/03/1994' }),
+      makeStation({ id: '3', dateOpened: '18/02/1995' }),
+      makeStation({ id: '4', dateOpened: '21/03/1994' }),
+    ]
+    const options = getStationFilterOptions(withDates)
+    expect(options.dateOpened).toEqual(['21/03/1994', '22/08/1994', '18/02/1995'])
+  })
+
+  it('filters by date opened selections', () => {
+    const withDates: Station[] = [
+      makeStation({ id: '1', dateOpened: '21/03/1994' }),
+      makeStation({ id: '2', dateOpened: '22/08/1994' }),
+      makeStation({ id: '3', dateOpened: '18/02/1995' }),
+    ]
+    const options = getStationFilterOptions(withDates)
+    const defaults = getDefaultStationFilterSelections(options)
+    const results = filterStations(
+      withDates,
+      '',
+      { ...defaults, dateOpened: ['21/03/1994', '18/02/1995'] },
+      options
+    )
+    expect(results.map((station) => station.id)).toEqual(['1', '3'])
   })
 
   it('returns all stations with default all-selected filters', () => {
@@ -225,12 +316,100 @@ describe('stationSearchFiltering', () => {
     expect(sorted.map((station) => station.id)).toEqual(['high', 'low'])
   })
 
+  it('sorts by a chosen passenger year and drops stations without that year', () => {
+    const passengerStations: Station[] = [
+      makeStation({
+        id: 'a',
+        stationName: 'Alpha',
+        yearlyPassengers: { '2023': 100, '2024': 900 },
+      }),
+      makeStation({
+        id: 'b',
+        stationName: 'Bravo',
+        yearlyPassengers: { '2023': 500, '2024': 50 },
+      }),
+      makeStation({
+        id: 'c',
+        stationName: 'Charlie',
+        yearlyPassengers: { '2024': 200 },
+      }),
+    ]
+
+    expect(
+      sortStations(passengerStations, 'passengers-desc', { passengerYear: '2023' }).map(
+        (station) => station.id
+      )
+    ).toEqual(['b', 'a'])
+
+    expect(
+      sortStations(passengerStations, 'passengers-asc', { passengerYear: '2024' }).map(
+        (station) => station.id
+      )
+    ).toEqual(['b', 'c', 'a'])
+  })
+
+  it('sorts by date opened then order of opening within that date', () => {
+    // SuperTram assigns order per opening date (orders can repeat across dates).
+    const withDates: Station[] = [
+      makeStation({ id: 'carbrook', stationName: 'Carbrook', dateOpened: '21/03/1994', orderOfOpening: 3 }),
+      makeStation({
+        id: 'meadowhall',
+        stationName: 'Meadowhall Interchange',
+        dateOpened: '21/03/1994',
+        orderOfOpening: 1,
+      }),
+      makeStation({
+        id: 'meadowhall-south',
+        stationName: 'Meadowhall South/Tinsley',
+        dateOpened: '21/03/1994',
+        orderOfOpening: 2,
+      }),
+      makeStation({
+        id: 'arbourthorne',
+        stationName: 'Arbourthorne Road',
+        dateOpened: '22/08/1994',
+        orderOfOpening: 4,
+      }),
+      makeStation({
+        id: 'arena',
+        stationName: 'Arena/Olympic Legacy Park',
+        dateOpened: '22/08/1994',
+        orderOfOpening: 7,
+      }),
+      makeStation({ id: 'none', stationName: 'Z', dateOpened: null }),
+    ]
+
+    expect(sortStations(withDates, 'date-opened-asc').map((station) => station.id)).toEqual([
+      'meadowhall',
+      'meadowhall-south',
+      'carbrook',
+      'arbourthorne',
+      'arena',
+      'none',
+    ])
+    expect(sortStations(withDates, 'date-opened-desc').map((station) => station.id)).toEqual([
+      'arena',
+      'arbourthorne',
+      'carbrook',
+      'meadowhall-south',
+      'meadowhall',
+      'none',
+    ])
+  })
+
   it('maps sidebar sort options to table sort state', () => {
     expect(sortOptionToTableSort('passengers-desc')).toEqual({
       column: 'latestPassengers',
       direction: 'desc',
     })
+    expect(sortOptionToTableSort('date-opened-asc')).toEqual({
+      column: 'dateOpened',
+      direction: 'asc',
+    })
     expect(tableSortToSortOption({ column: 'toc', direction: 'asc' })).toBe('toc-asc')
+    expect(tableSortToSortOption({ column: 'dateOpened', direction: 'desc' })).toBe(
+      'date-opened-desc'
+    )
     expect(tableSortToSortOption({ column: 'county', direction: 'asc' })).toBeNull()
   })
 

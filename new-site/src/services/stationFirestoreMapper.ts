@@ -1,6 +1,7 @@
 import type { StationCollectionId } from '@/constants/stationCollections'
 import { isNetworkCollection } from '@/constants/stationCollections'
 import type { Station } from '@/types'
+import { LIGHT_RAIL_DOC_FIELDS } from '@/utils/lightRailStationFields'
 import { mapStationDetailFieldsFromFirestore } from '@/utils/stationsTableColumnCatalog'
 import { extractYearlyPassengersFromFirestoreData } from '@/utils/yearlyPassengers'
 
@@ -200,6 +201,11 @@ function readOrderOfOpening(data: Record<string, unknown>): string | null {
     : null
 }
 
+function readPlatforms(data: Record<string, unknown>): string | null {
+  const value = data[LIGHT_RAIL_DOC_FIELDS.platforms] ?? data.Platforms ?? data.platforms
+  return value != null && String(value).trim() !== '' ? String(value).trim() : null
+}
+
 export function mapFirestoreDocToStation(
   docId: string,
   data: Record<string, unknown>,
@@ -210,6 +216,7 @@ export function mapFirestoreDocToStation(
   const linesServed = readLinesServed(data)
   const dateOpened = readDateOpened(data)
   const orderOfOpening = readOrderOfOpening(data)
+  const platforms = readPlatforms(data)
 
   if (detailLevel === 'lean') {
     return {
@@ -258,6 +265,7 @@ export function mapFirestoreDocToStation(
     linesServed,
     dateOpened,
     orderOfOpening,
+    platforms,
     ...(isNetworkCollection(collectionName) ? { sourceCollectionId: collectionName } : {}),
   }
 

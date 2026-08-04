@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { Station } from '@/types'
-import { shouldReplaceFullWithList, stationHasLocaleDetail } from '@/services/stationsDataService'
+import {
+  lightRailStationsMissingPlatforms,
+  shouldReplaceFullWithList,
+  stationHasLocaleDetail,
+} from '@/services/stationsDataService'
 
 const leanRow = (id: string): Station => ({
   id,
@@ -24,6 +28,17 @@ const listRow = (id: string): Station => ({
   borough: 'Westminster',
 })
 
+const supertramRow = (id: string, overrides: Partial<Station> = {}): Station => ({
+  ...leanRow(id),
+  stationName: 'Cathedral',
+  crsCode: '',
+  toc: null,
+  stnarea: 'GBSHEFFSUPERTRAM',
+  sourceCollectionId: 'lightrail_GBSHEFFSUPERTRAM',
+  linesServed: 'Blue, Yellow',
+  ...overrides,
+})
+
 describe('stationHasLocaleDetail', () => {
   it('detects locale fields on list rows', () => {
     expect(stationHasLocaleDetail(listRow('1'))).toBe(true)
@@ -42,5 +57,21 @@ describe('shouldReplaceFullWithList', () => {
 
   it('keeps full cache when it already has locale detail', () => {
     expect(shouldReplaceFullWithList([listRow('1')], [listRow('2')])).toBe(false)
+  })
+})
+
+describe('lightRailStationsMissingPlatforms', () => {
+  it('detects SuperTram list rows that have lines but no platforms', () => {
+    expect(lightRailStationsMissingPlatforms([supertramRow('1')])).toBe(true)
+  })
+
+  it('returns false when platforms are present', () => {
+    expect(
+      lightRailStationsMissingPlatforms([supertramRow('1', { platforms: 'A, B' })])
+    ).toBe(false)
+  })
+
+  it('ignores non-light-rail stations', () => {
+    expect(lightRailStationsMissingPlatforms([listRow('1')])).toBe(false)
   })
 })

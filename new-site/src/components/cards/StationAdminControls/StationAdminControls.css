@@ -46,6 +46,10 @@
   box-sizing: border-box;
 }
 
+.station-admin-controls-group .station-admin-controls-action-button + .station-admin-controls-action-button {
+  margin-top: var(--space-sm);
+}
+
 .station-admin-controls-label {
   margin: 0 0 var(--space-xs);
   font-size: var(--text-xs);

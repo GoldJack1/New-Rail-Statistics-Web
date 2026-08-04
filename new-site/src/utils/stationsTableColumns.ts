@@ -1,14 +1,22 @@
 import type { Station } from '../types'
-import { isLightRailStop } from './stationCardForNetwork'
+import { isLightRailStop, getStationTocForDisplay } from './stationCardForNetwork'
 import { formatStationLocationDisplay } from './formatStationLocation'
 import { formatFareZoneDisplay } from './formatFareZone'
 import { parseStoredDateForSort } from './dateDdMmYyyy'
 import { readStationUrl } from './stationUrlField'
-import { getLatestYearlyPassengerCount, getPassengersForSort } from './yearlyPassengers'
+import {
+  getLatestYearlyPassengerCount,
+  getPassengersForSort,
+  getYearlyPassengerCountForYear,
+} from './yearlyPassengers'
+import { compareStationsByDateOpened } from './stationDateOpenedSort'
 import { NETWORK_LABELS } from '../constants/stationCollections'
 import type { NetworkCollectionId } from '../constants/stationCollections'
 import {
   STATIONS_TABLE_COLUMN_CATALOG_BY_KEY,
+  getYearFromPassengerYearColumnKey,
+  isPassengerYearColumnKey,
+  makePassengerYearColumnKey,
   type StationsTableColumnKey,
   type StationsTableColumnSlot,
   type StationsTableColumnSortMode,
@@ -31,6 +39,12 @@ export interface StationsTableColumnDefinition {
 }
 
 export function getTableColumnValue(station: Station, column: StationsTableColumnKey): string {
+  if (isPassengerYearColumnKey(column)) {
+    const year = getYearFromPassengerYearColumnKey(column)
+    const count = getYearlyPassengerCountForYear(station.yearlyPassengers, year)
+    return count != null ? String(count) : ''
+  }
+
   const isLightRail = isLightRailStop(station)
 
   switch (column) {
@@ -41,9 +55,9 @@ export function getTableColumnValue(station: Station, column: StationsTableColum
     case 'crs':
       return isLightRail ? '' : (station.crsCode ?? '').trim()
     case 'tiploc':
-      return isLightRail ? '' : (station.tiploc ?? '').trim()
+      return isLightRail ? '' : (station.tiploc ?? '').trim().toUpperCase()
     case 'toc':
-      return isLightRail ? '' : (station.toc ?? '').trim()
+      return getStationTocForDisplay(station)
     case 'country':
       return (station.country ?? '').trim()
     case 'county':
@@ -97,6 +111,10 @@ export function getTableColumnValue(station: Station, column: StationsTableColum
       return (station.liftDetails ?? '').trim()
     case 'dateOpened':
       return (station.dateOpened ?? '').trim()
+    case 'orderOfOpening':
+      return station.orderOfOpening != null && String(station.orderOfOpening).trim() !== ''
+        ? String(station.orderOfOpening).trim()
+        : ''
     case 'limitedService':
       return (station.isLimitedService ?? '').trim()
     case 'staffed':
@@ -127,6 +145,9 @@ export function getTableColumnValue(station: Station, column: StationsTableColum
       const count = getLatestYearlyPassengerCount(station.yearlyPassengers)
       return count != null ? String(count) : ''
     }
+    case 'yearlyPassengers':
+      // Slot expands to passengers:YYYY columns; keep empty if unresolved.
+      return ''
     case 'network': {
       const networkId = station.sourceCollectionId
       if (!networkId || !(networkId in NETWORK_LABELS)) return ''
@@ -171,6 +192,18 @@ function compareStationsByColumn(
     return direction === 'asc' ? result : -result
   }
 
+  if (isPassengerYearColumnKey(column)) {
+    const year = getYearFromPassengerYearColumnKey(column)
+    const countA = getYearlyPassengerCountForYear(a.yearlyPassengers, year) ?? -1
+    const countB = getYearlyPassengerCountForYear(b.yearlyPassengers, year) ?? -1
+    const result = countA - countB
+    return direction === 'asc' ? result : -result
+  }
+
+  if (column === 'dateOpened') {
+    return compareStationsByDateOpened(a, b, direction)
+  }
+
   const sortMode = STATIONS_TABLE_COLUMN_CATALOG_BY_KEY[column].sortMode
   const valueA = getTableColumnValue(a, column)
   const valueB = getTableColumnValue(b, column)
@@ -187,23 +220,63 @@ export function sortStationsByTableColumn(
   stations: Station[],
   sort: StationsTableSort
 ): Station[] {
-  return [...stations].sort((a, b) => compareStationsByColumn(a, b, sort.column, sort.direction))
+  const { column, direction } = sort
+  let list = stations
+  if (isPassengerYearColumnKey(column)) {
+    const year = getYearFromPassengerYearColumnKey(column)
+    list = stations.filter(
+      (station) => getYearlyPassengerCountForYear(station.yearlyPassengers, year) != null
+    )
+  }
+
+  return [...list].sort((a, b) => compareStationsByColumn(a, b, column, direction))
 }
 
 export function resolveTableColumnsFromSlots(
-  slots: StationsTableColumnSlot[]
+  slots: StationsTableColumnSlot[],
+  options: { passengerYears?: string[] } = {}
 ): StationsTableColumnDefinition[] {
-  return slots.map((slot, slotIndex) => {
+  const passengerYears = options.passengerYears ?? []
+  const columns: StationsTableColumnDefinition[] = []
+
+  slots.forEach((slot, slotIndex) => {
+    if (slot.field === 'yearlyPassengers') {
+      if (passengerYears.length === 0) {
+        const catalog = STATIONS_TABLE_COLUMN_CATALOG_BY_KEY.yearlyPassengers
+        columns.push({
+          key: 'yearlyPassengers',
+          label: catalog.defaultLabel,
+          sortMode: catalog.sortMode,
+          cellClassName: 'stations-table__passenger-year',
+          slotIndex,
+        })
+        return
+      }
+
+      for (const year of passengerYears) {
+        columns.push({
+          key: makePassengerYearColumnKey(year),
+          label: year,
+          sortMode: 'numeric',
+          cellClassName: 'stations-table__passenger-year',
+          slotIndex,
+        })
+      }
+      return
+    }
+
     const catalog = STATIONS_TABLE_COLUMN_CATALOG_BY_KEY[slot.field]
-    return {
+    columns.push({
       key: slot.field,
       label: catalog.defaultLabel,
       sortMode: catalog.sortMode,
       cellClassName: catalog.cellClassName,
       renderAsLinesChips: catalog.renderAsLinesChips,
       slotIndex,
-    }
+    })
   })
+
+  return columns
 }
 
 export function formatTableCellValue(value: string): string {

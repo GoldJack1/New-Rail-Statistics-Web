@@ -7,6 +7,7 @@ import {
   NETWORK_COLLECTION_IDS,
   NETWORK_LABELS,
   isNetworkCollection,
+  isStationIncludedInAllNetworkView,
   type NetworkCollectionId,
   type NetworkViewFilter,
 } from '../../constants/stationCollections'
@@ -457,7 +458,9 @@ export function StationsOsmMap({
     () =>
       stations.filter((station) => {
         if (!isValidStationCoordinate(station.latitude, station.longitude)) return false
-        if (networkView === 'all') return true
+        if (networkView === 'all') {
+          return isStationIncludedInAllNetworkView(station.sourceCollectionId)
+        }
         return station.sourceCollectionId === networkView
       }),
     [stations, networkView]

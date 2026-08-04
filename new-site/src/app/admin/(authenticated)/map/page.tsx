@@ -6,7 +6,6 @@ import dynamic from 'next/dynamic'
 import { WarningCircle } from '@phosphor-icons/react'
 
 import { PageTopHeader } from '@/components/misc'
-import BetaTag from '@/components/misc/BetaTag/BetaTag'
 import { BUTBaseButton as Button, BUTWideButton } from '@/components/buttons'
 import NetworkStationTabGroup from '@/components/cards/NetworkStationTabGroup/NetworkStationTabGroup'
 import MapLiteModeGate from '@/components/maps/MapLiteModeGate'
@@ -34,7 +33,12 @@ import { useMapsTimelineSession } from '@/hooks/useMapsTimelineSession'
 import { useRestoreMapsSelectedStation } from '@/hooks/useRestoreMapsSelectedStation'
 import { useDevicePerformanceTier } from '@/hooks/useDevicePerformanceTier'
 import { writeMapsSelectedStationKey } from '@/utils/mapsSelectedStationStorage'
-import { isNetworkCollection, NETWORK_COLLECTION_IDS, type NetworkViewFilter } from '@/constants/stationCollections'
+import {
+  isNetworkCollection,
+  isStationIncludedInAllNetworkView,
+  NETWORK_COLLECTION_IDS,
+  type NetworkViewFilter,
+} from '@/constants/stationCollections'
 import type { NewStationNavigationState } from '@/types/newStationNavigation'
 import type { Station } from '@/types'
 import { setNewStationNavigationState } from '@/utils/clientNavigationState'
@@ -154,7 +158,9 @@ const StationsMapPage: React.FC = () => {
     () =>
       stations.filter((station) => {
         if (!isValidStationCoordinate(station.latitude, station.longitude)) return false
-        if (networkView === 'all') return true
+        if (networkView === 'all') {
+          return isStationIncludedInAllNetworkView(station.sourceCollectionId)
+        }
         return station.sourceCollectionId === networkView
       }),
     [stations, networkView]
@@ -251,7 +257,6 @@ const StationsMapPage: React.FC = () => {
     <div className="stations-page stations-map-page">
       <PageTopHeader
         title="Map"
-        titleAddon={<BetaTag />}
         subtitle={stationsLoading ? 'Loading stations…' : '\u00a0'}
       />
       <div className="stations-toolbar-band">

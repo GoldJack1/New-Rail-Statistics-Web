@@ -11,6 +11,8 @@ interface StationAdminViewControlsProps {
   displayMode: StationAdminDisplayMode
   onDisplayModeChange: (mode: StationAdminDisplayMode) => void
   onAssignHeaders?: () => void
+  onResetTableSort?: () => void
+  canResetTableSort?: boolean
   tableModeDisabled?: boolean
   className?: string
 }
@@ -19,10 +21,15 @@ const StationAdminViewControls: React.FC<StationAdminViewControlsProps> = ({
   displayMode,
   onDisplayModeChange,
   onAssignHeaders,
+  onResetTableSort,
+  canResetTableSort = false,
   tableModeDisabled = false,
   className,
 }) => {
   const showAssignHeaders = displayMode === 'table' && Boolean(onAssignHeaders)
+  const showResetTableSort =
+    displayMode === 'table' && Boolean(onResetTableSort)
+  const showTableColumnControls = showAssignHeaders || showResetTableSort
 
   return (
     <section
@@ -52,21 +59,35 @@ const StationAdminViewControls: React.FC<StationAdminViewControlsProps> = ({
       </div>
 
       <CollapsibleSection
-        isExpanded={showAssignHeaders}
+        isExpanded={showTableColumnControls}
         className="station-admin-controls-reveal"
-        ariaHidden={!showAssignHeaders}
+        ariaHidden={!showTableColumnControls}
       >
         <div className="station-admin-controls-group">
           <span className="station-admin-controls-label">Table columns</span>
-          <Button
-            type="button"
-            variant="wide"
-            width="fill"
-            className="station-admin-controls-action-button"
-            onClick={onAssignHeaders}
-          >
-            Assign headers
-          </Button>
+          {showAssignHeaders && (
+            <Button
+              type="button"
+              variant="wide"
+              width="fill"
+              className="station-admin-controls-action-button"
+              onClick={onAssignHeaders}
+            >
+              Assign headers
+            </Button>
+          )}
+          {showResetTableSort && (
+            <Button
+              type="button"
+              variant="wide"
+              width="fill"
+              className="station-admin-controls-action-button"
+              onClick={onResetTableSort}
+              disabled={!canResetTableSort}
+            >
+              Reset column sort
+            </Button>
+          )}
         </div>
       </CollapsibleSection>
     </section>

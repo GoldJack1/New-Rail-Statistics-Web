@@ -1,13 +1,16 @@
 /** Shared map pin sizing for circle markers and SuperTram logo markers. */
+import { SELECTED_MARKER_BORDER_COLOR } from '../constants/stationNetworkMapColors'
+
 export const MARKER_RADIUS = {
   desktop: { visual: 7, visualSelected: 10, hit: 12, hitSelected: 14 },
-  mobile: { visual: 8, visualSelected: 11, hit: 24, hitSelected: 26 },
+  // Mobile hit is intentionally larger than the visible pin (~64px) so finger taps register reliably.
+  mobile: { visual: 8, visualSelected: 11, hit: 32, hitSelected: 34 },
 } as const
 
 /** Circle marker stroke — shared with SuperTram blob outline. */
 export const MARKER_STROKE = {
   weight: { normal: 2, selected: 3 },
-  color: { normal: '#ffffff', selected: '#2563eb' },
+  color: { normal: '#ffffff', selected: SELECTED_MARKER_BORDER_COLOR },
 } as const
 
 export function getMarkerVisualRadius(isSelected: boolean, mobile: boolean): number {
@@ -37,4 +40,9 @@ export function getSuperTramIconOuterDiameter(isSelected: boolean, mobile: boole
 export function getMarkerHitRadius(isSelected: boolean, mobile: boolean): number {
   const sizes = mobile ? MARKER_RADIUS.mobile : MARKER_RADIUS.desktop
   return isSelected ? sizes.hitSelected : sizes.hit
+}
+
+/** Invisible tap/click diameter for markers (circle hit layer or padded SuperTram icon). */
+export function getMarkerHitDiameter(isSelected: boolean, mobile: boolean): number {
+  return getMarkerHitRadius(isSelected, mobile) * 2
 }
