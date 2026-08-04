@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Moon, Sun } from '@phosphor-icons/react'
 import { useAuth } from '../../../contexts/AuthContext'
@@ -13,6 +13,9 @@ import {
 import { BUTFooterLink, TOGToggleVisited } from '../../buttons'
 import './Footer.css'
 
+/** Window for successive taps/clicks on the copyright text to open login. */
+const LOGIN_TAP_WINDOW_MS = 700
+
 const Footer: React.FC = () => {
   const { user, logout } = useAuth()
   const { toggleTheme } = useTheme()
@@ -21,6 +24,7 @@ const Footer: React.FC = () => {
   const search = searchParams?.toString() ? `?${searchParams.toString()}` : ''
   const router = useRouter()
   const adminModeActive = useStationAdminMode()
+  const loginTapRef = useRef({ count: 0, lastAt: 0 })
   const syncAdminSearchParam =
     pathname === '/stations' ||
     pathname === '/stations/map' ||
@@ -48,9 +52,18 @@ const Footer: React.FC = () => {
     router.replace(query.length > 0 ? `${pathname}?${query}` : pathname, { scroll: false })
   }
 
-  const handleCopyrightClick = (event: React.MouseEvent<HTMLParagraphElement>) => {
-    if (user || event.detail !== 3) return
-    router.push('/log-in')
+  /** Counts clicks and touch taps (touch still fires `click`); `event.detail` is unreliable on mobile. */
+  const handleCopyrightClick = () => {
+    if (user) return
+    const now = Date.now()
+    const { count, lastAt } = loginTapRef.current
+    const nextCount = now - lastAt < LOGIN_TAP_WINDOW_MS ? count + 1 : 1
+    if (nextCount >= 3) {
+      loginTapRef.current = { count: 0, lastAt: 0 }
+      router.push('/log-in')
+      return
+    }
+    loginTapRef.current = { count: nextCount, lastAt: now }
   }
 
   return (
