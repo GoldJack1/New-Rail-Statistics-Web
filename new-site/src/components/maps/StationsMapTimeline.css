@@ -278,3 +278,32 @@
     position: relative;
     z-index: 1;
 }
+
+.stations-map-timeline__follow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.stations-map-timeline__follow-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.stations-map-timeline__follow-label {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: inherit;
+}
+
+.stations-map-timeline__follow-hint {
+    font-size: var(--text-xs);
+    color: inherit;
+    opacity: 0.72;
+}

@@ -196,9 +196,8 @@ function readDateOpened(data: Record<string, unknown>): string | null {
 }
 
 function readOrderOfOpening(data: Record<string, unknown>): string | null {
-  return data['Order of Opening'] != null && String(data['Order of Opening']).trim() !== ''
-    ? String(data['Order of Opening'])
-    : null
+  const raw = data['Order of Opening'] ?? data.orderOfOpening
+  return raw != null && String(raw).trim() !== '' ? String(raw) : null
 }
 
 function readPlatforms(data: Record<string, unknown>): string | null {

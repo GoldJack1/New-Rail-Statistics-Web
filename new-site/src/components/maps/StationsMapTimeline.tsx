@@ -13,6 +13,8 @@ import '../cards/TextCard/TextCard.css'
 import './StationsMapTimeline.css'
 
 const AUTO_PLAY_INTERVAL_MS = 900
+/** Give the camera time to finish a constant-speed track pan before the next step. */
+const AUTO_PLAY_FOLLOW_INTERVAL_MS = 4000
 
 interface StationsMapTimelineProps {
   stations: Station[]
@@ -22,8 +24,16 @@ interface StationsMapTimelineProps {
   onPlayingChange: (playing: boolean) => void
   modeEnabled: boolean
   onModeEnabledChange: (enabled: boolean) => void
-  /** When true, timeline mode cannot be turned on (e.g. a line filter is active). */
+  followAppearing: boolean
+  onFollowAppearingChange: (enabled: boolean) => void
+  /** When true, append “· #N” order-of-opening to the timeline date. */
+  showOrderOfOpening?: boolean
+  /** When true, timeline mode cannot be turned on (e.g. a line or date opened filter is active). */
   modeDisabled?: boolean
+  /** Shown instead of the default subtitle when modeDisabled is true. */
+  modeDisabledMessage?: string
+  /** aria-label for the disabled mode toggle. */
+  modeDisabledAriaLabel?: string
   /** Sidebar section: drop the floating card chrome; section title provides the heading. */
   embedded?: boolean
 }
@@ -36,13 +46,19 @@ export function StationsMapTimeline({
   onPlayingChange,
   modeEnabled,
   onModeEnabledChange,
+  followAppearing,
+  onFollowAppearingChange,
+  showOrderOfOpening = false,
   modeDisabled = false,
+  modeDisabledMessage = 'This feature does not work when filters are applied. Select All to view the timeline.',
+  modeDisabledAriaLabel = 'Network timeline unavailable while filters are selected',
   embedded = false,
 }: StationsMapTimelineProps) {
   const steps = useMemo(() => buildSuperTramTimelineSteps(stations), [stations])
   const maxIndex = Math.max(0, steps.length - 1)
   const clampedIndex = steps.length === 0 ? 0 : Math.max(0, Math.min(stepIndex, maxIndex))
   const currentStep = steps.length > 0 ? steps[clampedIndex] : null
+  const playIntervalMs = followAppearing ? AUTO_PLAY_FOLLOW_INTERVAL_MS : AUTO_PLAY_INTERVAL_MS
 
   useEffect(() => {
     if (!modeEnabled || !isPlaying || steps.length === 0) return
@@ -58,7 +74,7 @@ export function StationsMapTimeline({
       if (next >= maxIndex) {
         onPlayingChange(false)
       }
-    }, AUTO_PLAY_INTERVAL_MS)
+    }, playIntervalMs)
 
     return () => window.clearTimeout(timer)
   }, [
@@ -67,6 +83,7 @@ export function StationsMapTimeline({
     clampedIndex,
     maxIndex,
     steps.length,
+    playIntervalMs,
     onStepIndexChange,
     onPlayingChange,
   ])
@@ -110,14 +127,19 @@ export function StationsMapTimeline({
   )
 
   const subtitle = modeDisabled
-    ? 'This feature does not work when filtering by line. Select All to view the timeline.'
+    ? modeDisabledMessage
     : 'Watch how the network has expanded over the years, stop by stop.'
 
   const currentLabel = currentStep?.label ?? '—'
+  const currentOrder = currentStep?.cutoff.order
   const currentDateMs = currentStep?.dateMs ?? null
   const sliderProgress = maxIndex === 0 ? 1 : clampedIndex / maxIndex
   const showTimelineControls = modeEnabled && steps.length > 0
   const timelineNetworkColor = NETWORK_MAP_COLORS[LIGHTRAIL_COLLECTION_ID]
+  const dateLabel =
+    showOrderOfOpening && currentOrder != null && Number.isFinite(currentOrder)
+      ? `${currentLabel} · #${currentOrder}`
+      : currentLabel
 
   return (
     <section
@@ -155,7 +177,7 @@ export function StationsMapTimeline({
           disabled={modeDisabled}
           ariaLabel={
             modeDisabled
-              ? 'Network timeline unavailable while a line filter is selected'
+              ? modeDisabledAriaLabel
               : modeEnabled
                 ? 'Turn off network timeline'
                 : 'Turn on network timeline'
@@ -176,7 +198,7 @@ export function StationsMapTimeline({
                 className="stations-map-timeline__date"
                 dateTime={currentDateMs != null ? new Date(currentDateMs).toISOString() : undefined}
               >
-                {currentLabel}
+                {dateLabel}
               </time>
               <span className="stations-map-timeline__step">
                 {clampedIndex + 1} / {steps.length}
@@ -205,7 +227,7 @@ export function StationsMapTimeline({
                   aria-valuemin={0}
                   aria-valuemax={maxIndex}
                   aria-valuenow={clampedIndex}
-                  aria-valuetext={currentLabel}
+                  aria-valuetext={dateLabel}
                 />
               </div>
               <div className="stations-map-timeline__range-labels">

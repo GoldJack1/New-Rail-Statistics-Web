@@ -9,11 +9,14 @@ import {
 /**
  * Timeline mode/step for the stations map. Survives map remounts (e.g. open a
  * stop and return) via sessionStorage for the browser tab.
+ * Follow / order-number toggles default off.
  */
 export function useMapsTimelineSession(showSuperTramTimeline: boolean, stepsLength: number) {
   const [timelineModeEnabled, setTimelineModeEnabled] = useState(false)
   const [timelineStepIndex, setTimelineStepIndex] = useState(0)
   const [timelinePlaying, setTimelinePlaying] = useState(false)
+  const [timelineFollowAppearing, setTimelineFollowAppearing] = useState(false)
+  const [timelineShowOrderOfOpening, setTimelineShowOrderOfOpening] = useState(false)
   const [sessionReady, setSessionReady] = useState(false)
 
   useEffect(() => {
@@ -21,6 +24,8 @@ export function useMapsTimelineSession(showSuperTramTimeline: boolean, stepsLeng
     if (saved) {
       setTimelineModeEnabled(saved.modeEnabled)
       setTimelineStepIndex(saved.stepIndex)
+      setTimelineFollowAppearing(saved.followAppearing)
+      setTimelineShowOrderOfOpening(saved.showOrderOfOpening)
     }
     setSessionReady(true)
   }, [])
@@ -30,8 +35,16 @@ export function useMapsTimelineSession(showSuperTramTimeline: boolean, stepsLeng
     writeMapsTimelineSessionState({
       modeEnabled: timelineModeEnabled,
       stepIndex: timelineStepIndex,
+      followAppearing: timelineFollowAppearing,
+      showOrderOfOpening: timelineShowOrderOfOpening,
     })
-  }, [sessionReady, timelineModeEnabled, timelineStepIndex])
+  }, [
+    sessionReady,
+    timelineModeEnabled,
+    timelineStepIndex,
+    timelineFollowAppearing,
+    timelineShowOrderOfOpening,
+  ])
 
   useEffect(() => {
     if (!sessionReady) return
@@ -54,5 +67,9 @@ export function useMapsTimelineSession(showSuperTramTimeline: boolean, stepsLeng
     setTimelineStepIndex,
     timelinePlaying,
     setTimelinePlaying,
+    timelineFollowAppearing,
+    setTimelineFollowAppearing,
+    timelineShowOrderOfOpening,
+    setTimelineShowOrderOfOpening,
   }
 }

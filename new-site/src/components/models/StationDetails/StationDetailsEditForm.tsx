@@ -374,18 +374,21 @@ const StationDetailsEditForm: React.FC<StationDetailsEditFormProps> = ({
       return s === '' ? null : s
     }
 
+    // Baseline matches form init (published station + any staged pending updates).
+    const baselineStation = mergeStationWithPendingUpdate(station, pendingEntry)
+
     const currentStation = {
-      stationName: normOpt(station.stationName),
-      crsCode: normOpt(station.crsCode),
-      tiploc: normOpt(station.tiploc),
-      toc: normOpt(station.toc),
-      country: normOpt(station.country),
-      county: normOpt(station.county),
-      stnarea: normOpt(station.stnarea),
-      borough: normOpt(station.borough),
-      fareZone: normOpt(station.fareZone),
-      latitude: Number(station.latitude ?? 0),
-      longitude: Number(station.longitude ?? 0)
+      stationName: normOpt(baselineStation.stationName),
+      crsCode: normOpt(baselineStation.crsCode),
+      tiploc: normOpt(baselineStation.tiploc),
+      toc: normOpt(baselineStation.toc),
+      country: normOpt(baselineStation.country),
+      county: normOpt(baselineStation.county),
+      stnarea: normOpt(baselineStation.stnarea),
+      borough: normOpt(baselineStation.borough),
+      fareZone: normOpt(baselineStation.fareZone),
+      latitude: Number(baselineStation.latitude ?? 0),
+      longitude: Number(baselineStation.longitude ?? 0)
     }
 
     const draftStation = {
@@ -406,8 +409,10 @@ const StationDetailsEditForm: React.FC<StationDetailsEditFormProps> = ({
 
     // Yearly passengers: compare the object as stored, not the raw rows UI.
     const currentPassengers =
-      station.yearlyPassengers && typeof station.yearlyPassengers === 'object' && !Array.isArray(station.yearlyPassengers)
-        ? (station.yearlyPassengers as Record<string, unknown>)
+      baselineStation.yearlyPassengers &&
+      typeof baselineStation.yearlyPassengers === 'object' &&
+      !Array.isArray(baselineStation.yearlyPassengers)
+        ? (baselineStation.yearlyPassengers as Record<string, unknown>)
         : null
     const draftPassengers = (() => {
       if (yearlyPassengersRows.length === 0) return null
@@ -423,15 +428,25 @@ const StationDetailsEditForm: React.FC<StationDetailsEditFormProps> = ({
     })()
     if (stableStringify(currentPassengers) !== stableStringify(draftPassengers)) return true
 
+    // Light rail: only treat real field diffs as dirty (not full-doc vs changed-subset).
+    if (fieldSchema.isLightRail) {
+      const changedLightRail = pickChangedLightRailSandboxFields(
+        additionalForm as Record<string, unknown>,
+        (mergeAdditionalDocWithPendingUpdate(additionalDoc, pendingEntry) ??
+          additionalDoc) as Record<string, unknown> | null
+      )
+      if (Object.keys(changedLightRail).length > 0) return true
+
+      const baselineSlug = normStr(
+        (mergeAdditionalDocWithPendingUpdate(additionalDoc, pendingEntry) ?? additionalDoc)?.urlSlug ??
+          baselineStation.urlSlug
+      )
+      const draftSlug = normStr(additionalForm.urlSlug)
+      return baselineSlug !== draftSlug
+    }
+
     // Additional details: compare a draft built the same way review/save do.
     const draftAdditional = (() => {
-      if (fieldSchema.isLightRail) {
-        const picked = pickChangedLightRailSandboxFields(
-          additionalForm as Record<string, unknown>,
-          additionalDoc as Record<string, unknown> | null
-        )
-        return Object.keys(picked).length > 0 ? picked : null
-      }
       const picked = pickAdditionalDetails(additionalForm as SandboxStationDoc, stationCollectionId)
       const facilities: Record<string, unknown> = {}
       for (const row of facilitiesRows) {
@@ -455,9 +470,9 @@ const StationDetailsEditForm: React.FC<StationDetailsEditFormProps> = ({
       return Object.keys(picked).length > 0 ? picked : null
     })()
 
-    const currentAdditional = fieldSchema.isLightRail
-      ? pickLightRailSandboxOnlyFields(additionalDoc as Record<string, unknown>)
-      : pickAdditionalDetails(additionalDoc, stationCollectionId)
+    const baselineAdditionalDoc =
+      mergeAdditionalDocWithPendingUpdate(additionalDoc, pendingEntry) ?? additionalDoc
+    const currentAdditional = pickAdditionalDetails(baselineAdditionalDoc, stationCollectionId)
     if (stableStringify(currentAdditional) !== stableStringify(draftAdditional)) return true
 
     return false

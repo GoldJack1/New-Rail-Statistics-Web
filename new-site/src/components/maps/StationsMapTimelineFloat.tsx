@@ -19,7 +19,12 @@ interface StationsMapTimelineFloatProps {
   onPlayingChange: (playing: boolean) => void
   modeEnabled: boolean
   onModeEnabledChange: (enabled: boolean) => void
+  followAppearing: boolean
+  onFollowAppearingChange: (enabled: boolean) => void
+  showOrderOfOpening?: boolean
   modeDisabled?: boolean
+  modeDisabledMessage?: string
+  modeDisabledAriaLabel?: string
 }
 
 type TimelinePanelSnapshot = {
@@ -27,6 +32,8 @@ type TimelinePanelSnapshot = {
   stepIndex: number
   isPlaying: boolean
   modeEnabled: boolean
+  followAppearing: boolean
+  showOrderOfOpening: boolean
   modeDisabled: boolean
 }
 
@@ -44,7 +51,12 @@ export default function StationsMapTimelineFloat({
   onPlayingChange,
   modeEnabled,
   onModeEnabledChange,
+  followAppearing,
+  onFollowAppearingChange,
+  showOrderOfOpening = false,
   modeDisabled = false,
+  modeDisabledMessage,
+  modeDisabledAriaLabel,
 }: StationsMapTimelineFloatProps) {
   const openRef = useRef(false)
   const [open, setOpen] = useState(false)
@@ -59,9 +71,20 @@ export default function StationsMapTimelineFloat({
       stepIndex,
       isPlaying,
       modeEnabled,
+      followAppearing,
+      showOrderOfOpening,
       modeDisabled,
     })
-  }, [active, stations, stepIndex, isPlaying, modeEnabled, modeDisabled])
+  }, [
+    active,
+    stations,
+    stepIndex,
+    isPlaying,
+    modeEnabled,
+    followAppearing,
+    showOrderOfOpening,
+    modeDisabled,
+  ])
 
   useEffect(() => {
     if (active) {
@@ -73,6 +96,8 @@ export default function StationsMapTimelineFloat({
         stepIndex,
         isPlaying,
         modeEnabled,
+        followAppearing,
+        showOrderOfOpening,
         modeDisabled,
       })
       setOpen(true)
@@ -134,7 +159,12 @@ export default function StationsMapTimelineFloat({
         onPlayingChange={onPlayingChange}
         modeEnabled={panel.modeEnabled}
         onModeEnabledChange={onModeEnabledChange}
+        followAppearing={panel.followAppearing}
+        onFollowAppearingChange={onFollowAppearingChange}
+        showOrderOfOpening={panel.showOrderOfOpening}
         modeDisabled={panel.modeDisabled}
+        modeDisabledMessage={modeDisabledMessage}
+        modeDisabledAriaLabel={modeDisabledAriaLabel}
       />
     </div>
   )

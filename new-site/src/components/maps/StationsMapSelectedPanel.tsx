@@ -20,10 +20,12 @@ interface StationsMapSelectedPanelProps {
   station: Station | null
   isPendingNew?: boolean
   detailsLoading?: boolean
+  /** When true (admin edit mode), open the station edit page instead of view. */
+  isEditMode?: boolean
 }
 
 const StationsMapSelectedPanel = forwardRef<HTMLElement, StationsMapSelectedPanelProps>(
-  ({ station, isPendingNew = false, detailsLoading = false }, ref) => {
+  ({ station, isPendingNew = false, detailsLoading = false, isEditMode = false }, ref) => {
     const router = useRouter()
     const pathname = usePathname()
     const { networkView } = useStationCollection()
@@ -48,7 +50,11 @@ const StationsMapSelectedPanel = forwardRef<HTMLElement, StationsMapSelectedPane
       if (stationPath) {
         snapshotActiveStationsMapView(networkView)
         setStationDetailsNavigationState({ returnTo: mapReturnTo })
-        router.push(`/stations/${stationPath}`)
+        router.push(
+          isEditMode
+            ? `/admin/stations/${stationPath}/edit`
+            : `/stations/${stationPath}`
+        )
       }
     }
 

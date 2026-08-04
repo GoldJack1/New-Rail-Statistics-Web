@@ -59,6 +59,37 @@
   letter-spacing: 0.03em;
 }
 
+.station-admin-controls-follow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.station-admin-controls-follow-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.station-admin-controls-follow-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: inherit;
+}
+
+.station-admin-controls-follow-hint {
+  font-size: var(--text-xs);
+  color: inherit;
+  opacity: 0.72;
+}
+
+.station-admin-controls-group .station-admin-controls-follow + .station-admin-controls-follow {
+  margin-top: var(--space-sm);
+}
+
 .station-admin-controls-note {
   margin: 0;
   font-size: var(--text-sm);

@@ -28,7 +28,6 @@ import {
   finishStationsListFiltersRestore,
   shouldRestoreStationsListFilters,
   type SupertramLineFilter,
-  type StationsListFiltersState,
 } from '@/utils/stationsListFiltersStorage'
 import {
   type StationsTableSort,
@@ -109,49 +108,50 @@ export function useStationsBrowseFilters({
   managePagination = false,
   paginationResetDeps = [],
 }: UseStationsBrowseFiltersInput) {
-  const [restoredListFilters] = useState<StationsListFiltersState | null>(() => {
-    // Details→list uses a one-shot restore flag. Otherwise keep session filters so
-    // list ↔ map share the same Search/Sort/Filters state.
-    if (shouldRestoreStationsListFilters()) {
-      return peekStationsListFiltersStateForRestore()
-    }
-    return readStationsListFiltersState()
+  // Session restore must run after mount — reading storage in useState causes
+  // SSR/client hydration mismatches (e.g. Reset all disabled vs enabled).
+  const [filtersSessionReady, setFiltersSessionReady] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [searchMode, setSearchMode] = useState<StationSearchMode>('name')
+  const [filterSelections, setFilterSelections] = useState<StationFilterSelections>({
+    ...EMPTY_FILTER_SELECTIONS,
   })
-  const [searchTerm, setSearchTerm] = useState(() => restoredListFilters?.searchTerm ?? '')
-  const [searchMode, setSearchMode] = useState<StationSearchMode>(
-    () => restoredListFilters?.searchMode ?? 'name'
-  )
-  const [filterSelections, setFilterSelections] = useState<StationFilterSelections>(
-    () => restoredListFilters?.filterSelections ?? { ...EMPTY_FILTER_SELECTIONS }
-  )
-  const [hasUserInteractedWithFilters, setHasUserInteractedWithFilters] = useState(
-    () => restoredListFilters?.hasUserInteractedWithFilters ?? false
-  )
-  const [sortOption, setSortOption] = useState<SortOption>(
-    () => restoredListFilters?.sortOption ?? 'name-asc'
-  )
-  const [passengerSortYear, setPassengerSortYear] = useState<PassengerSortYear>(
-    () => restoredListFilters?.passengerSortYear ?? 'latest'
-  )
-  const [supertramLineFilter, setSupertramLineFilter] = useState<SupertramLineFilter>(
-    () => restoredListFilters?.supertramLineFilter ?? []
-  )
+  const [hasUserInteractedWithFilters, setHasUserInteractedWithFilters] = useState(false)
+  const [sortOption, setSortOption] = useState<SortOption>('name-asc')
+  const [passengerSortYear, setPassengerSortYear] = useState<PassengerSortYear>('latest')
+  const [supertramLineFilter, setSupertramLineFilter] = useState<SupertramLineFilter>([])
   const [supertramFiltersExpanded, setSupertramFiltersExpanded] = useState(false)
   const [irishNiFiltersExpanded, setIrishNiFiltersExpanded] = useState(false)
-  const [currentPage, setCurrentPage] = useState(() => restoredListFilters?.currentPage ?? 1)
-  const [tableSort, setTableSort] = useState<StationsTableSort>(
-    () => restoredListFilters?.tableSort ?? { column: 'name', direction: 'asc' }
-  )
-  const skipInitialPageResetRef = useRef(restoredListFilters != null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [tableSort, setTableSort] = useState<StationsTableSort>({
+    column: 'name',
+    direction: 'asc',
+  })
+  const skipInitialPageResetRef = useRef(false)
 
   useEffect(() => {
+    const restored = shouldRestoreStationsListFilters()
+      ? peekStationsListFiltersStateForRestore()
+      : readStationsListFiltersState()
+
+    if (restored) {
+      setSearchTerm(restored.searchTerm)
+      setSearchMode(restored.searchMode)
+      setFilterSelections(restored.filterSelections)
+      setHasUserInteractedWithFilters(restored.hasUserInteractedWithFilters)
+      setSortOption(restored.sortOption)
+      setPassengerSortYear(restored.passengerSortYear)
+      setSupertramLineFilter(restored.supertramLineFilter)
+      setCurrentPage(restored.currentPage)
+      setTableSort(restored.tableSort)
+      skipInitialPageResetRef.current = true
+      if (restored.networkView) {
+        setNetworkView(restored.networkView)
+      }
+    }
     finishStationsListFiltersRestore()
-  }, [])
-
-  useEffect(() => {
-    if (!restoredListFilters?.networkView) return
-    setNetworkView(restoredListFilters.networkView)
-  }, [restoredListFilters, setNetworkView])
+    setFiltersSessionReady(true)
+  }, [setNetworkView])
 
   useEffect(() => {
     if (isAdminMode) return
@@ -404,8 +404,9 @@ export function useStationsBrowseFilters({
   ])
 
   useEffect(() => {
+    if (!filtersSessionReady) return
     persistFiltersState()
-  }, [persistFiltersState])
+  }, [filtersSessionReady, persistFiltersState])
 
   useEffect(() => {
     if (!managePagination) return

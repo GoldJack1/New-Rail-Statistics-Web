@@ -10,6 +10,7 @@ interface StationsMapSelectedCardFloatProps {
   station: Station | null
   isPendingNew?: boolean
   detailsLoading?: boolean
+  isEditMode?: boolean
 }
 
 /**
@@ -20,6 +21,7 @@ export default function StationsMapSelectedCardFloat({
   station,
   isPendingNew = false,
   detailsLoading = false,
+  isEditMode = false,
 }: StationsMapSelectedCardFloatProps) {
   const openRef = useRef(false)
   const [open, setOpen] = useState(false)
@@ -102,6 +104,7 @@ export default function StationsMapSelectedCardFloat({
         station={panel.station}
         isPendingNew={panel.isPendingNew}
         detailsLoading={panel.detailsLoading}
+        isEditMode={isEditMode}
       />
     </div>
   )

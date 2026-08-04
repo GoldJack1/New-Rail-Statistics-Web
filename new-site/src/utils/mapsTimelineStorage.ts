@@ -1,8 +1,12 @@
-const MAPS_TIMELINE_SESSION_KEY = 'railstats:mapsTimeline'
+const MAPS_TIMELINE_SESSION_KEY = 'railstats:mapsTimeline:v2'
 
 export type MapsTimelineSessionState = {
   modeEnabled: boolean
   stepIndex: number
+  /** Slowly fly the map to newly appearing stops while the timeline plays. Default off. */
+  followAppearing: boolean
+  /** Show “· #N” order-of-opening on the timeline date. Default off. */
+  showOrderOfOpening: boolean
 }
 
 export function readMapsTimelineSessionState(): MapsTimelineSessionState | null {
@@ -19,6 +23,9 @@ export function readMapsTimelineSessionState(): MapsTimelineSessionState | null 
     return {
       modeEnabled: Boolean(parsed.modeEnabled),
       stepIndex,
+      // Explicit true only — missing/undefined stays off by default.
+      followAppearing: parsed.followAppearing === true,
+      showOrderOfOpening: parsed.showOrderOfOpening === true,
     }
   } catch {
     return null
@@ -33,6 +40,8 @@ export function writeMapsTimelineSessionState(state: MapsTimelineSessionState): 
       JSON.stringify({
         modeEnabled: Boolean(state.modeEnabled),
         stepIndex: Math.max(0, Math.floor(state.stepIndex)),
+        followAppearing: state.followAppearing === true,
+        showOrderOfOpening: state.showOrderOfOpening === true,
       })
     )
   } catch {

@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic'
 import { WarningCircle } from '@phosphor-icons/react'
 
 import { PageTopHeader } from '@/components/misc'
-import { BUTBaseButton as Button, BUTWideButton } from '@/components/buttons'
+import { BUTWideButton } from '@/components/buttons'
 import NetworkStationTabGroup from '@/components/cards/NetworkStationTabGroup/NetworkStationTabGroup'
 import MapLiteModeGate from '@/components/maps/MapLiteModeGate'
 import StationsMapSelectedCardFloat from '@/components/maps/StationsMapSelectedCardFloat'
@@ -14,7 +14,7 @@ import StationsMapTimeline from '@/components/maps/StationsMapTimeline'
 import StationsMapTimelineFloat from '@/components/maps/StationsMapTimelineFloat'
 import StationsBrowseSidebar from '@/components/stations/StationsBrowseSidebar'
 import { LIGHTRAIL_COLLECTION_ID } from '@/utils/lightRailStationFields'
-import { buildSuperTramTimelineSteps } from '@/utils/superTramTimeline'
+import { buildSuperTramTimelineSteps, getTimelineVisibleStationIds } from '@/utils/superTramTimeline'
 import { isSupertramLineFilterAll } from '@/utils/stationsListFiltersStorage'
 import { useStationCollection } from '@/contexts/StationCollectionContext'
 import { usePendingStationChanges } from '@/hooks/usePendingStationChanges'
@@ -37,6 +37,7 @@ import { useMapPageChromeScrollSnap } from '@/hooks/useMapPageChromeScrollSnap'
 import { useRestoreMapsSelectedStation } from '@/hooks/useRestoreMapsSelectedStation'
 import { useDevicePerformanceTier } from '@/hooks/useDevicePerformanceTier'
 import { writeMapsSelectedStationKey } from '@/utils/mapsSelectedStationStorage'
+import { readMapsBrowseMode, writeMapsBrowseMode } from '@/utils/mapsBrowseModeStorage'
 import {
   DEFAULT_STATION_ADMIN_SIDEBAR_SECTIONS,
   type StationAdminSidebarSectionsState,
@@ -83,6 +84,8 @@ const StationsMapPageClient: React.FC<StationsMapPageClientProps> = ({
     initialSidebarSections ?? DEFAULT_STATION_ADMIN_SIDEBAR_SECTIONS
   )
   const [selectedStation, setSelectedStation] = useState<Station | null>(null)
+  // sessionStorage must restore after mount to avoid SSR hydration mismatches
+  const [isEditMode, setIsEditMode] = useState(false)
   const [isAddStationMode, setIsAddStationMode] = useState(false)
   const [stationDetailsLoading, setStationDetailsLoading] = useState(false)
   const [mapFitNonce, setMapFitNonce] = useState(0)
@@ -142,7 +145,20 @@ const StationsMapPageClient: React.FC<StationsMapPageClientProps> = ({
 
   const showSuperTramTimeline = networkView === LIGHTRAIL_COLLECTION_ID
   const lineFilterActive = !isSupertramLineFilterAll(supertramLineFilter)
-  const timelineAvailable = showSuperTramTimeline && !lineFilterActive
+  const dateOpenedFilterActive =
+    effectiveSelections.dateOpened.length !== uniqueValues.dateOpened.length
+  const timelineFilterBlocked = lineFilterActive || dateOpenedFilterActive
+  const timelineAvailable = showSuperTramTimeline && !timelineFilterBlocked
+  const timelineDisabledMessage = lineFilterActive && dateOpenedFilterActive
+    ? 'This feature does not work when filtering by line or date opened. Select All on both to view the timeline.'
+    : lineFilterActive
+      ? 'This feature does not work when filtering by line. Select All to view the timeline.'
+      : 'This feature does not work when filtering by date opened. Select All to view the timeline.'
+  const timelineDisabledAriaLabel = lineFilterActive && dateOpenedFilterActive
+    ? 'Network timeline unavailable while line or date opened filters are selected'
+    : lineFilterActive
+      ? 'Network timeline unavailable while a line filter is selected'
+      : 'Network timeline unavailable while a date opened filter is selected'
 
   const handleNetworkViewChange = useCallback(
     (view: NetworkViewFilter) => {
@@ -153,11 +169,30 @@ const StationsMapPageClient: React.FC<StationsMapPageClientProps> = ({
     [networkView, handleBrowseNetworkViewChange]
   )
 
+  const wasAdminModeRef = useRef(false)
   useEffect(() => {
-    if (!isAdminMode) {
+    if (isAdminMode) {
+      if (!wasAdminModeRef.current) {
+        setIsEditMode(readMapsBrowseMode() === 'edit')
+      }
+      wasAdminModeRef.current = true
+      return
+    }
+    if (!wasAdminModeRef.current) return
+    wasAdminModeRef.current = false
+    setIsEditMode(false)
+    setIsAddStationMode(false)
+    writeMapsBrowseMode('view')
+  }, [isAdminMode])
+
+  const handleEditModeChange = useCallback((mode: 'view' | 'edit') => {
+    const nextEdit = mode === 'edit'
+    setIsEditMode(nextEdit)
+    writeMapsBrowseMode(mode)
+    if (!nextEdit) {
       setIsAddStationMode(false)
     }
-  }, [isAdminMode])
+  }, [])
 
   const loadStations = useCallback(() => {
     refetch()
@@ -309,13 +344,17 @@ const StationsMapPageClient: React.FC<StationsMapPageClientProps> = ({
     setTimelineStepIndex,
     timelinePlaying,
     setTimelinePlaying,
+    timelineFollowAppearing,
+    setTimelineFollowAppearing,
+    timelineShowOrderOfOpening,
+    setTimelineShowOrderOfOpening,
   } = useMapsTimelineSession(showSuperTramTimeline, superTramTimelineSteps.length)
 
   useEffect(() => {
-    if (!lineFilterActive) return
+    if (!timelineFilterBlocked) return
     setTimelinePlaying(false)
     setTimelineModeEnabled(false)
-  }, [lineFilterActive, setTimelineModeEnabled, setTimelinePlaying])
+  }, [timelineFilterBlocked, setTimelineModeEnabled, setTimelinePlaying])
 
   const timelineCutoff = useMemo(() => {
     if (!timelineAvailable || superTramTimelineSteps.length === 0) return null
@@ -333,6 +372,13 @@ const StationsMapPageClient: React.FC<StationsMapPageClientProps> = ({
   const activeTimelineCutoff = timelineModeEnabled && timelineAvailable ? timelineCutoff : null
   const activeTimelineShowUndatedAtMax =
     timelineModeEnabled && timelineAvailable ? timelineShowUndatedAtMax : true
+  const activeTimelineVisibleStationIds = useMemo(() => {
+    if (!(timelineModeEnabled && timelineAvailable)) return null
+    return getTimelineVisibleStationIds(superTramTimelineSteps, timelineStepIndex)
+  }, [timelineModeEnabled, timelineAvailable, superTramTimelineSteps, timelineStepIndex])
+  const activeTimelineFollowAppearing = Boolean(
+    timelineModeEnabled && timelineAvailable && timelineFollowAppearing
+  )
 
   const selectedStationIsPending = Boolean(
     selectedStation && pendingNewKeys.has(getStationMapKey(selectedStation))
@@ -396,29 +442,6 @@ const StationsMapPageClient: React.FC<StationsMapPageClientProps> = ({
         subtitle={stationsLoading ? 'Loading stations…' : '\u00a0'}
       />
       <div className="stations-toolbar-band">
-        {isAdminMode && (
-          <div className="stations-map-page__admin-actions">
-            <Button
-              type="button"
-              variant="wide"
-              width="hug"
-              colorVariant={isAddStationMode ? 'accent' : 'primary'}
-              aria-pressed={isAddStationMode}
-              onClick={() => setIsAddStationMode((active) => !active)}
-            >
-              Add station mode
-            </Button>
-            <Button
-              type="button"
-              variant="wide"
-              width="hug"
-              colorVariant={pendingChangesCount > 0 ? 'accent' : 'primary'}
-              onClick={handleOpenPendingChanges}
-            >
-              Pending changes ({pendingChangesCount})
-            </Button>
-          </div>
-        )}
         <div className="stations-network-tabs-wrap stations-network-tabs-wrap--toolbar">
           <NetworkStationTabGroup
             value={networkView}
@@ -485,12 +508,19 @@ const StationsMapPageClient: React.FC<StationsMapPageClientProps> = ({
           hasUserInteractedWithFilters={hasUserInteractedWithFilters}
           resetAllFilters={resetAllFilters}
           showAdminSection={isAdminMode}
-          isEditMode={false}
+          adminVariant="map"
+          isEditMode={isEditMode}
           pendingChangesCount={pendingChangesCount}
-          onEditModeChange={() => {}}
+          onEditModeChange={handleEditModeChange}
           onOpenPendingChanges={handleOpenPendingChanges}
-          onAddStation={() => router.push('/admin/stations/new')}
+          isAddStationMode={isAddStationMode}
+          onAddStationModeChange={setIsAddStationMode}
           isAdminMode={isAdminMode}
+          showTimelineFollow={showSuperTramTimeline && timelineAvailable}
+          timelineFollowAppearing={timelineFollowAppearing}
+          onTimelineFollowAppearingChange={setTimelineFollowAppearing}
+          timelineShowOrderOfOpening={timelineShowOrderOfOpening}
+          onTimelineShowOrderOfOpeningChange={setTimelineShowOrderOfOpening}
           collapsed={!sidebarVisible}
           timelineContent={
             showSuperTramTimeline && !shouldGateAllNetworks && sidebarVisible ? (
@@ -502,7 +532,12 @@ const StationsMapPageClient: React.FC<StationsMapPageClientProps> = ({
                 onPlayingChange={setTimelinePlaying}
                 modeEnabled={timelineModeEnabled}
                 onModeEnabledChange={setTimelineModeEnabled}
-                modeDisabled={lineFilterActive}
+                followAppearing={timelineFollowAppearing}
+                onFollowAppearingChange={setTimelineFollowAppearing}
+                showOrderOfOpening={timelineShowOrderOfOpening}
+                modeDisabled={timelineFilterBlocked}
+                modeDisabledMessage={timelineDisabledMessage}
+                modeDisabledAriaLabel={timelineDisabledAriaLabel}
                 embedded
               />
             ) : null
@@ -524,12 +559,17 @@ const StationsMapPageClient: React.FC<StationsMapPageClientProps> = ({
                 selectedStationId={selectedStation ? getStationMapKey(selectedStation) : null}
                 onStationSelect={handleStationSelect}
                 onStationClear={handleStationClear}
-                allowAddStation={isAdminMode}
+                allowAddStation={isAdminMode && isEditMode}
                 addStationMode={isAddStationMode}
                 onAddStationModeChange={setIsAddStationMode}
                 onAddStationAtLocation={handleAddStationAtLocation}
                 timelineCutoff={activeTimelineCutoff}
+                timelineVisibleStationIds={activeTimelineVisibleStationIds}
                 timelineShowUndatedAtMax={activeTimelineShowUndatedAtMax}
+                timelineFollowAppearing={activeTimelineFollowAppearing}
+                timelineFollowReserveFloatChrome={
+                  showSuperTramTimeline && !sidebarVisible
+                }
                 liteMode={isLiteMode}
                 fitNonce={mapFitNonce}
                 dataReady={dataReady}
@@ -538,6 +578,7 @@ const StationsMapPageClient: React.FC<StationsMapPageClientProps> = ({
                   station={selectedStation}
                   isPendingNew={selectedStationIsPending}
                   detailsLoading={stationDetailsLoading}
+                  isEditMode={isAdminMode && isEditMode}
                 />
               </StationsOsmMap>
             )}
@@ -552,7 +593,12 @@ const StationsMapPageClient: React.FC<StationsMapPageClientProps> = ({
               onPlayingChange={setTimelinePlaying}
               modeEnabled={timelineModeEnabled}
               onModeEnabledChange={setTimelineModeEnabled}
-              modeDisabled={lineFilterActive}
+              followAppearing={timelineFollowAppearing}
+              onFollowAppearingChange={setTimelineFollowAppearing}
+              showOrderOfOpening={timelineShowOrderOfOpening}
+              modeDisabled={timelineFilterBlocked}
+              modeDisabledMessage={timelineDisabledMessage}
+              modeDisabledAriaLabel={timelineDisabledAriaLabel}
             />
           )}
         </div>

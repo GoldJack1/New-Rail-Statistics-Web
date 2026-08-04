@@ -127,12 +127,22 @@ export interface StationsBrowseSidebarProps {
   onShowOpenedOnChange?: (show: boolean) => void
 
   showAdminSection?: boolean
+  /** List: view/edit controls. Map: add-station mode toggle. */
+  adminVariant?: 'list' | 'map'
   isEditMode?: boolean
   pendingChangesCount?: number
   onEditModeChange?: (mode: 'view' | 'edit') => void
   onOpenPendingChanges?: () => void
   onAddStation?: () => void
+  isAddStationMode?: boolean
+  onAddStationModeChange?: (active: boolean) => void
   isAdminMode?: boolean
+  /** Map + SuperTram: show Follow stops under Admin. */
+  showTimelineFollow?: boolean
+  timelineFollowAppearing?: boolean
+  onTimelineFollowAppearingChange?: (enabled: boolean) => void
+  timelineShowOrderOfOpening?: boolean
+  onTimelineShowOrderOfOpeningChange?: (enabled: boolean) => void
   /** When true, panel is off-screen (map desktop collapse) — hide from AT / focus. */
   collapsed?: boolean
   /** Map page: SuperTram timeline controls when the side panel is open. */
@@ -193,12 +203,20 @@ const StationsBrowseSidebar: React.FC<StationsBrowseSidebarProps> = ({
   showOpenedOn = true,
   onShowOpenedOnChange,
   showAdminSection = false,
+  adminVariant = 'list',
   isEditMode = false,
   pendingChangesCount = 0,
   onEditModeChange,
   onOpenPendingChanges,
   onAddStation,
+  isAddStationMode = false,
+  onAddStationModeChange,
   isAdminMode = false,
+  showTimelineFollow = false,
+  timelineFollowAppearing = false,
+  onTimelineFollowAppearingChange,
+  timelineShowOrderOfOpening = false,
+  onTimelineShowOrderOfOpeningChange,
   collapsed = false,
   timelineContent,
 }) => {
@@ -671,26 +689,40 @@ const StationsBrowseSidebar: React.FC<StationsBrowseSidebarProps> = ({
           </SidebarDropdownSection>
         )}
 
-        {showAdminSection && onEditModeChange && onOpenPendingChanges && onAddStation && (
+        {showAdminSection &&
+          onOpenPendingChanges &&
+          (adminVariant === 'map'
+            ? Boolean(onEditModeChange && onAddStationModeChange)
+            : Boolean(onEditModeChange && onAddStation)) && (
           <SidebarDropdownSection
             title="Admin"
             expanded={sidebarSections.admin}
             onExpandedChange={(expanded) => setSectionExpanded('admin', expanded)}
           >
             <StationAdminControls
+              variant={adminVariant}
               isEditMode={isEditMode}
               pendingChangesCount={pendingChangesCount}
               onModeChange={onEditModeChange}
               onOpenPendingChanges={onOpenPendingChanges}
               onAddStation={onAddStation}
-              fareZoneOptions={isAdminMode ? uniqueValues.fareZones : undefined}
+              isAddStationMode={isAddStationMode}
+              onAddStationModeChange={onAddStationModeChange}
+              showTimelineFollow={showTimelineFollow}
+              timelineFollowAppearing={timelineFollowAppearing}
+              onTimelineFollowAppearingChange={onTimelineFollowAppearingChange}
+              timelineShowOrderOfOpening={timelineShowOrderOfOpening}
+              onTimelineShowOrderOfOpeningChange={onTimelineShowOrderOfOpeningChange}
+              fareZoneOptions={
+                adminVariant === 'list' && isAdminMode ? uniqueValues.fareZones : undefined
+              }
               selectedFareZonePositions={
-                isAdminMode
+                adminVariant === 'list' && isAdminMode
                   ? getSelectedPositions(uniqueValues.fareZones, effectiveSelections.fareZones)
                   : []
               }
               onFareZoneSelectionChange={
-                isAdminMode
+                adminVariant === 'list' && isAdminMode
                   ? (selectedItems) => updateFilterSelection('fareZones', selectedItems)
                   : undefined
               }

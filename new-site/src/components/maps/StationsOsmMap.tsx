@@ -26,9 +26,17 @@ import {
 import { getMarkerHitRadius, getMarkerVisualRadius, MARKER_STROKE } from '../../utils/mapMarkerSizing'
 import { addThemeTileLayersToMap, swapThemeTileLayers, type MapTileLayerRefs } from '../../utils/mapTileLayers'
 import {
-  isStationVisibleAtTimelineCutoff,
+  isStationVisibleInTimelineStep,
   type SuperTramTimelineCutoff,
 } from '../../utils/superTramTimeline'
+import {
+  loadSuperTramTrackGraph,
+  pointAlongTrackPath,
+  shortestTrackPathBetweenLatLngs,
+  trackFollowDurationSeconds,
+  trackPathLengthMeters,
+  type LatLngTuple,
+} from '../../utils/superTramTrackPath'
 import { LIGHTRAIL_COLLECTION_ID } from '../../utils/lightRailStationFields'
 import {
   getMapViewportMarkerLimit,
@@ -46,6 +54,7 @@ import {
 } from '../../utils/mapsMapViewStorage'
 import {
   STATIONS_MAP_DEFAULT_CHROME,
+  STATIONS_MAP_TIMELINE_BOTTOM_CHROME,
   STATIONS_MAP_EMPTY_CENTER,
   STATIONS_MAP_EMPTY_ZOOM,
   isNearEmptyDefaultMapView,
@@ -68,7 +77,144 @@ import './leafletDarkTiles.css'
 const MOBILE_MAP_MEDIA = '(max-width: 639px)'
 const VIEWPORT_MOVEEND_DEBOUNCE_MS = 150
 const PROGRAMMATIC_MOVE_MS = 300
+/** Close-up on the stop that just appeared. */
+const TIMELINE_FOLLOW_SINGLE_ZOOM = 16
+/** Keep the pin slightly below true centre; timeline float sits top-right. */
+const TIMELINE_FOLLOW_BOTTOM_BIAS_PX = 36
+/** Approximate floating timeline card width when the side panel is collapsed. */
+const TIMELINE_FOLLOW_FLOAT_RIGHT_CHROME_PX = 380
 const SCROLL_ZOOM_HINT_MS = 2200
+
+/**
+ * The stop that just opened at this timeline step (prologue → empty).
+ */
+function getTimelineFollowFocusStation(
+  stations: Station[],
+  cutoff: SuperTramTimelineCutoff,
+  visibleStationIds: ReadonlySet<string> | null,
+  showUndatedAtMax: boolean
+): Station | null {
+  if (cutoff.stationId == null) return null
+
+  const focus = stations.find((station) => {
+    if (station.id !== cutoff.stationId) return false
+    if (station.sourceCollectionId !== LIGHTRAIL_COLLECTION_ID) return false
+    if (!isValidStationCoordinate(station.latitude, station.longitude)) return false
+    return isStationVisibleInTimelineStep(station, {
+      cutoff,
+      visibleStationIds,
+      showUndatedAtMax,
+    })
+  })
+
+  return focus ?? null
+}
+
+type MapFollowChrome = { top: number; right: number; bottom: number; left: number }
+
+/**
+ * Centre a stop in the padded map viewport (accounts for timeline chrome).
+ * Tiny bounds + padding is more reliable than project/unproject bias.
+ */
+function flyToStationCentered(
+  map: L.Map,
+  lat: number,
+  lng: number,
+  zoom: number,
+  duration: number,
+  chrome: MapFollowChrome
+) {
+  const pad = 1e-5
+  const bounds = L.latLngBounds(
+    [lat - pad, lng - pad],
+    [lat + pad, lng + pad]
+  )
+  map.flyToBounds(bounds, {
+    paddingTopLeft: [chrome.left, chrome.top],
+    paddingBottomRight: [chrome.right, chrome.bottom],
+    maxZoom: zoom,
+    animate: duration > 0,
+    duration,
+    easeLinearity: 0.25,
+  })
+}
+
+/** Map centre so `lat/lng` sits in the padded viewport (chrome-aware). */
+function mapCenterForPinnedPoint(
+  map: L.Map,
+  lat: number,
+  lng: number,
+  zoom: number,
+  chrome: MapFollowChrome
+): L.LatLng {
+  const size = map.getSize()
+  const viewW = Math.max(1, size.x - chrome.left - chrome.right)
+  const viewH = Math.max(1, size.y - chrome.top - chrome.bottom)
+  const targetScreen = L.point(chrome.left + viewW / 2, chrome.top + viewH / 2)
+  const mapCenterScreen = L.point(size.x / 2, size.y / 2)
+  const pointProjected = map.project([lat, lng], zoom)
+  const centerProjected = pointProjected.add(mapCenterScreen.subtract(targetScreen))
+  return map.unproject(centerProjected, zoom)
+}
+
+/**
+ * Ground-level pan along a track path. Returns a cancel function.
+ */
+function animateCameraAlongTrackPath(
+  map: L.Map,
+  path: LatLngTuple[],
+  zoom: number,
+  durationSec: number,
+  chrome: MapFollowChrome,
+  onFrame: (fn: () => void) => void,
+  onDone: () => void
+): () => void {
+  if (path.length === 0) {
+    onDone()
+    return () => {}
+  }
+
+  if (durationSec <= 0 || path.length === 1) {
+    const end = path[path.length - 1]
+    onFrame(() => {
+      map.setView(mapCenterForPinnedPoint(map, end[0], end[1], zoom, chrome), zoom, {
+        animate: false,
+      })
+    })
+    onDone()
+    return () => {}
+  }
+
+  const totalMeters = trackPathLengthMeters(path)
+  let rafId = 0
+  let cancelled = false
+  const startedAt = performance.now()
+
+  const tick = (now: number) => {
+    if (cancelled) return
+    // Linear in time → constant metres/second along the path (no ease-in/out).
+    const t = Math.min(1, (now - startedAt) / (durationSec * 1000))
+    const point = pointAlongTrackPath(path, totalMeters * t)
+    onFrame(() => {
+      map.setView(mapCenterForPinnedPoint(map, point[0], point[1], zoom, chrome), zoom, {
+        animate: false,
+      })
+    })
+    if (t < 1) {
+      rafId = window.requestAnimationFrame(tick)
+      return
+    }
+    onDone()
+  }
+
+  rafId = window.requestAnimationFrame(tick)
+  return () => {
+    if (cancelled) return
+    cancelled = true
+    if (rafId) window.cancelAnimationFrame(rafId)
+    onDone()
+  }
+}
 
 /** Keeps the selected-station overlay inside the visible map stage while the page scrolls. */
 function MapSelectedCardDock({
@@ -270,7 +416,16 @@ interface StationsOsmMapProps {
   onAddStationModeChange?: (enabled: boolean) => void
   /** SuperTram opening timeline — null disables timeline filtering (visibility only). */
   timelineCutoff?: SuperTramTimelineCutoff | null
+  /** When set, pin visibility follows the slider step list instead of re-comparing cutoffs. */
+  timelineVisibleStationIds?: ReadonlySet<string> | null
   timelineShowUndatedAtMax?: boolean
+  /** Slowly fly the camera to the currently visible timeline stops as they appear. */
+  timelineFollowAppearing?: boolean
+  /**
+   * When true, reserve space for the floating timeline card (side panel closed)
+   * so follow-camera centres in the clear map area.
+   */
+  timelineFollowReserveFloatChrome?: boolean
   liteMode?: boolean
   /**
    * Increment when the user changes network tabs to fit the map to that network.
@@ -314,8 +469,13 @@ function getStationMarkerColor(
   return NETWORK_MAP_FALLBACK_COLOR
 }
 
-function setMarkerTimelineVisibility(marker: StationMarkerPair, visible: boolean): void {
+function setMarkerTimelineVisibility(
+  marker: StationMarkerPair,
+  visible: boolean,
+  options?: { animateAppear?: boolean }
+): void {
   const opacity = visible ? 1 : 0
+  const animateAppear = Boolean(options?.animateAppear && visible)
 
   if (marker.kind === 'supertram-logo') {
     const iconMarker = marker.visual as L.Marker
@@ -323,6 +483,19 @@ function setMarkerTimelineVisibility(marker: StationMarkerPair, visible: boolean
     const element = iconMarker.getElement()
     if (element) {
       element.style.pointerEvents = visible ? 'auto' : 'none'
+      const inner = element.querySelector(
+        '.stations-osm-map__supertram-marker'
+      ) as HTMLElement | null
+      if (inner) {
+        inner.classList.remove('stations-osm-map__supertram-marker--appear')
+        if (!visible) {
+          inner.style.transform = ''
+        } else if (animateAppear) {
+          // Force a reflow so the grow animation retriggers each time a stop opens.
+          void inner.offsetWidth
+          inner.classList.add('stations-osm-map__supertram-marker--appear')
+        }
+      }
     }
     return
   }
@@ -333,9 +506,36 @@ function setMarkerTimelineVisibility(marker: StationMarkerPair, visible: boolean
   })
 
   const circleMarker = marker.visual as L.CircleMarker
+  const fullRadius = circleMarker.options.radius ?? getMarkerVisualRadius(false, false)
+  if (!visible) {
+    circleMarker.setStyle({
+      fillOpacity: 0,
+      opacity: 0,
+      radius: fullRadius,
+    })
+    return
+  }
+
+  if (animateAppear) {
+    circleMarker.setStyle({
+      fillOpacity: 0.95,
+      opacity: 1,
+      radius: Math.max(1, fullRadius * 0.15),
+    })
+    window.requestAnimationFrame(() => {
+      circleMarker.setStyle({
+        fillOpacity: 0.95,
+        opacity: 1,
+        radius: fullRadius,
+      })
+    })
+    return
+  }
+
   circleMarker.setStyle({
-    fillOpacity: visible ? 0.95 : 0,
-    opacity,
+    fillOpacity: 0.95,
+    opacity: 1,
+    radius: fullRadius,
   })
 }
 
@@ -387,7 +587,10 @@ export function StationsOsmMap({
   onAddStationAtLocation,
   onAddStationModeChange,
   timelineCutoff = null,
+  timelineVisibleStationIds = null,
   timelineShowUndatedAtMax = true,
+  timelineFollowAppearing = false,
+  timelineFollowReserveFloatChrome = false,
   liteMode = false,
   fitNonce = 0,
   dataReady = true,
@@ -429,6 +632,19 @@ export function StationsOsmMap({
   const didFitForReadyRef = useRef(false)
   const dataReadyRef = useRef(dataReady)
   const stationsByKeyRef = useRef<Map<string, Station>>(new Map())
+  /** Previous rendered timeline visibility per marker key. */
+  const timelineVisibilityPrevRef = useRef<Map<string, boolean>>(new Map())
+  /** Station ids held hidden until the follow camera finishes flying to them. */
+  const followDeferredHiddenIdsRef = useRef<Set<string>>(new Set())
+  /** Station ids that have finished their follow reveal (committed on the map). */
+  const followCommittedVisibleIdsRef = useRef<Set<string>>(new Set())
+  const followRevealTimerRef = useRef<number | null>(null)
+  const followRevealGenerationRef = useRef(0)
+  /** Detects timeline step / follow-mode changes vs style-only re-renders. */
+  const followStepKeyRef = useRef('')
+  /** Last stop the follow camera settled on — used to route along tracks. */
+  const followLastFocusRef = useRef<LatLngTuple | null>(null)
+  const followTrackCancelRef = useRef<(() => void) | null>(null)
   const { theme } = useTheme()
   const themeKey = theme === 'dark' ? 'dark' : 'light'
 
@@ -465,6 +681,8 @@ export function StationsOsmMap({
       }),
     [stations, networkView]
   )
+  const mapStationsRef = useRef(mapStations)
+  mapStationsRef.current = mapStations
 
   const cullViewport = shouldCullStationsMapMarkers(mapStations.length, networkView, liteMode)
 
@@ -508,7 +726,7 @@ export function StationsOsmMap({
     [mapStations, networkView]
   )
 
-  const withProgrammaticMove = useCallback((fn: () => void) => {
+  const withProgrammaticMove = useCallback((fn: () => void, holdMs = PROGRAMMATIC_MOVE_MS) => {
     programmaticMoveRef.current = true
     if (programmaticClearTimerRef.current !== null) {
       window.clearTimeout(programmaticClearTimerRef.current)
@@ -519,7 +737,7 @@ export function StationsOsmMap({
       programmaticClearTimerRef.current = window.setTimeout(() => {
         programmaticClearTimerRef.current = null
         programmaticMoveRef.current = false
-      }, PROGRAMMATIC_MOVE_MS)
+      }, holdMs)
     }
   }, [])
 
@@ -1051,39 +1269,282 @@ export function StationsOsmMap({
   }, [dataReady, publishedStations, networkView, fitNonce, tryApplyMapCamera])
 
   useEffect(() => {
-    markersByIdRef.current.forEach((marker, stationKey) => {
-      const station = stationsByKeyRef.current.get(stationKey)
-      if (!station) return
-      applyMarkerStyle(
-        marker,
-        station,
-        networkView,
-        pendingNewStationKeys,
-        stationKey === selectedStationId,
-        mobileMarkers
-      )
+    if (!timelineFollowAppearing) return
+    void loadSuperTramTrackGraph().catch(() => {
+      /* follow falls back to flyTo when the graph is unavailable */
+    })
+  }, [timelineFollowAppearing])
 
-      if (timelineCutoff === null || station.sourceCollectionId !== LIGHTRAIL_COLLECTION_ID) {
-        setMarkerTimelineVisibility(marker, true)
-        return
+  useEffect(() => {
+    const clearFollowRevealTimer = () => {
+      if (followRevealTimerRef.current !== null) {
+        window.clearTimeout(followRevealTimerRef.current)
+        followRevealTimerRef.current = null
+      }
+    }
+
+    const clearFollowTrackAnimation = () => {
+      followTrackCancelRef.current?.()
+      followTrackCancelRef.current = null
+    }
+
+    const buildFollowChrome = (): MapFollowChrome => {
+      const rightChrome = timelineFollowReserveFloatChrome
+        ? TIMELINE_FOLLOW_FLOAT_RIGHT_CHROME_PX
+        : STATIONS_MAP_DEFAULT_CHROME.right
+      return {
+        top: STATIONS_MAP_DEFAULT_CHROME.top + TIMELINE_FOLLOW_BOTTOM_BIAS_PX,
+        right: rightChrome,
+        bottom: STATIONS_MAP_DEFAULT_CHROME.bottom + STATIONS_MAP_TIMELINE_BOTTOM_CHROME,
+        left: STATIONS_MAP_DEFAULT_CHROME.left,
+      }
+    }
+
+    const scheduleReveal = (
+      appearingIds: string[],
+      committed: Set<string>,
+      revealGeneration: number,
+      delayMs: number,
+      applyTimelineVisibility: (animateStationIds?: ReadonlySet<string>) => void
+    ) => {
+      clearFollowRevealTimer()
+      followRevealTimerRef.current = window.setTimeout(() => {
+        followRevealTimerRef.current = null
+        if (revealGeneration !== followRevealGenerationRef.current) return
+        appearingIds.forEach((id) => {
+          followDeferredHiddenIdsRef.current.delete(id)
+          committed.add(id)
+        })
+        applyTimelineVisibility(new Set(appearingIds))
+      }, delayMs)
+    }
+
+    /**
+     * Pan along SuperTram tracks when possible; otherwise fly straight.
+     * Resolves with the camera move duration in seconds.
+     */
+    const moveFollowCamera = async (
+      map: L.Map,
+      focusStation: { latitude: number; longitude: number },
+      prefersReducedMotion: boolean,
+      revealGeneration: number
+    ): Promise<number> => {
+      const chrome = buildFollowChrome()
+      const to: LatLngTuple = [focusStation.latitude, focusStation.longitude]
+      const from = followLastFocusRef.current
+      followLastFocusRef.current = to
+
+      if (prefersReducedMotion) {
+        withProgrammaticMove(() => {
+          flyToStationCentered(map, to[0], to[1], TIMELINE_FOLLOW_SINGLE_ZOOM, 0, chrome)
+        }, PROGRAMMATIC_MOVE_MS)
+        return 0
       }
 
-      const visible = isStationVisibleAtTimelineCutoff(
-        station,
-        timelineCutoff,
-        timelineShowUndatedAtMax
+      let path: LatLngTuple[] | null = null
+      if (from) {
+        try {
+          const graph = await loadSuperTramTrackGraph()
+          if (revealGeneration !== followRevealGenerationRef.current) return 0
+          path = shortestTrackPathBetweenLatLngs(graph, from, to)
+        } catch {
+          path = null
+        }
+      }
+
+      if (revealGeneration !== followRevealGenerationRef.current) return 0
+
+      // Always prefer a path of at least the two endpoints (track or straight).
+      const movePath = path && path.length > 0 ? path : from ? [from, to] : [to]
+      const duration = trackFollowDurationSeconds(trackPathLengthMeters(movePath))
+
+      if (movePath.length === 1 || duration <= 0) {
+        withProgrammaticMove(() => {
+          flyToStationCentered(map, to[0], to[1], TIMELINE_FOLLOW_SINGLE_ZOOM, 0, chrome)
+        }, PROGRAMMATIC_MOVE_MS)
+        return 0
+      }
+
+      clearFollowTrackAnimation()
+      await new Promise<void>((resolve) => {
+        followTrackCancelRef.current = animateCameraAlongTrackPath(
+          map,
+          movePath,
+          TIMELINE_FOLLOW_SINGLE_ZOOM,
+          duration,
+          chrome,
+          (fn) => withProgrammaticMove(fn, 80),
+          () => {
+            followTrackCancelRef.current = null
+            resolve()
+          }
+        )
+      })
+      return duration
+    }
+
+    const applyTimelineVisibility = (animateStationIds?: ReadonlySet<string>) => {
+      markersByIdRef.current.forEach((marker, stationKey) => {
+        const station = stationsByKeyRef.current.get(stationKey)
+        if (!station) return
+
+        applyMarkerStyle(
+          marker,
+          station,
+          networkView,
+          pendingNewStationKeys,
+          stationKey === selectedStationId,
+          mobileMarkers
+        )
+
+        if (timelineCutoff === null || station.sourceCollectionId !== LIGHTRAIL_COLLECTION_ID) {
+          followDeferredHiddenIdsRef.current.delete(station.id)
+          timelineVisibilityPrevRef.current.set(stationKey, true)
+          setMarkerTimelineVisibility(marker, true)
+          return
+        }
+
+        const timelineVisible = isStationVisibleInTimelineStep(station, {
+          cutoff: timelineCutoff,
+          visibleStationIds: timelineVisibleStationIds,
+          showUndatedAtMax: timelineShowUndatedAtMax,
+        })
+        const visible =
+          timelineVisible && !followDeferredHiddenIdsRef.current.has(station.id)
+        const animateAppear = Boolean(animateStationIds?.has(station.id) && visible)
+        timelineVisibilityPrevRef.current.set(stationKey, visible)
+        setMarkerTimelineVisibility(marker, visible, { animateAppear })
+      })
+    }
+
+    const visibleIdsKey = timelineVisibleStationIds
+      ? [...timelineVisibleStationIds].sort().join('|')
+      : ''
+    const followStepKey = [
+      timelineFollowAppearing ? '1' : '0',
+      timelineCutoff?.stationId ?? '',
+      timelineCutoff?.dateMs ?? '',
+      timelineShowUndatedAtMax ? '1' : '0',
+      visibleIdsKey,
+    ].join(':')
+    const followStepChanged = followStepKey !== followStepKeyRef.current
+
+    // Style-only update (selection, etc.): keep deferred pins hidden, don't re-fly.
+    if (!followStepChanged && timelineFollowAppearing && timelineCutoff !== null) {
+      applyTimelineVisibility()
+      // Do not clear the in-flight reveal timer from this path.
+      return
+    }
+    followStepKeyRef.current = followStepKey
+
+    // Follow off / timeline off: show pins immediately (grow on newly revealed).
+    if (!timelineFollowAppearing || timelineCutoff === null) {
+      clearFollowRevealTimer()
+      clearFollowTrackAnimation()
+      followRevealGenerationRef.current += 1
+      followDeferredHiddenIdsRef.current.clear()
+      followLastFocusRef.current = null
+
+      const animateIds = new Set<string>()
+      if (timelineCutoff !== null) {
+        markersByIdRef.current.forEach((_marker, stationKey) => {
+          const station = stationsByKeyRef.current.get(stationKey)
+          if (!station || station.sourceCollectionId !== LIGHTRAIL_COLLECTION_ID) return
+          const willShow = isStationVisibleInTimelineStep(station, {
+            cutoff: timelineCutoff,
+            visibleStationIds: timelineVisibleStationIds,
+            showUndatedAtMax: timelineShowUndatedAtMax,
+          })
+          const wasShown = timelineVisibilityPrevRef.current.get(stationKey) === true
+          if (willShow && !wasShown) animateIds.add(station.id)
+        })
+      }
+
+      followCommittedVisibleIdsRef.current = new Set(
+        timelineVisibleStationIds ? [...timelineVisibleStationIds] : []
       )
-      setMarkerTimelineVisibility(marker, visible)
+      applyTimelineVisibility(animateIds)
+      return () => {
+        clearFollowRevealTimer()
+        clearFollowTrackAnimation()
+      }
+    }
+
+    const targetVisibleIds = timelineVisibleStationIds
+      ? new Set(timelineVisibleStationIds)
+      : new Set<string>()
+    const committed = followCommittedVisibleIdsRef.current
+    const appearingIds: string[] = []
+    targetVisibleIds.forEach((id) => {
+      if (!committed.has(id)) appearingIds.push(id)
     })
-    // Intentionally omit markerStations — cull refreshes must not restyle every pin
-    // (setIcon/setStyle during/after zoom reads as jiggling).
+    committed.forEach((id) => {
+      if (!targetVisibleIds.has(id)) committed.delete(id)
+    })
+
+    appearingIds.forEach((id) => followDeferredHiddenIdsRef.current.add(id))
+    applyTimelineVisibility()
+
+    const focusStation = getTimelineFollowFocusStation(
+      mapStationsRef.current,
+      timelineCutoff,
+      timelineVisibleStationIds,
+      timelineShowUndatedAtMax
+    )
+
+    const map = mapRef.current
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    clearFollowRevealTimer()
+    clearFollowTrackAnimation()
+    followRevealGenerationRef.current += 1
+    const revealGeneration = followRevealGenerationRef.current
+
+    if (!focusStation) {
+      return () => {
+        clearFollowRevealTimer()
+        clearFollowTrackAnimation()
+      }
+    }
+
+    if (!map) {
+      if (appearingIds.length > 0) {
+        appearingIds.forEach((id) => {
+          followDeferredHiddenIdsRef.current.delete(id)
+          committed.add(id)
+        })
+        applyTimelineVisibility(new Set(appearingIds))
+      }
+      followLastFocusRef.current = [focusStation.latitude, focusStation.longitude]
+      return () => {
+        clearFollowRevealTimer()
+        clearFollowTrackAnimation()
+      }
+    }
+
+    void (async () => {
+      await moveFollowCamera(map, focusStation, prefersReducedMotion, revealGeneration)
+      if (revealGeneration !== followRevealGenerationRef.current) return
+      if (appearingIds.length === 0) return
+      // Camera has already arrived — reveal the stop immediately.
+      scheduleReveal(appearingIds, committed, revealGeneration, 0, applyTimelineVisibility)
+    })()
+
+    return () => {
+      clearFollowRevealTimer()
+      clearFollowTrackAnimation()
+    }
   }, [
     selectedStationId,
     networkView,
     mobileMarkers,
     pendingNewStationKeys,
     timelineCutoff,
+    timelineVisibleStationIds,
     timelineShowUndatedAtMax,
+    timelineFollowAppearing,
+    timelineFollowReserveFloatChrome,
+    withProgrammaticMove,
   ])
 
   useEffect(() => {
