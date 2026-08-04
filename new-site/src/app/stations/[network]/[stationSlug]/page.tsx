@@ -535,7 +535,7 @@ function StationDetailsPage() {
         >
           Back
         </BUTWideButton>
-        {station && canEdit ? (
+        {station && isAdminMode ? (
           <BUTCircleButton
             type="button"
             ariaLabel="Edit station"

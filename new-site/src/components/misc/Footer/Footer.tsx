@@ -48,12 +48,17 @@ const Footer: React.FC = () => {
     router.replace(query.length > 0 ? `${pathname}?${query}` : pathname, { scroll: false })
   }
 
+  const handleCopyrightClick = (event: React.MouseEvent<HTMLParagraphElement>) => {
+    if (user || event.detail !== 3) return
+    router.push('/log-in')
+  }
+
   return (
     <footer className="site-footer app-footer">
       <div className="site-footer-inner">
         <div className="site-footer-primary-row">
           <div className="site-footer-brand">
-            <p>&copy; {new Date().getFullYear()} Rail Statistics</p>
+            <p onClick={handleCopyrightClick}>&copy; {new Date().getFullYear()} Rail Statistics</p>
           </div>
           <div className="site-footer-links site-footer-links--base-row">
             <BUTFooterLink to="/">
@@ -86,8 +91,8 @@ const Footer: React.FC = () => {
             </BUTFooterLink>
           </div>
         </div>
-        <div className="site-footer-secondary-row">
-          {user ? (
+        {user ? (
+          <div className="site-footer-secondary-row">
             <div className="site-footer-admin-toggle">
               <span className="site-footer-admin-toggle__label">Admin</span>
               <TOGToggleVisited
@@ -97,28 +102,22 @@ const Footer: React.FC = () => {
                 className="site-footer-admin-toggle__control"
               />
             </div>
-          ) : null}
-          <div className="site-footer-links site-footer-links--logged-in-row">
-            <BUTFooterLink to="/admin/messages">
-              Messages
-            </BUTFooterLink>
-            <BUTFooterLink to="/admin/api-status">
-              API Status
-            </BUTFooterLink>
-            <BUTFooterLink to="/admin/design-system">
-              Design System
-            </BUTFooterLink>
-            {user ? (
+            <div className="site-footer-links site-footer-links--logged-in-row">
+              <BUTFooterLink to="/admin/messages">
+                Messages
+              </BUTFooterLink>
+              <BUTFooterLink to="/admin/api-status">
+                API Status
+              </BUTFooterLink>
+              <BUTFooterLink to="/admin/design-system">
+                Design System
+              </BUTFooterLink>
               <BUTFooterLink onActivate={logout} className="site-footer-logout">
                 Log out
               </BUTFooterLink>
-            ) : (
-              <BUTFooterLink to="/log-in">
-                Log in
-              </BUTFooterLink>
-            )}
+            </div>
           </div>
-        </div>
+        ) : null}
       </div>
     </footer>
   )
