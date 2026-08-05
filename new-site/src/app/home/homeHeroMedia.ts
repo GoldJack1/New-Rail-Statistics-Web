@@ -27,7 +27,6 @@ export function homeHeroSharedImage(src: string): HeroMedia {
 }
 
 /** Temporary square placeholder art standing in for every home hero while final media is produced. */
-export const HOME_TEST_MEDIA: HeroMedia = homeHeroImage({
-  light: '/media/home/test/light.webp',
-  dark: '/media/home/test/dark.webp'
-})
+export const HOME_TEST_MEDIA: HeroMedia = homeHeroSharedImage(
+  '/media/home/test/newtophometrial.webp'
+)
