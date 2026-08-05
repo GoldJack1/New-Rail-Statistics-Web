@@ -13,6 +13,7 @@ import Hero6VisitTracking from './home/sections/Hero6VisitTracking'
 import Hero7Subscription from './home/sections/Hero7Subscription'
 import Hero8ClosingDownload from './home/sections/Hero8ClosingDownload'
 import Hero9Migrate from './home/sections/Hero9Migrate'
+import HeroNewestStations from './home/sections/HeroNewestStations'
 
 export default function HomePage() {
   const [downloadModalOpen, setDownloadModalOpen] = useState(false)
@@ -34,6 +35,7 @@ export default function HomePage() {
         <HomeDownloadPlatformModal open={downloadModalOpen} onClose={() => setDownloadModalOpen(false)} />
 
         <Hero2TopFeatures />
+        <HeroNewestStations />
         <Hero3StationDetail />
         <Hero4Favourites />
         <Hero5SearchFilter />
