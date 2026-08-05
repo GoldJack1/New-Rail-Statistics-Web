@@ -82,11 +82,14 @@
   transition: none !important;
 }
 
+/* Cell is one band wide: it clips art that spills its frame (see HeroImageStack contain rules) so
+ * neighbouring slides never bleed into the visible band. */
 .rs-carousel-hero__visual .rs-carousel-hero-image-strip__cell {
   position: relative;
   flex: 0 0 calc(100% / var(--carousel-hero-slide-count, 1));
   height: 100%;
   min-width: 0;
+  overflow: hidden;
 }
 
 /* Secondary option: match hometophero band tint instead of `--bg-secondary`. */

@@ -93,6 +93,17 @@
   );
 }
 
+/*
+ * Contain art is framed by the band, not by its own frame. On desktop the frame is only half the
+ * band, so clipping here would slice the square down the middle once the scroll zoom takes it past
+ * 1x. Let it spill and leave clipping to the hero section (and, in carousels, the slide cell), which
+ * are both a full band wide.
+ */
+.rs-home-hero-image-stack--media-fit-contain .rs-home-hero-image-stack__frame,
+.rs-home-hero-image-stack--media-fit-contain .rs-home-hero-image-stack__picture {
+  overflow: visible;
+}
+
 /* Desktop: the frame is one half of the band, so center the square inside it. */
 .rs-home-hero-image-stack--media-fit-contain .rs-home-hero-image-stack__media {
   top: 50%;
