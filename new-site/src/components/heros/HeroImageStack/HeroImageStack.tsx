@@ -7,6 +7,7 @@ import {
   HERO_IMAGE_LIGHT_DESKTOP_TABLET,
   HERO_IMAGE_LIGHT_MOBILE
 } from '../heroImageConstants'
+import type { HeroMedia, HeroMediaFit } from '../../models/heroCarouselSlideModel'
 import './HeroImageStack.css'
 
 export type HeroImageStackVariant = 'carousel' | 'static'
@@ -46,9 +47,14 @@ export interface HeroImageStackProps {
   videoPreload?: 'none' | 'metadata' | 'auto'
   /** IntersectionObserver root margin before starting video download (lazy heroes use a tighter margin). */
   approachRootMargin?: string
-  /** When set, replaces built-in paths (e.g. merged per-slide sources). */
+  /**
+   * Preferred media: image or video with light/dark (+ optional mobile) sources.
+   * When set, takes precedence over `sources` / `videoSources`.
+   */
+  media?: HeroMedia
+  /** When set (and `media` omitted), replaces built-in image paths. */
   sources?: HeroImageStackSources
-  /** Optional themed videos. When present, videos render instead of image sources. */
+  /** Optional themed videos. When present (and `media` omitted), videos render instead of images. */
   videoSources?: {
     dark: string
     light: string
@@ -57,7 +63,12 @@ export interface HeroImageStackProps {
   }
   /** Prefer lower-quality/mobile-tablet video sources when available. */
   videoQuality?: 'standard' | 'low'
-  /** Mobile/tablet media framing mode. */
+  /**
+   * How media fills the frame. `contain` keeps square assets fully in view at all breakpoints.
+   * Defaults to `cover` (legacy crop/overflow behaviour).
+   */
+  mediaFit?: HeroMediaFit
+  /** Mobile/tablet media framing mode (ignored when `mediaFit` is `contain`). */
   mobileTabletMediaMode?: 'cropped' | 'uncropped'
   /** Optional uncropped tuning for this specific usage. */
   mobileTabletUncroppedSettings?: HeroMobileTabletUncroppedSettings
@@ -71,7 +82,7 @@ export interface HeroImageStackProps {
   alt?: string
 }
 
-const DESKTOP_PICTURE_MEDIA = '(min-width: 1200px)'
+const MOBILE_TABLET_PICTURE_MEDIA = '(max-width: 1199px)'
 
 /**
  * Every hero `.webm` ships with a same-path `.mp4` sibling (re-encoded for browsers — chiefly
@@ -94,6 +105,37 @@ function browserSupportsWebM(): boolean {
   return probe.canPlayType('video/webm; codecs="vp9"') !== '' || probe.canPlayType('video/webm') !== ''
 }
 
+function resolveMedia(
+  media: HeroMedia | undefined,
+  sources: HeroImageStackSources | undefined,
+  videoSources: HeroImageStackProps['videoSources']
+): HeroMedia {
+  if (media) return media
+
+  if (videoSources) {
+    return {
+      type: 'video',
+      light: videoSources.light,
+      dark: videoSources.dark,
+      lightMobile: videoSources.lightMobileTablet,
+      darkMobile: videoSources.darkMobileTablet
+    }
+  }
+
+  const darkDesktopTablet = sources?.darkDesktopTablet ?? HERO_IMAGE_DARK_DESKTOP_TABLET
+  const darkMobile = sources?.darkMobile ?? HERO_IMAGE_DARK_MOBILE
+  const lightDesktopTablet = sources?.lightDesktopTablet ?? HERO_IMAGE_LIGHT_DESKTOP_TABLET
+  const lightMobile = sources?.lightMobile ?? HERO_IMAGE_LIGHT_MOBILE
+
+  return {
+    type: 'image',
+    light: lightDesktopTablet,
+    dark: darkDesktopTablet,
+    lightMobile: lightMobile !== lightDesktopTablet ? lightMobile : undefined,
+    darkMobile: darkMobile !== darkDesktopTablet ? darkMobile : undefined
+  }
+}
+
 const VARIANT_MODIFIER: Record<HeroImageStackVariant, string> = {
   carousel: 'rs-home-hero-image-stack--carousel-hero',
   static: 'rs-home-hero-image-stack--static-hero'
@@ -104,9 +146,11 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
   loading = 'eager',
   videoPreload,
   approachRootMargin,
+  media,
   sources,
   videoSources,
   mobileTabletMediaMode = 'cropped',
+  mediaFit = 'cover',
   mobileTabletUncroppedSettings,
   mobileTabletUncroppedMaxScale,
   isActive = true,
@@ -114,10 +158,8 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
   videoQuality = 'low',
   alt = ''
 }) => {
-  const darkDesktopTablet = sources?.darkDesktopTablet ?? HERO_IMAGE_DARK_DESKTOP_TABLET
-  const darkMobile = sources?.darkMobile ?? HERO_IMAGE_DARK_MOBILE
-  const lightDesktopTablet = sources?.lightDesktopTablet ?? HERO_IMAGE_LIGHT_DESKTOP_TABLET
-  const lightMobile = sources?.lightMobile ?? HERO_IMAGE_LIGHT_MOBILE
+  const resolvedMedia = resolveMedia(media, sources, videoSources)
+  const isVideo = resolvedMedia.type === 'video'
   const decorative = alt.trim() === ''
   const rootRef = useRef<HTMLDivElement | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
@@ -134,6 +176,10 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
 
   const resolvedApproachMargin =
     approachRootMargin ?? (loading === 'eager' ? '400px 0px' : '120px 0px')
+
+  const useContainFit = mediaFit === 'contain'
+  const useUncroppedMobile =
+    !useContainFit && mobileTabletMediaMode === 'uncropped'
 
   useEffect(() => {
     const root = rootRef.current
@@ -193,30 +239,32 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
   const resolvedVideoPreload = videoPreload ?? (hasApproachedViewport ? eagerVideoPreload : 'none')
 
   const preferLowQuality = videoQuality === 'low'
-  const darkVideoSrc = isMobileTabletViewport && videoSources?.darkMobileTablet
-    ? videoSources.darkMobileTablet
-    : videoSources?.dark
-  const lightVideoSrc = isMobileTabletViewport && videoSources?.lightMobileTablet
-    ? videoSources.lightMobileTablet
-    : videoSources?.light
+  const darkVideoSrc =
+    isMobileTabletViewport && resolvedMedia.darkMobile
+      ? resolvedMedia.darkMobile
+      : resolvedMedia.dark
+  const lightVideoSrc =
+    isMobileTabletViewport && resolvedMedia.lightMobile
+      ? resolvedMedia.lightMobile
+      : resolvedMedia.light
   const activeVideoSrc = theme === 'dark' ? darkVideoSrc : lightVideoSrc
 
   /** Carousel cells only mount video for the active slide; static heroes mount once approached. */
   const shouldMountVideo =
-    Boolean(videoSources) &&
+    isVideo &&
     hasApproachedViewport &&
     (variant === 'static' || isActive) &&
     Boolean(activeVideoSrc)
 
   useEffect(() => {
-    if (!shouldMountVideo || !videoSources) return
+    if (!shouldMountVideo || !isVideo) return
     const el = videoRef.current
     if (!el || el.readyState > 0 || !el.querySelector('source')) return
     el.load()
-  }, [shouldMountVideo, videoSources, activeVideoSrc])
+  }, [shouldMountVideo, isVideo, activeVideoSrc])
 
   useEffect(() => {
-    if (!videoSources) return
+    if (!isVideo) return
 
     const el = videoRef.current
     if (!el) return
@@ -235,7 +283,7 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
     void el.play().catch(() => {
       // Ignore failed autoplay attempts; muted inline videos should usually play.
     })
-  }, [isActive, isInViewport, videoSources, shouldMountVideo])
+  }, [isActive, isInViewport, isVideo, shouldMountVideo])
 
   return (
     <div
@@ -243,9 +291,8 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
       className={[
         'rs-home-hero-image-stack',
         VARIANT_MODIFIER[variant],
-        mobileTabletMediaMode === 'uncropped'
-          ? 'rs-home-hero-image-stack--mobile-tablet-uncropped'
-          : ''
+        useContainFit ? 'rs-home-hero-image-stack--media-fit-contain' : '',
+        useUncroppedMobile ? 'rs-home-hero-image-stack--mobile-tablet-uncropped' : ''
       ]
         .filter(Boolean)
         .join(' ')}
@@ -300,7 +347,7 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
       aria-hidden={decorative ? true : undefined}
     >
       <div className="rs-home-hero-image-stack__frame">
-        {videoSources ? (
+        {isVideo ? (
           shouldMountVideo ? (
             <div
               className={[
@@ -333,20 +380,24 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
         ) : (
           <>
             <picture className="rs-home-hero-image-stack__picture rs-home-hero-image-stack__picture--dark">
-              <source media={DESKTOP_PICTURE_MEDIA} srcSet={darkDesktopTablet} />
+              {resolvedMedia.darkMobile ? (
+                <source media={MOBILE_TABLET_PICTURE_MEDIA} srcSet={resolvedMedia.darkMobile} />
+              ) : null}
               <img
                 className="rs-home-hero-image-stack__media"
-                src={darkMobile}
+                src={resolvedMedia.dark}
                 alt={alt}
                 loading={loading}
                 decoding="async"
               />
             </picture>
             <picture className="rs-home-hero-image-stack__picture rs-home-hero-image-stack__picture--light">
-              <source media={DESKTOP_PICTURE_MEDIA} srcSet={lightDesktopTablet} />
+              {resolvedMedia.lightMobile ? (
+                <source media={MOBILE_TABLET_PICTURE_MEDIA} srcSet={resolvedMedia.lightMobile} />
+              ) : null}
               <img
                 className="rs-home-hero-image-stack__media"
-                src={lightMobile}
+                src={resolvedMedia.light}
                 alt={alt}
                 loading={loading}
                 decoding="async"

@@ -9,6 +9,24 @@
   --hero-image-parallax-x: 0px;
   --hero-image-parallax-y: 0px;
   --hero-image-motion-y: 0px;
+  /*
+   * Band height needed for the square to reach full width. Off above phone widths, where the band
+   * would have to grow by hundreds of pixels to match a wide viewport. Heroes fold this into their
+   * mobile `min-height` via `max()`, so 0 leaves their own base height untouched.
+   */
+  --hero-band-min-square-fit: 0px;
+}
+
+/*
+ * Phones: the square is capped by the smaller of the band's width and the room the copy panel
+ * leaves above it. The panel usually wins here, letterboxing the art with dead space either side,
+ * so make the band tall enough that the square is limited by screen width instead.
+ */
+@media (max-width: 420px) {
+  .rs-static-hero,
+  .rs-carousel-hero {
+    --hero-band-min-square-fit: calc(var(--hero-copy-panel-height, 0px) + 100vw);
+  }
 }
 
 @media (max-width: 409px) {

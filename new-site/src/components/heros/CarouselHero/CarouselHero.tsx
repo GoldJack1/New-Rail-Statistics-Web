@@ -18,11 +18,12 @@ import {
   type HeroTitleHeadingLevel
 } from '../HeroSlideCopy'
 import {
-  mergeCarouselHeroSlideSources,
+  resolveCarouselHeroSlideMedia,
   type CarouselHeroContentFill,
   type CarouselHeroSlide,
   type HeroDesktopPanelSide,
   type HeroMediaCropMode,
+  type HeroMediaFit,
   type HeroMobilePanelPosition,
   type HeroTextStyle
 } from '../../models/heroCarouselSlideModel'
@@ -37,6 +38,7 @@ import { unionDOMRects, useScrollDirectionFadeBounds } from '../../../hooks/useS
 import { scrollFadeRevealClassNames } from '../../misc/ScrollFadeReveal/ScrollFadeReveal'
 import '../../misc/ScrollFadeReveal/ScrollFadeReveal.css'
 import { useHeroImageMotion } from '../useHeroImageMotion'
+import { useHeroCopyPanelHeight } from '../useHeroCopyPanelHeight'
 import { useLockedHeroTextBlockScroll } from '../useLockedHeroTextBlockScroll'
 import './CarouselHero.css'
 
@@ -48,11 +50,17 @@ export type {
   CarouselHeroSlide,
   CarouselHeroContentFill,
   HeroDesktopPanelSide,
+  HeroMedia,
   HeroMediaCropMode,
+  HeroMediaFit,
   HeroMobilePanelPosition,
-  HeroTextStyle
+  HeroTextStyle,
+  HeroThemeMediaSources
 } from '../../models/heroCarouselSlideModel'
-export { mergeCarouselHeroSlideSources } from '../../models/heroCarouselSlideModel'
+export {
+  mergeCarouselHeroSlideSources,
+  resolveCarouselHeroSlideMedia
+} from '../../models/heroCarouselSlideModel'
 /* eslint-enable react-refresh/only-export-components */
 
 const AUTO_PLAY_MS_DEFAULT = 10_000
@@ -107,6 +115,8 @@ export interface CarouselHeroProps {
   desktopPanelSide?: HeroDesktopPanelSide
   /** Below 1200px: stack copy toward the bottom (default) or top of the hero band. */
   mobilePanelPosition?: HeroMobilePanelPosition
+  /** How media fills the frame (`contain` keeps square assets fully visible). */
+  mediaFit?: HeroMediaFit
   /** Mobile/tablet media framing default for all slides. */
   mobileTabletMediaMode?: HeroMediaCropMode
   /** Optional default max scale cap for mobile/tablet uncropped slides. */
@@ -129,6 +139,7 @@ const CarouselHero: React.FC<CarouselHeroProps> = ({
   titleHeadingLevel = 1,
   desktopPanelSide = 'left',
   mobilePanelPosition = 'bottom',
+  mediaFit = 'cover',
   mobileTabletMediaMode = 'cropped',
   mobileTabletUncroppedMaxScale,
   mobileTabletUncroppedSettings
@@ -380,6 +391,8 @@ const CarouselHero: React.FC<CarouselHeroProps> = ({
     ancestorScrollResyncKey: textBlockScrollLayoutKey
   })
 
+  useHeroCopyPanelHeight(carouselSectionRef, '.rs-carousel-hero__content')
+
   const getScrollFadeUnionBounds = useCallback((): DOMRect | null => {
     const a = scrollFadeVisualRef.current?.getBoundingClientRect() ?? null
     const b = scrollFadeCopyRef.current?.getBoundingClientRect() ?? null
@@ -591,13 +604,15 @@ const CarouselHero: React.FC<CarouselHeroProps> = ({
               .join(' ')}
             onTransitionEnd={onImageStripTransitionEnd}
           >
-          {slides.map((slide, i) => (
+          {slides.map((slide, i) => {
+            const resolvedMedia = resolveCarouselHeroSlideMedia(slide, defaultImageSources)
+            return (
             <div key={i} className="rs-carousel-hero-image-strip__cell">
               <HeroImageStack
                 variant="carousel"
                 loading={i === safeIndex ? 'eager' : 'lazy'}
-                sources={mergeCarouselHeroSlideSources(slide, defaultImageSources)}
-                videoSources={slide.videoSources}
+                media={resolvedMedia}
+                mediaFit={slide.mediaFit ?? mediaFit}
                 mobileTabletMediaMode={slide.mobileTabletMediaMode ?? mobileTabletMediaMode}
                 mobileTabletUncroppedMaxScale={
                   slide.mobileTabletUncroppedMaxScale ?? mobileTabletUncroppedMaxScale
@@ -606,18 +621,21 @@ const CarouselHero: React.FC<CarouselHeroProps> = ({
                   slide.mobileTabletUncroppedSettings ?? mobileTabletUncroppedSettings
                 }
                 isActive={i === safeIndex}
-                videoLoop={Boolean(slide.videoSources)}
+                videoLoop={resolvedMedia.type === 'video'}
                 alt={slide.imageAlt ?? ''}
               />
             </div>
-          ))}
-          {useStripClone ? (
+            )
+          })}
+          {useStripClone ? (() => {
+            const resolvedMedia = resolveCarouselHeroSlideMedia(slides[0], defaultImageSources)
+            return (
             <div key="strip-clone-0" className="rs-carousel-hero-image-strip__cell">
               <HeroImageStack
                 variant="carousel"
                 loading={safeIndex === 0 ? 'eager' : 'lazy'}
-                sources={mergeCarouselHeroSlideSources(slides[0], defaultImageSources)}
-                videoSources={slides[0].videoSources}
+                media={resolvedMedia}
+                mediaFit={slides[0].mediaFit ?? mediaFit}
                 mobileTabletMediaMode={slides[0].mobileTabletMediaMode ?? mobileTabletMediaMode}
                 mobileTabletUncroppedMaxScale={
                   slides[0].mobileTabletUncroppedMaxScale ?? mobileTabletUncroppedMaxScale
@@ -626,11 +644,12 @@ const CarouselHero: React.FC<CarouselHeroProps> = ({
                   slides[0].mobileTabletUncroppedSettings ?? mobileTabletUncroppedSettings
                 }
                 isActive={safeIndex === 0}
-                videoLoop={Boolean(slides[0].videoSources)}
+                videoLoop={resolvedMedia.type === 'video'}
                 alt={slides[0].imageAlt ?? ''}
               />
             </div>
-          ) : null}
+            )
+          })() : null}
           </div>
         </div>
       </div>

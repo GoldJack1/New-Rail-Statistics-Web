@@ -865,16 +865,27 @@
 
 /* Mobile + tablet: stacked panel through 1199px; split card from 1200px. */
 @media (max-width: 1199px) {
+  /*
+   * StaticHero band heights plus room for the prev/next + indicator bar (40px) and the
+   * gap above it (16px), with headroom for the tallest slide's copy. Without this the
+   * carousel reuses the static heights and long titles clip against the band foot.
+   */
   .rs-carousel-hero {
-    min-height: 760px;
+    --carousel-hero-controls-allowance: 80px;
+    --hero-band-base-min-height: calc(760px + var(--carousel-hero-controls-allowance));
+    /* `--hero-band-min-square-fit` (heroShared.css) raises this on phones so the square fits. */
+    min-height: max(
+      var(--hero-band-base-min-height),
+      var(--hero-band-min-square-fit, 0px)
+    );
   }
 
   .rs-carousel-hero[data-carousel-hero-cta-band='1'] {
-    min-height: 836px;
+    --hero-band-base-min-height: calc(836px + var(--carousel-hero-controls-allowance));
   }
 
   .rs-carousel-hero[data-carousel-hero-cta-band='2'] {
-    min-height: 912px;
+    --hero-band-base-min-height: calc(912px + var(--carousel-hero-controls-allowance));
   }
 
   /* Bottom text + carousel panel: extra air above copy on small screens. */

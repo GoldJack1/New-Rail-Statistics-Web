@@ -73,6 +73,106 @@
   }
 }
 
+/*
+ * Square contain: keep media fully in view at every breakpoint.
+ *
+ * Zoom ramps linearly off `--hero-image-view-progress`, which holds at 0 until the band starts
+ * leaving the top of the viewport and then runs 0→1 as it scrolls off, so the art is still while
+ * scrolling in. `scale-speed` shortens the ramp: 1 spreads the zoom across the whole exit, 2
+ * finishes it by the time the band is halfway gone.
+ */
+.rs-home-hero-image-stack--media-fit-contain {
+  --hero-image-contain-scale: calc(
+    1 +
+      min(
+        1,
+        var(--hero-image-view-progress, 0) *
+          var(--hero-image-mobile-uncropped-scale-speed, 1)
+      ) *
+      (var(--hero-image-mobile-uncropped-max-scale, 1.6) - 1)
+  );
+}
+
+/* Desktop: the frame is one half of the band, so center the square inside it. */
+.rs-home-hero-image-stack--media-fit-contain .rs-home-hero-image-stack__media {
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center;
+  transform: translate(
+      calc(-50% + var(--hero-image-parallax-x)),
+      calc(-50% + var(--hero-image-parallax-y) + var(--hero-image-motion-y))
+    )
+    scale(var(--hero-image-contain-scale));
+  transform-origin: center center;
+  animation: none;
+  opacity: 1;
+  filter: none;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/*
+ * Mobile / tablet: art fills the whole stacked band while the copy panel overlays one end.
+ * Anchor the square's panel-facing edge to where the panel's gradient begins, so the art always
+ * meets the fade rather than the band: pinning the opposite edge instead leaves a gap whenever the
+ * square is limited by viewport width rather than by the panel. Any slack falls at the far edge.
+ *
+ * `--hero-image-contain-gradient-overlap` then slides the whole square that far past the gradient
+ * start, which buys the same clearance at the band's free edge without resizing the art. The
+ * overlapped strip sits inside the panel's fade, so it reads as clearance rather than a crop.
+ */
+@media (max-width: 1199px) {
+  .rs-home-hero-image-stack--media-fit-contain .rs-home-hero-image-stack__media {
+    top: auto;
+    bottom: calc(
+      var(--hero-copy-panel-height, 50%) - var(--hero-image-contain-gradient-overlap, 10px)
+    );
+    width: var(
+      --hero-image-mobile-uncropped-media-width-mobile,
+      var(--hero-image-mobile-uncropped-media-width, 100%)
+    );
+    height: auto;
+    aspect-ratio: 1 / 1;
+    max-width: 100%;
+    /*
+     * Cap the square by the space the copy panel actually leaves, not by a fixed fraction of the
+     * band: the panel grows as copy wraps onto more lines, so a fixed fraction leaves a gap on wide
+     * tablets and buries the art behind the panel on phones. `--hero-copy-panel-height` is measured
+     * by `useHeroCopyPanelHeight`; the 50% fallback matches the old behaviour before hydration.
+     * Clearance at the band's free edge comes from the gradient overlap above, which slides the
+     * square along the band; taking it off this cap instead would shrink the art rather than move it.
+     */
+    max-height: var(
+      --hero-image-contain-max-height,
+      calc(100% - var(--hero-copy-panel-height, 50%))
+    );
+    transform: translate(
+        calc(-50% + var(--hero-image-parallax-x)),
+        calc(var(--hero-image-parallax-y) + var(--hero-image-motion-y))
+      )
+      scale(var(--hero-image-contain-scale));
+    /* Scroll zoom grows away from the gradient, keeping that edge welded to it. */
+    transform-origin: center bottom;
+  }
+}
+
+@media (min-width: 421px) and (max-width: 1023px) {
+  .rs-home-hero-image-stack--media-fit-contain .rs-home-hero-image-stack__media {
+    width: var(
+      --hero-image-mobile-uncropped-media-width-tablet,
+      var(
+        --hero-image-mobile-uncropped-media-width-mobile,
+        var(--hero-image-mobile-uncropped-media-width, 100%)
+      )
+    );
+  }
+}
+
 @media (max-width: 1199px) {
   /*
    * Uncropped: shared framing + scroll scale on img and video (`scale` from hero section).
@@ -158,11 +258,22 @@
       scale(var(--hero-image-scale));
   }
 
+  .rs-home-hero-image-stack--media-fit-contain .rs-home-hero-image-stack__media,
   .rs-home-hero-image-stack--mobile-tablet-uncropped .rs-home-hero-image-stack__media {
     transform: translate(
         calc(-50% + var(--hero-image-parallax-x)),
         calc(-50% + var(--hero-image-parallax-y) + var(--hero-image-motion-y))
       )
       scale(1);
+  }
+
+  @media (max-width: 1199px) {
+    .rs-home-hero-image-stack--media-fit-contain .rs-home-hero-image-stack__media {
+      transform: translate(
+          calc(-50% + var(--hero-image-parallax-x)),
+          calc(var(--hero-image-parallax-y) + var(--hero-image-motion-y))
+        )
+        scale(1);
+    }
   }
 }

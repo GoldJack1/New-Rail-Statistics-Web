@@ -663,15 +663,20 @@
 /* Mobile + tablet: stacked panel through 1199px; split card from 1200px. */
 @media (max-width: 1199px) {
   .rs-static-hero {
-    min-height: 760px;
+    --hero-band-base-min-height: 760px;
+    /* `--hero-band-min-square-fit` (heroShared.css) raises this on phones so the square fits. */
+    min-height: max(
+      var(--hero-band-base-min-height),
+      var(--hero-band-min-square-fit, 0px)
+    );
   }
 
   .rs-static-hero[data-static-hero-cta-band='1'] {
-    min-height: 836px;
+    --hero-band-base-min-height: 836px;
   }
 
   .rs-static-hero[data-static-hero-cta-band='2'] {
-    min-height: 912px;
+    --hero-band-base-min-height: 912px;
   }
 
   /* Bottom text panel: extra air above copy on small screens. */

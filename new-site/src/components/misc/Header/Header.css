@@ -288,34 +288,7 @@
     }
 
     .header-nav-links {
-        gap: var(--space-sm);
-    }
-
-    /* Tablet + mobile: nav in hamburger; Download app is desktop-only */
-    .header-nav--desktop,
-    .header-download-app-button--desktop {
-        display: none !important;
-    }
-
-    .universal-header .header-menu-toggle {
-        display: inline-flex;
-        min-height: 44px;
-        min-width: 44px;
-    }
-
-    .universal-header .header-mobile-panel {
-        display: grid;
-        grid-template-rows: 0fr;
-        transition: grid-template-rows 0.22s ease;
-    }
-
-    .universal-header.universal-header--menu-open .header-mobile-panel {
-        grid-template-rows: 1fr;
-        border-top: 1px solid var(--border-color);
-    }
-
-    .universal-header .header-mobile-panel-inner {
-        min-height: 0;
+        gap: var(--space-md);
     }
 }
 
@@ -340,5 +313,32 @@
 
     .logo.logo--mobile {
         display: flex;
+    }
+
+    /* Mobile only: nav in hamburger; Download app is desktop/tablet-only */
+    .header-nav--desktop,
+    .header-download-app-button--desktop {
+        display: none !important;
+    }
+
+    .universal-header .header-menu-toggle {
+        display: inline-flex;
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .universal-header .header-mobile-panel {
+        display: grid;
+        grid-template-rows: 0fr;
+        transition: grid-template-rows 0.22s ease;
+    }
+
+    .universal-header.universal-header--menu-open .header-mobile-panel {
+        grid-template-rows: 1fr;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .universal-header .header-mobile-panel-inner {
+        min-height: 0;
     }
 }

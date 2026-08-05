@@ -10,6 +10,22 @@ import type {
 export type CarouselHeroSlideImageSources = HeroImageStackSources
 export type HeroMediaCropMode = 'cropped' | 'uncropped'
 
+/** How media fills the hero frame. `contain` keeps square art fully in view at all breakpoints. */
+export type HeroMediaFit = 'cover' | 'contain'
+
+/** Light/dark themed URLs, with optional mobile/tablet overrides. */
+export type HeroThemeMediaSources = {
+  light: string
+  dark: string
+  lightMobile?: string
+  darkMobile?: string
+}
+
+/** Discriminated media for a slide: square webp image or themed video. */
+export type HeroMedia =
+  | ({ type: 'image' } & HeroThemeMediaSources)
+  | ({ type: 'video' } & HeroThemeMediaSources)
+
 export interface CarouselHeroSlideCta {
   label: string
   /** Wide hero CTA colour; defaults to `accent`. */
@@ -34,13 +50,20 @@ export interface CarouselHeroSlide {
    */
   imageAlt?: string
   /**
+   * Preferred per-slide media: image or video with light/dark (optional mobile) sources.
+   * When set, takes precedence over `imageSources` / `videoSources`.
+   */
+  media?: HeroMedia
+  /**
    * Per-slide art: light/dark × desktop-tablet / mobile URLs (`HeroImageStack`).
    * Omitted keys are filled from `defaultImageSources` on `CarouselHero` / `StaticHero`.
+   * Prefer `media` for new slides.
    */
   imageSources?: Partial<CarouselHeroSlideImageSources>
   /**
-   * Optional themed video art for this slide. When provided, `HeroImageStack` renders video
-   * instead of images and plays only while the slide is active.
+   * Optional themed video art for this slide. When provided (and `media` is omitted),
+   * `HeroImageStack` renders video instead of images.
+   * Prefer `media: { type: 'video', ... }` for new slides.
    */
   videoSources?: {
     dark: string
@@ -48,6 +71,8 @@ export interface CarouselHeroSlide {
     darkMobileTablet?: string
     lightMobileTablet?: string
   }
+  /** How media fills the frame (`contain` keeps square assets fully visible). */
+  mediaFit?: HeroMediaFit
   /** Mobile/tablet media framing for this slide only (defaults to hero-level setting). */
   mobileTabletMediaMode?: HeroMediaCropMode
   /** Optional max scale cap for mobile/tablet uncropped mode. */
@@ -74,6 +99,33 @@ export function mergeCarouselHeroSlideSources(
     darkMobile: p.darkMobile ?? base.darkMobile,
     lightDesktopTablet: p.lightDesktopTablet ?? base.lightDesktopTablet,
     lightMobile: p.lightMobile ?? base.lightMobile
+  }
+}
+
+/** Resolve preferred `media`, else legacy `videoSources` / merged `imageSources`. */
+export function resolveCarouselHeroSlideMedia(
+  slide: CarouselHeroSlide,
+  base: HeroImageStackSources
+): HeroMedia {
+  if (slide.media) return slide.media
+
+  if (slide.videoSources) {
+    return {
+      type: 'video',
+      light: slide.videoSources.light,
+      dark: slide.videoSources.dark,
+      lightMobile: slide.videoSources.lightMobileTablet,
+      darkMobile: slide.videoSources.darkMobileTablet
+    }
+  }
+
+  const sources = mergeCarouselHeroSlideSources(slide, base)
+  return {
+    type: 'image',
+    light: sources.lightDesktopTablet,
+    dark: sources.darkDesktopTablet,
+    lightMobile: sources.lightMobile !== sources.lightDesktopTablet ? sources.lightMobile : undefined,
+    darkMobile: sources.darkMobile !== sources.darkDesktopTablet ? sources.darkMobile : undefined
   }
 }
 

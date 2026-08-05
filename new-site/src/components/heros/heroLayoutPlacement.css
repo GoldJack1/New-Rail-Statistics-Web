@@ -62,6 +62,19 @@
       transparent 100%
     );
   }
+
+  /*
+   * Contain media meets the gradient above it by default (HeroImageStack.css). With the copy panel
+   * at the top, the gradient runs along the panel's lower edge, so meet it from below instead.
+   */
+  .rs-static-hero[data-hero-mobile-panel='top'] .rs-home-hero-image-stack--media-fit-contain .rs-home-hero-image-stack__media,
+  .rs-carousel-hero[data-hero-mobile-panel='top'] .rs-home-hero-image-stack--media-fit-contain .rs-home-hero-image-stack__media {
+    top: calc(
+      var(--hero-copy-panel-height, 50%) - var(--hero-image-contain-gradient-overlap, 5px)
+    );
+    bottom: auto;
+    transform-origin: center top;
+  }
 }
 
 /* ---- Desktop: copy panel on the right (image reads on the left) ---- */

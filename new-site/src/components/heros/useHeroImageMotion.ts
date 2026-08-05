@@ -13,6 +13,13 @@ export interface UseHeroImageMotionOptions {
  * when `max-width: 409px` so the art reads smaller on very narrow phones.
  */
 const MAX_SCROLL_SCALE_DELTA = 1
+/**
+ * The same exit progress as `--hero-image-scale` (0 until the band starts leaving the top of the
+ * viewport, then 0→1 as it scrolls off) published as a plain 0→1 number, without the `1 +` offset
+ * or the narrow-viewport multiplier baked into the scale. Effects ramp off this so they stay idle
+ * while the hero scrolls into view and only animate as it leaves.
+ */
+const VIEW_PROGRESS_PROPERTY = '--hero-image-view-progress'
 /** Must match hero CSS `@media (max-width: 409px)` — scales `--hero-image-scale` for both scroll motion and static fallback. */
 const NARROW_VIEWPORT_IMAGE_SCALE = 0.75
 const NARROW_VIEWPORT_MQ = '(max-width: 409px)'
@@ -62,6 +69,7 @@ export function useHeroImageMotion(
     const computeAndSetScale = () => {
       if (mq.matches) {
         el.style.removeProperty('--hero-image-scale')
+        el.style.removeProperty(VIEW_PROGRESS_PROPERTY)
         return
       }
 
@@ -79,6 +87,7 @@ export function useHeroImageMotion(
       const narrow = narrowMq.matches ? NARROW_VIEWPORT_IMAGE_SCALE : 1
       const scale = base * narrow
       el.style.setProperty('--hero-image-scale', scale.toFixed(4))
+      el.style.setProperty(VIEW_PROGRESS_PROPERTY, progress.toFixed(4))
     }
 
     const schedule = () => {
@@ -162,6 +171,7 @@ export function useHeroImageMotion(
       narrowMq.removeEventListener('change', onMq)
       if (raf) cancelAnimationFrame(raf)
       el.style.removeProperty('--hero-image-scale')
+      el.style.removeProperty(VIEW_PROGRESS_PROPERTY)
     }
   }, [heroRef, active, options?.ancestorScrollResyncKey])
 }

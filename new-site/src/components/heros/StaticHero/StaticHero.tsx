@@ -13,11 +13,12 @@ import {
   type HeroTitleHeadingLevel
 } from '../HeroSlideCopy'
 import {
-  mergeCarouselHeroSlideSources,
+  resolveCarouselHeroSlideMedia,
   type CarouselHeroContentFill,
   type CarouselHeroSlide,
   type HeroDesktopPanelSide,
   type HeroMediaCropMode,
+  type HeroMediaFit,
   type HeroMobilePanelPosition,
   type HeroTextStyle
 } from '../../models/heroCarouselSlideModel'
@@ -32,6 +33,7 @@ import { unionDOMRects, useScrollDirectionFadeBounds } from '../../../hooks/useS
 import { scrollFadeRevealClassNames } from '../../misc/ScrollFadeReveal/ScrollFadeReveal'
 import '../../misc/ScrollFadeReveal/ScrollFadeReveal.css'
 import { useHeroImageMotion } from '../useHeroImageMotion'
+import { useHeroCopyPanelHeight } from '../useHeroCopyPanelHeight'
 import { useLockedHeroTextBlockScroll } from '../useLockedHeroTextBlockScroll'
 import './StaticHero.css'
 
@@ -78,6 +80,8 @@ export interface StaticHeroProps {
   desktopPanelSide?: HeroDesktopPanelSide
   /** Below 1200px: stack copy toward the bottom (default) or top of the hero band. */
   mobilePanelPosition?: HeroMobilePanelPosition
+  /** How media fills the frame (`contain` keeps square assets fully visible). */
+  mediaFit?: HeroMediaFit
   /** Mobile/tablet media framing default for this static hero. */
   mobileTabletMediaMode?: HeroMediaCropMode
   /** Optional default max scale cap for mobile/tablet uncropped media. */
@@ -98,6 +102,7 @@ const StaticHero: React.FC<StaticHeroProps> = ({
   titleHeadingLevel = 2,
   desktopPanelSide = 'left',
   mobilePanelPosition = 'bottom',
+  mediaFit = 'cover',
   mobileTabletMediaMode = 'cropped',
   mobileTabletUncroppedMaxScale,
   mobileTabletUncroppedSettings
@@ -205,6 +210,8 @@ const StaticHero: React.FC<StaticHeroProps> = ({
     ancestorScrollResyncKey: textBlockScrollLayoutKey
   })
 
+  useHeroCopyPanelHeight(staticSectionRef, '.rs-static-hero__content')
+
   const getScrollFadeUnionBounds = useCallback((): DOMRect | null => {
     const a = scrollFadeVisualRef.current?.getBoundingClientRect() ?? null
     const b = scrollFadeCopyRef.current?.getBoundingClientRect() ?? null
@@ -215,6 +222,8 @@ const StaticHero: React.FC<StaticHeroProps> = ({
   const scrollFadeLayoutBust = `${slide.title}|${tallestSlideTextPx ?? ''}|${tallestCtaRowPx ?? ''}|${textStyle}|${maxCtaCount}`
 
   const scrollFadeVisible = useScrollDirectionFadeBounds(getScrollFadeUnionBounds, scrollFadeLayoutBust)
+
+  const resolvedMedia = resolveCarouselHeroSlideMedia(slide, defaultImageSources)
 
   useEffect(() => {
     let cancelled = false
@@ -252,9 +261,9 @@ const StaticHero: React.FC<StaticHeroProps> = ({
           <HeroImageStack
             variant="static"
             loading={imageLoading}
-            sources={mergeCarouselHeroSlideSources(slide, defaultImageSources)}
-            videoSources={slide.videoSources}
-            videoLoop={Boolean(slide.videoSources)}
+            media={resolvedMedia}
+            videoLoop={resolvedMedia.type === 'video'}
+            mediaFit={slide.mediaFit ?? mediaFit}
             mobileTabletMediaMode={slide.mobileTabletMediaMode ?? mobileTabletMediaMode}
             mobileTabletUncroppedMaxScale={
               slide.mobileTabletUncroppedMaxScale ?? mobileTabletUncroppedMaxScale

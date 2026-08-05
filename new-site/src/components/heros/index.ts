@@ -5,11 +5,17 @@ export type {
   CarouselHeroSlide,
   CarouselHeroContentFill,
   HeroDesktopPanelSide,
+  HeroMedia,
   HeroMediaCropMode,
+  HeroMediaFit,
   HeroMobilePanelPosition,
   HeroTextStyle,
+  HeroThemeMediaSources,
 } from './CarouselHero/CarouselHero'
-export { mergeCarouselHeroSlideSources } from './CarouselHero/CarouselHero'
+export {
+  mergeCarouselHeroSlideSources,
+  resolveCarouselHeroSlideMedia,
+} from './CarouselHero/CarouselHero'
 
 export { default as StaticHero } from './StaticHero/StaticHero'
 export { default as HeroImageStack } from './HeroImageStack/HeroImageStack'
