@@ -23,6 +23,10 @@ export interface NewestStationsHeroItem {
   /** Eyebrow above the card, e.g. `Newest station`. */
   label: string
   station: Station
+  /** Caption before the station date (default: `OPENED`). */
+  datePrefix?: string
+  /** Disable card navigation for placeholder records. */
+  interactive?: boolean
 }
 
 export interface NewestStationsHeroProps {
@@ -55,25 +59,37 @@ const NewestStationsHero: React.FC<NewestStationsHeroProps> = ({
         </div>
 
         <ul className="rs-newest-stations-hero__cards">
-          {items.map(({ label, station }) => {
-            const openStation = () => router.push(`/stations/${buildStationPath(station)}`)
+          {items.map(({ label, station, datePrefix = 'OPENED', interactive = true }) => {
+            const openStation = () => {
+              if (interactive) router.push(`/stations/${buildStationPath(station)}`)
+            }
             const cardProps = {
               station,
               locationDisplay: formatStationLocationDisplay(station),
               onCardClick: openStation,
               onInfoClick: openStation,
+              actionsDisabled: !interactive,
             }
             const openedOn = formatOpenedOn(station.dateOpened)
 
             return (
-              <li key={label} className="rs-newest-stations-hero__card">
+              <li
+                key={`${label}-${station.id}`}
+                className={[
+                  'rs-newest-stations-hero__card',
+                  interactive ? '' : 'rs-newest-stations-hero__card--non-interactive',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                aria-disabled={interactive ? undefined : true}
+              >
                 <p className="rs-newest-stations-hero__card-label">
                   <span className="rs-newest-stations-hero__card-label-name">
                     {openedOn ? `${label}:` : label}
                   </span>
                   {openedOn ? (
                     <span className="rs-newest-stations-hero__card-label-date">
-                      OPENED {openedOn}
+                      {datePrefix} {openedOn}
                     </span>
                   ) : null}
                 </p>

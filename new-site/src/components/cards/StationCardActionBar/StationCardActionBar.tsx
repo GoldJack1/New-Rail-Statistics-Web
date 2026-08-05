@@ -8,10 +8,14 @@ import './StationCardActionBar.css'
 
 interface StationCardActionBarProps {
   onInfoClick: () => void
+  disabled?: boolean
 }
 
 type VisitStatus = 'visited' | 'not-visited'
-const StationCardActionBar: React.FC<StationCardActionBarProps> = ({ onInfoClick }) => {
+const StationCardActionBar: React.FC<StationCardActionBarProps> = ({
+  onInfoClick,
+  disabled = false,
+}) => {
   const [visitStatus, setVisitStatus] = useState<VisitStatus>('not-visited')
   const [isFavorite, setIsFavorite] = useState(false)
 
@@ -59,6 +63,7 @@ const StationCardActionBar: React.FC<StationCardActionBarProps> = ({ onInfoClick
         colorVariant="primary"
         ariaLabel="View station details"
         icon={InfoIcon}
+        disabled={disabled}
         onClick={(event) => {
           event.stopPropagation()
           onInfoClick()

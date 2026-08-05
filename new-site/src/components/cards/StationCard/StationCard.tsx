@@ -12,6 +12,8 @@ interface StationCardProps {
   onInfoClick: () => void
   /** Reserve SuperTram line-strip height so mixed All-tab grids align. */
   reserveLineStripSpace?: boolean
+  /** Disable detail actions when a card is displaying placeholder data. */
+  actionsDisabled?: boolean
 }
 
 const StationCard: React.FC<StationCardProps> = ({
@@ -20,6 +22,7 @@ const StationCard: React.FC<StationCardProps> = ({
   onCardClick,
   onInfoClick,
   reserveLineStripSpace = false,
+  actionsDisabled = false,
 }) => {
   return (
     <article className="rs-station-card-stack">
@@ -39,7 +42,7 @@ const StationCard: React.FC<StationCardProps> = ({
           <div className="rs-station-line-strip-spacer" aria-hidden="true" />
         ) : null}
       </section>
-      <StationCardActionBar onInfoClick={onInfoClick} />
+      <StationCardActionBar onInfoClick={onInfoClick} disabled={actionsDisabled} />
     </article>
   )
 }

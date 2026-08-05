@@ -72,6 +72,18 @@
     min-width: 0;
 }
 
+.rs-newest-stations-hero__card--non-interactive {
+    pointer-events: none;
+}
+
+.rs-newest-stations-hero__card--non-interactive .rs-station-text-card {
+    cursor: default;
+}
+
+.rs-newest-stations-hero__card--non-interactive .rs-station-card-action-bar {
+    opacity: 0.6;
+}
+
 .rs-newest-stations-hero__card-label {
     display: flex;
     flex-wrap: wrap;
@@ -93,6 +105,14 @@
     font-weight: 500;
 }
 
+/* Desktop: same 600px band height as the other heroes, content centred in it. */
+@media (min-width: 1200px) {
+    .rs-newest-stations-hero {
+        align-items: center;
+        min-height: 600px;
+    }
+}
+
 /* Below the desktop split, the other heroes drop to a 24px side inset. */
 @media (max-width: 1199px) {
     .rs-newest-stations-hero__inner {
@@ -100,7 +120,8 @@
     }
 }
 
-@media (max-width: 639px) {
+/* Mobile layout: single-column cards and tighter band. */
+@media (max-width: 824px) {
     .rs-newest-stations-hero {
         padding: var(--space-2xl) 0;
     }

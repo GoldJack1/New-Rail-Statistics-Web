@@ -18,6 +18,8 @@ interface LightRailStopCardProps {
   showOpenedOn?: boolean
   /** When true, appends `(order)` after the opened-on date (admin-only). */
   showOrderOfOpening?: boolean
+  /** Disable detail actions when a card is displaying placeholder data. */
+  actionsDisabled?: boolean
 }
 
 const LightRailStopCard: React.FC<LightRailStopCardProps> = ({
@@ -27,6 +29,7 @@ const LightRailStopCard: React.FC<LightRailStopCardProps> = ({
   onInfoClick,
   showOpenedOn = false,
   showOrderOfOpening = false,
+  actionsDisabled = false,
 }) => {
   const operatorLabel = station.toc || NETWORK_LABELS[LIGHTRAIL_COLLECTION_ID]
   const openedOnLabel = showOpenedOn
@@ -49,7 +52,7 @@ const LightRailStopCard: React.FC<LightRailStopCardProps> = ({
         ) : null}
         <LightRailLineStrip linesServed={station.linesServed} />
       </section>
-      <StationCardActionBar onInfoClick={onInfoClick} />
+      <StationCardActionBar onInfoClick={onInfoClick} disabled={actionsDisabled} />
     </article>
   )
 }
