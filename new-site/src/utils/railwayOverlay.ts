@@ -117,6 +117,30 @@ type VectorRailwayLayerOptions = {
   style: (properties: Record<string, unknown>, zoom: number) => L.PathOptions
 }
 
+/** Empty tile in the shape leaflet.vectorgrid uses for non-ok responses (`for..in` yields nothing). */
+const EMPTY_VECTOR_TILE = { layers: [] as unknown[] }
+
+type VectorTilePromiseLayer = {
+  _getVectorTilePromise?: (coords: unknown) => Promise<unknown>
+}
+
+/**
+ * leaflet.vectorgrid tolerates a non-ok HTTP response, but a hard network/CORS failure makes the
+ * underlying `fetch` reject, and its `createTile` never catches that — so each failed tile leaks an
+ * `unhandledRejection: TypeError: Failed to fetch`. This is common when OpenRailwayMap's tile
+ * service is down (it serves 502s with no CORS headers). Swallow the rejection into an empty tile so
+ * the layer just renders nothing for that tile and Leaflet marks it loaded.
+ */
+function silenceVectorTileFetchRejections(layer: L.GridLayer): void {
+  const grid = layer as unknown as VectorTilePromiseLayer
+  const original = grid._getVectorTilePromise
+  if (typeof original !== 'function') return
+
+  grid._getVectorTilePromise = function patched(this: unknown, coords: unknown) {
+    return original.call(this, coords).catch(() => EMPTY_VECTOR_TILE)
+  }
+}
+
 function createVectorRailwayLayer({
   url,
   layerName,
@@ -124,7 +148,7 @@ function createVectorRailwayLayer({
   bounds,
   style
 }: VectorRailwayLayerOptions): L.GridLayer {
-  return L.vectorGrid.protobuf(url, {
+  const layer = L.vectorGrid.protobuf(url, {
     attribution: OPEN_RAILWAY_MAP_ATTRIBUTION,
     pane: 'overlayPane',
     bounds,
@@ -133,6 +157,9 @@ function createVectorRailwayLayer({
     },
     ...zoomBounds
   })
+
+  silenceVectorTileFetchRejections(layer)
+  return layer
 }
 
 export type RailwayOverlayLayers = {
