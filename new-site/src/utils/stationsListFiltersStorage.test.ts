@@ -9,6 +9,7 @@ import {
   toggleSupertramLineFilter,
   writeStationsListFiltersState,
 } from './stationsListFiltersStorage'
+import type { SupertramLineFilter } from './stationsListFiltersStorage'
 
 describe('stationsListFiltersStorage', () => {
   afterEach(() => {
@@ -33,7 +34,7 @@ describe('stationsListFiltersStorage', () => {
         ...getDefaultStationsListFiltersState().filterSelections,
         dateOpened: ['21/03/1994'],
       },
-      supertramLineFilter: ['Blue'],
+      supertramLineFilter: ['Blue'] satisfies SupertramLineFilter,
       currentPage: 2,
     }
 
@@ -51,9 +52,14 @@ describe('stationsListFiltersStorage', () => {
   it('normalizes a full line selection to All and accepts legacy string values', () => {
     const state = {
       ...getDefaultStationsListFiltersState('lightrail_GBSHEFFSUPERTRAM'),
-      supertramLineFilter: ['Blue', 'Yellow', 'Purple', 'Tram-Train'] as const,
+      supertramLineFilter: [
+        'Blue',
+        'Yellow',
+        'Purple',
+        'Tram-Train',
+      ] satisfies SupertramLineFilter,
     }
-    writeStationsListFiltersState(state as ReturnType<typeof getDefaultStationsListFiltersState>)
+    writeStationsListFiltersState(state)
     expect(readStationsListFiltersState()?.supertramLineFilter).toEqual([])
 
     sessionStorage.setItem(

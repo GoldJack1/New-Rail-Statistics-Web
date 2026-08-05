@@ -9,11 +9,14 @@ import { preventSingleWordWidow } from '@/utils/textWidow'
 import { resolveAppDownloadAction } from '@/utils/appDownload'
 
 const HOME_PRIMARY_SUBTITLE =
-  "Start building a map of where you've been, one station at a time."
+  "View data for all mainline stations in the UK & Ireland, and all Light Rail stations in Sheffield."
 
-const HOME_PRIMARY_HERO1_VIDEO_SOURCES = {
-  light: '/media/home/hero1/slide1/light.webm',
-  dark: '/media/home/hero1/slide1/dark.webm'
+/** Transparent PNG-style art, so the same file serves both themes. */
+const HOME_PRIMARY_HERO1_IMAGE_SOURCES = {
+  darkDesktopTablet: '/media/home/hero1/slide1/hero.webp',
+  darkMobile: '/media/home/hero1/slide1/hero.webp',
+  lightDesktopTablet: '/media/home/hero1/slide1/hero.webp',
+  lightMobile: '/media/home/hero1/slide1/hero.webp'
 } as const
 
 const HOME_PRIMARY_HERO8_VIDEO_SOURCES = {
@@ -389,10 +392,22 @@ export default function HomePage() {
 
   const homePrimaryHero1Slide = useMemo(
     (): CarouselHeroSlide => ({
-      title: 'The Ultimate Station Bashing App is Here!',
+      title: 'The most comprehensive Station Datebase is Here!',
       body: <p>{preventSingleWordWidow(HOME_PRIMARY_SUBTITLE)}</p>,
-      ctas: [{ label: 'Download Now', onClick: onDownloadCta }],
-      videoSources: HOME_PRIMARY_HERO1_VIDEO_SOURCES
+      ctas: [
+        { label: 'Download Now', onClick: onDownloadCta },
+        { label: 'View Stations', href: '/stations', target: '_self', colorVariant: 'primary' }
+      ],
+      imageSources: HOME_PRIMARY_HERO1_IMAGE_SOURCES,
+      mobileTabletMediaMode: 'uncropped',
+      mobileTabletUncroppedSettings: {
+        scaleSpeed: 3.5,
+        maxScale: 1.9,
+        mobileMediaWidthPercent: 30,
+        tabletMediaWidthPercent: 70,
+        imageTopPercent: 20,
+        tabletTopPercent: 25
+      }
     }),
     [onDownloadCta]
   )

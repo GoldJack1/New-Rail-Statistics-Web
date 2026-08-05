@@ -103,7 +103,7 @@ function getTimelineFollowFocusStation(
     return isStationVisibleInTimelineStep(station, {
       cutoff,
       visibleStationIds,
-      showUndatedAtMax,
+      showIncompleteAtMax: showUndatedAtMax,
     })
   })
 
@@ -1407,7 +1407,7 @@ export function StationsOsmMap({
         const timelineVisible = isStationVisibleInTimelineStep(station, {
           cutoff: timelineCutoff,
           visibleStationIds: timelineVisibleStationIds,
-          showUndatedAtMax: timelineShowUndatedAtMax,
+          showIncompleteAtMax: timelineShowUndatedAtMax,
         })
         const visible =
           timelineVisible && !followDeferredHiddenIdsRef.current.has(station.id)
@@ -1453,7 +1453,7 @@ export function StationsOsmMap({
           const willShow = isStationVisibleInTimelineStep(station, {
             cutoff: timelineCutoff,
             visibleStationIds: timelineVisibleStationIds,
-            showUndatedAtMax: timelineShowUndatedAtMax,
+            showIncompleteAtMax: timelineShowUndatedAtMax,
           })
           const wasShown = timelineVisibilityPrevRef.current.get(stationKey) === true
           if (willShow && !wasShown) animateIds.add(station.id)

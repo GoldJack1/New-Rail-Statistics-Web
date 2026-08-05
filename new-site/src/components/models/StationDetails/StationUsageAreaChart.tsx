@@ -181,18 +181,30 @@ function resolveTouchTooltip(args: {
   plotHeight: number
   margin: { top: number; right: number; left: number; bottom: number }
   yAxisWidth: number
+  xAxisPadding: { left: number; right: number }
   xAxisHeight: number
   series: ChartSeriesPoint[] | DualChartSeriesPoint[]
   isDual: boolean
   mode: ChartMode
 }): ActiveTooltip | null {
-  const { localX, plotWidth, plotHeight, margin, yAxisWidth, xAxisHeight, series, isDual, mode } =
-    args
+  const {
+    localX,
+    plotWidth,
+    plotHeight,
+    margin,
+    yAxisWidth,
+    xAxisPadding,
+    xAxisHeight,
+    series,
+    isDual,
+    mode,
+  } = args
   const n = series.length
   if (n === 0) return null
 
-  const left = margin.left + yAxisWidth
-  const right = plotWidth - margin.right
+  // Match Recharts XAxis `padding` so scrub index/anchor align with bar centres and line dots.
+  const left = margin.left + yAxisWidth + xAxisPadding.left
+  const right = plotWidth - margin.right - xAxisPadding.right
   const innerW = right - left
   if (innerW <= 0) return null
 
@@ -644,6 +656,10 @@ export function StationUsageAreaChart({
   const isExportCapture = Boolean(exportCaptureSize)
   const exportAxisFontSize = 15
   const exportYAxisWidth = 58
+  const xAxisPadding = {
+    left: expanded || isExportCapture ? 8 : 0,
+    right: expanded || isExportCapture ? 20 : 16,
+  }
   const xAxis = (
     <XAxis
       dataKey="year"
@@ -665,7 +681,7 @@ export function StationUsageAreaChart({
       height={isExportCapture ? 64 : tiltedXAxis ? 52 : 28}
       dy={isExportCapture || tiltedXAxis ? 2 : 6}
       minTickGap={0}
-      padding={{ left: expanded || isExportCapture ? 8 : 0, right: expanded || isExportCapture ? 20 : 16 }}
+      padding={xAxisPadding}
     />
   )
 
@@ -749,6 +765,7 @@ export function StationUsageAreaChart({
       plotHeight: rect.height,
       margin: chartMargin,
       yAxisWidth: yAxisWidthForScrub,
+      xAxisPadding,
       xAxisHeight: isExportCapture ? 64 : xAxisHeight,
       series: chartSeries,
       isDual: isDualSeries,

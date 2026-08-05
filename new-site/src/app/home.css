@@ -14,18 +14,18 @@
     width: 100%;
 }
 
-/* Top hero only, mobile / tablet: StaticHero min-heights −150px (desktop uses default StaticHero). */
+/* Top hero only, mobile / tablet: StaticHero min-heights −25px (desktop uses default StaticHero). */
 @media (max-width: 1199px) {
     .home-page__top-static-hero .rs-static-hero {
-        min-height: calc(760px - 150px);
+        min-height: calc(760px - 25px);
     }
 
     .home-page__top-static-hero .rs-static-hero[data-static-hero-cta-band='1'] {
-        min-height: calc(836px - 150px);
+        min-height: calc(836px - 25px);
     }
 
     .home-page__top-static-hero .rs-static-hero[data-static-hero-cta-band='2'] {
-        min-height: calc(912px - 150px);
+        min-height: calc(912px - 25px);
     }
 
     .home-page__hero-favourites-mobile-image-bottom .rs-home-hero-image-stack__media {
