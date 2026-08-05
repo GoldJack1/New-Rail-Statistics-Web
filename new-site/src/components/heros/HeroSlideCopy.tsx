@@ -1,6 +1,6 @@
 'use client'
 
-import React, { type Ref } from 'react'
+import React, { type ReactNode, type Ref } from 'react'
 import { BUTBaseButton as Button } from '../buttons'
 import type { CarouselHeroSlide, CarouselHeroSlideCta } from '../models/heroCarouselSlideModel'
 
@@ -12,6 +12,15 @@ function heroClass(ns: HeroSlideCopyNamespace, part: string): string {
 }
 
 export type HeroTitleHeadingLevel = 1 | 2 | 3
+
+/** Stable token for layout/measure keys when `title` may be a ReactNode. */
+export function heroTitleLayoutKey(title: ReactNode): string {
+  if (title == null || typeof title === 'boolean') return ''
+  if (typeof title === 'string' || typeof title === 'number' || typeof title === 'bigint') {
+    return String(title)
+  }
+  return 'title-node'
+}
 
 export const HeroSlideCtaRow: React.FC<{
   namespace: HeroSlideCopyNamespace
@@ -50,8 +59,8 @@ export const HeroSlideCtaRow: React.FC<{
 
 export const HeroSlideTextContent: React.FC<{
   namespace: HeroSlideCopyNamespace
-  title: string
-  body: React.ReactNode
+  title: ReactNode
+  body: ReactNode
   titleHeadingLevel?: HeroTitleHeadingLevel
   /** Optional ref on the title heading (e.g. carousel focus management). */
   titleRef?: Ref<HTMLHeadingElement>

@@ -5,41 +5,72 @@ import type { CarouselHeroSlide } from '@/components/models/heroCarouselSlideMod
 import { HOME_SQUARE_MEDIA_DEFAULTS, HOME_SQUARE_MEDIA_FIT } from '../homeHeroDefaults'
 import { HOME_TEST_MEDIA } from '../homeHeroMedia'
 
+const tryOnStationsCta = {
+  label: 'Try on Stations',
+  href: '/stations',
+  target: '_self' as const
+}
+
 const SLIDES: CarouselHeroSlide[] = [
   {
-    title: 'Search your way',
+    title: 'Search your way!',
     body: (
       <>
-        <p>
-          Find stations in list view or on the map by station name, National Rail CRS code, or
-          TIPLOC code.
-        </p>
-        <p>
-          Whether you search casually or know exactly what you are looking for, Rail Statistics helps
-          you get there faster.
-        </p>
+        <p>Find stations by Station name, CRS, or TIPLOC Codes.</p>
+        <p>Works in the station list & on the map.</p>
       </>
     ),
+    ctas: [tryOnStationsCta],
     media: HOME_TEST_MEDIA,
     mediaFit: HOME_SQUARE_MEDIA_FIT,
     mobileTabletUncroppedSettings: HOME_SQUARE_MEDIA_DEFAULTS,
     autoPlayMs: 17_000
   },
   {
-    title: 'Filter stations with more control',
+    title: (
+      <>
+        Filters that match
+        <br />
+        the network
+      </>
+    ),
     body: (
       <>
-        <p>Use advanced filters to browse stations by country, county, and operator.</p>
         <p>
-          You can also narrow down stations within Greater London by all 33 London boroughs for more
-          detailed exploration.
+          Options change with the network you are browsing. Not every filter applies everywhere.
+        </p>
+        <p>
+          Use country, county, and operator where they apply; provinces for Ireland and Northern
+          Ireland; and borough filters where borough data is available (Avadable in Greater London
+          & Cumbria, expanding to all National Rail stations in the coming year).
         </p>
       </>
     ),
+    ctas: [tryOnStationsCta],
     media: HOME_TEST_MEDIA,
     mediaFit: HOME_SQUARE_MEDIA_FIT,
     mobileTabletUncroppedSettings: HOME_SQUARE_MEDIA_DEFAULTS,
-    autoPlayMs: 44_000
+    autoPlayMs: 24_000
+  },
+  {
+    title: (
+      <>
+        Lines, openings,
+        <br />
+        and sort options
+      </>
+    ),
+    body: (
+      <>
+        <p>For SuperTram, filter by line and date opened.</p>
+        <p>Sort the list with the sort-by options available for that network.</p>
+      </>
+    ),
+    ctas: [tryOnStationsCta],
+    media: HOME_TEST_MEDIA,
+    mediaFit: HOME_SQUARE_MEDIA_FIT,
+    mobileTabletUncroppedSettings: HOME_SQUARE_MEDIA_DEFAULTS,
+    autoPlayMs: 16_000
   }
 ]
 

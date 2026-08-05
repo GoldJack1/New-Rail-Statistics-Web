@@ -15,6 +15,7 @@ import {
   HeroSlideCtaRow,
   HeroSlideMeasureCopy,
   HeroSlideTextContent,
+  heroTitleLayoutKey,
   type HeroTitleHeadingLevel
 } from '../HeroSlideCopy'
 import {
@@ -400,7 +401,7 @@ const CarouselHero: React.FC<CarouselHeroProps> = ({
     return a ?? b
   }, [])
 
-  const scrollFadeLayoutBust = `${safeIndex}|${tallestSlideTextPx ?? ''}|${tallestCtaRowPx ?? ''}|${outgoingSlideIndex ?? ''}|${stripVisualIndex}|${stripCellCount}|${current?.title ?? ''}`
+  const scrollFadeLayoutBust = `${safeIndex}|${tallestSlideTextPx ?? ''}|${tallestCtaRowPx ?? ''}|${outgoingSlideIndex ?? ''}|${stripVisualIndex}|${stripCellCount}|${heroTitleLayoutKey(current?.title)}`
 
   const scrollFadeVisible = useScrollDirectionFadeBounds(getScrollFadeUnionBounds, scrollFadeLayoutBust)
 

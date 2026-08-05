@@ -13,15 +13,19 @@ import { isLightRailStop } from '../../../utils/stationCardForNetwork'
 import { isoDateToDdMmYyyy, storedDateToIsoDate } from '../../../utils/dateDdMmYyyy'
 import './NewestStationsHero.css'
 
-/** Stored `dateOpened` normalised to `dd/mm/yyyy`; empty when missing or unparseable. */
+/**
+ * Stored `dateOpened` normalised to `dd/mm/yyyy`. Free-text values such as
+ * `late 2027` are kept as written so approximate openings can be shown.
+ */
 function formatOpenedOn(dateOpened: Station['dateOpened']): string {
-  if (!dateOpened?.trim()) return ''
-  return isoDateToDdMmYyyy(storedDateToIsoDate(dateOpened))
+  const trimmed = dateOpened?.trim()
+  if (!trimmed) return ''
+  return isoDateToDdMmYyyy(storedDateToIsoDate(trimmed)) || trimmed
 }
 
 export interface NewestStationsHeroItem {
-  /** Eyebrow above the card, e.g. `Newest station`. */
-  label: string
+  /** Eyebrow above the card, e.g. `Newest station`. Omit to show the date caption alone. */
+  label?: string
   station: Station
   /** Caption before the station date (default: `OPENED`). */
   datePrefix?: string
@@ -30,7 +34,8 @@ export interface NewestStationsHeroItem {
 }
 
 export interface NewestStationsHeroProps {
-  title: string
+  /** Plain string or JSX (e.g. with `<br />` for intentional line breaks). */
+  title: ReactNode
   body?: ReactNode
   items: NewestStationsHeroItem[]
   /** `aria-label` on the region (default: Newest stations). */
@@ -59,7 +64,7 @@ const NewestStationsHero: React.FC<NewestStationsHeroProps> = ({
         </div>
 
         <ul className="rs-newest-stations-hero__cards">
-          {items.map(({ label, station, datePrefix = 'OPENED', interactive = true }) => {
+          {items.map(({ label, station, datePrefix, interactive = true }) => {
             const openStation = () => {
               if (interactive) router.push(`/stations/${buildStationPath(station)}`)
             }
@@ -71,10 +76,13 @@ const NewestStationsHero: React.FC<NewestStationsHeroProps> = ({
               actionsDisabled: !interactive,
             }
             const openedOn = formatOpenedOn(station.dateOpened)
+            const labelText = label?.trim() ?? ''
+            const showDateCaption = Boolean(openedOn || datePrefix)
+            const resolvedDatePrefix = datePrefix ?? 'OPENED'
 
             return (
               <li
-                key={`${label}-${station.id}`}
+                key={`${labelText}-${station.id}`}
                 className={[
                   'rs-newest-stations-hero__card',
                   interactive ? '' : 'rs-newest-stations-hero__card--non-interactive',
@@ -83,16 +91,21 @@ const NewestStationsHero: React.FC<NewestStationsHeroProps> = ({
                   .join(' ')}
                 aria-disabled={interactive ? undefined : true}
               >
-                <p className="rs-newest-stations-hero__card-label">
-                  <span className="rs-newest-stations-hero__card-label-name">
-                    {openedOn ? `${label}:` : label}
-                  </span>
-                  {openedOn ? (
-                    <span className="rs-newest-stations-hero__card-label-date">
-                      {datePrefix} {openedOn}
-                    </span>
-                  ) : null}
-                </p>
+                {labelText || showDateCaption ? (
+                  <p className="rs-newest-stations-hero__card-label">
+                    {labelText ? (
+                      <span className="rs-newest-stations-hero__card-label-name">
+                        {showDateCaption ? `${labelText}:` : labelText}
+                      </span>
+                    ) : null}
+                    {showDateCaption ? (
+                      <span className="rs-newest-stations-hero__card-label-date">
+                        {resolvedDatePrefix}
+                        {openedOn ? ` ${openedOn}` : ''}
+                      </span>
+                    ) : null}
+                  </p>
+                ) : null}
                 {isLightRailStop(station) ? (
                   <LightRailStopCard {...cardProps} />
                 ) : (

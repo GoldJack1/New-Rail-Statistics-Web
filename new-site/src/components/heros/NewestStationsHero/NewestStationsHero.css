@@ -105,11 +105,16 @@
     font-weight: 500;
 }
 
-/* Desktop: same 600px band height as the other heroes, content centred in it. */
+/* Desktop: shorter than the 600px image heroes since this band is copy + cards only. */
 @media (min-width: 1200px) {
     .rs-newest-stations-hero {
         align-items: center;
-        min-height: 600px;
+        min-height: 480px;
+        padding: var(--space-2xl) 0;
+    }
+
+    .rs-newest-stations-hero__inner {
+        gap: var(--space-xl);
     }
 }
 

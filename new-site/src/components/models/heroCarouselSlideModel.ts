@@ -37,7 +37,8 @@ export interface CarouselHeroSlideCta {
 }
 
 export interface CarouselHeroSlide {
-  title: string
+  /** Plain string or JSX (e.g. with `<br />` for intentional line breaks). */
+  title: ReactNode
   body: ReactNode
   /** Optional autoplay duration override for this slide in milliseconds. */
   autoPlayMs?: number

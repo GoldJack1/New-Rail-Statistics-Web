@@ -17,13 +17,19 @@ export default function HeroNewestStations() {
   return (
     <div className="home-page__hero-row">
       <NewestStationsHero
-        title="The newest stations, already in the database"
+        title="The newest stations on the network!"
         body={
-          <p>
-            When a station or tram stop opens across GB National Rail, Irish Rail, NI Translink
-            and South Yorkshire SuperTram, it is added to Rail Statistics so you can start
-            tracking it right away.
-          </p>
+          <>
+            <p>
+              When a station or tram stop opens on National Rail, Irish Rail, NI Translink and South
+              Yorkshire SuperTram, it is added to Rail Statistics automatically from the arrival of
+              the first service.
+            </p>
+            <p>
+              So you can start tracking it right away, and no-more opening day searching for the
+              right details to add a station, meaning theres more time to explore the new station!
+            </p>
+          </>
         }
         items={ITEMS}
         ariaLabel="Newest stations and tram stops"

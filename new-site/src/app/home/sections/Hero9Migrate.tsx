@@ -6,12 +6,21 @@ import { HOME_SQUARE_MEDIA_DEFAULTS, HOME_SQUARE_MEDIA_FIT } from '../homeHeroDe
 import { HOME_TEST_MEDIA } from '../homeHeroMedia'
 
 const SLIDE: CarouselHeroSlide = {
-  title: 'Have a spreadsheet file already?',
+  title: (
+    <>
+      Already got
+      <br />
+      a spreadsheet?
+    </>
+  ),
   body: (
-    <p>
-      If you have a spreadsheet file already, click migrate below to get started on migrating your
-      file to Rail Statistics!
-    </p>
+    <>
+      <p>
+        Migrate your existing visit list into the Rail Statistics database and carry on from where
+        you left off.
+      </p>
+      <p>With the peace of mind, knowing the data is acuate and up-to-date.</p>
+    </>
   ),
   ctas: [{ label: 'Migrate', href: '/migration', target: '_self' }],
   media: HOME_TEST_MEDIA,

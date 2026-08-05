@@ -3,7 +3,6 @@
 import { useMemo, type MouseEvent } from 'react'
 import StaticHero from '@/components/heros/StaticHero/StaticHero'
 import type { CarouselHeroSlide } from '@/components/models/heroCarouselSlideModel'
-import { preventSingleWordWidow } from '@/utils/textWidow'
 import { HOME_SQUARE_MEDIA_DEFAULTS, HOME_SQUARE_MEDIA_FIT } from '../homeHeroDefaults'
 import { HOME_TEST_MEDIA } from '../homeHeroMedia'
 
@@ -14,13 +13,18 @@ export type Hero1DownloadSplashProps = {
 export default function Hero1DownloadSplash({ onDownloadCta }: Hero1DownloadSplashProps) {
   const slide = useMemo(
     (): CarouselHeroSlide => ({
-      title: 'The most comprehensive Station Datebase is here!',
+      title: (
+        <>
+          The most comprehensive
+          <br />
+          station database is here!
+        </>
+      ),
       body: (
-        <p>
-          {preventSingleWordWidow(
-            'View data for all mainline stations in the UK & Ireland, and all Tram Stops in Sheffield.'
-          )}
-        </p>
+        <>
+          <p>View data for all mainline stations in the UK & Ireland, and Tram stops in Sheffield.</p>
+          <p>Get started in the app to keep track of your visits on the go! (Coming to Web in 2027)</p>
+        </>
       ),
       ctas: [
         { label: 'Download Now', onClick: onDownloadCta },

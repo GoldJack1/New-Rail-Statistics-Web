@@ -5,16 +5,16 @@ import './home.css'
 import HomeDownloadPlatformModal from '@/components/models/HomeDownloadPlatformModal/HomeDownloadPlatformModal'
 import { resolveAppDownloadAction } from '@/utils/appDownload'
 import Hero1DownloadSplash from './home/sections/Hero1DownloadSplash'
-import Hero2TopFeatures from './home/sections/Hero2TopFeatures'
+import HeroNewestStations from './home/sections/HeroNewestStations'
+import HeroUpcomingStations from './home/sections/HeroUpcomingStations'
+import HeroNotifications from './home/sections/HeroNotifications'
 import Hero3StationDetail from './home/sections/Hero3StationDetail'
-import Hero4Favourites from './home/sections/Hero4Favourites'
+import HeroMapHybrid from './home/sections/HeroMapHybrid'
 import Hero5SearchFilter from './home/sections/Hero5SearchFilter'
-import Hero6VisitTracking from './home/sections/Hero6VisitTracking'
+import HeroVisitsFavourites from './home/sections/HeroVisitsFavourites'
 import Hero7Subscription from './home/sections/Hero7Subscription'
 import Hero8ClosingDownload from './home/sections/Hero8ClosingDownload'
 import Hero9Migrate from './home/sections/Hero9Migrate'
-import HeroNewestStations from './home/sections/HeroNewestStations'
-import HeroUpcomingStations from './home/sections/HeroUpcomingStations'
 
 export default function HomePage() {
   const [downloadModalOpen, setDownloadModalOpen] = useState(false)
@@ -35,13 +35,13 @@ export default function HomePage() {
 
         <HomeDownloadPlatformModal open={downloadModalOpen} onClose={() => setDownloadModalOpen(false)} />
 
-        <Hero2TopFeatures />
         <HeroNewestStations />
         <HeroUpcomingStations />
+        <HeroNotifications onDownloadCta={onDownloadCta} />
         <Hero3StationDetail />
-        <Hero4Favourites />
+        <HeroMapHybrid onDownloadCta={onDownloadCta} />
         <Hero5SearchFilter />
-        <Hero6VisitTracking />
+        <HeroVisitsFavourites onDownloadCta={onDownloadCta} />
         <Hero7Subscription />
         <Hero8ClosingDownload onDownloadCta={onDownloadCta} />
         <Hero9Migrate />

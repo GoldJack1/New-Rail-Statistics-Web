@@ -7,14 +7,12 @@ import { HOME_TEST_MEDIA } from '../homeHeroMedia'
 
 const SLIDES: CarouselHeroSlide[] = [
   {
-    title: 'Enjoy an ad-free experience',
+    title: 'Enjoy an ad-free experience (App Only)',
     body: (
-      <>
-        <p>
-          Included with Standard Premium and First Class, an ad-free experience lets you focus fully
-          on tracking your journeys without distractions.
-        </p>
-      </>
+      <p>
+        Included with Standard Premium and First Class. Focus on tracking your journeys without
+        distractions.
+      </p>
     ),
     media: HOME_TEST_MEDIA,
     mediaFit: HOME_SQUARE_MEDIA_FIT,
@@ -22,14 +20,12 @@ const SLIDES: CarouselHeroSlide[] = [
     autoPlayMs: 15_000
   },
   {
-    title: 'Unlock home-screen widgets',
+    title: 'Unlock home-screen widgets (App Only)',
     body: (
-      <>
-        <p>
-          Included with Standard Premium and First Class, home-screen widgets make it easy to keep
-          your station visit progress visible at a glance every day.
-        </p>
-      </>
+      <p>
+        Included with Standard Premium and First Class. Keep your station visit progress visible at
+        a glance.
+      </p>
     ),
     media: HOME_TEST_MEDIA,
     mediaFit: HOME_SQUARE_MEDIA_FIT,
@@ -37,14 +33,18 @@ const SLIDES: CarouselHeroSlide[] = [
     autoPlayMs: 15_000
   },
   {
-    title: 'Be first to try ticket tracking in beta',
-    body: (
+    title: (
       <>
-        <p>
-          Exclusive to First Class, be the first to try Ticket Tracking in beta when it launches in
-          beta in summer 2026.
-        </p>
+        Be first to try
+        <br />
+        Ticket Tracking (App Only)
       </>
+    ),
+    body: (
+      <p>
+        Exclusive to First Class. Try Ticket Tracking in beta when it launches in late 2026/Early
+        2027.
+      </p>
     ),
     media: HOME_TEST_MEDIA,
     mediaFit: HOME_SQUARE_MEDIA_FIT,

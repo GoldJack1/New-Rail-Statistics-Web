@@ -10,6 +10,7 @@ import {
   HeroSlideCtaRow,
   HeroSlideMeasureCopy,
   HeroSlideTextContent,
+  heroTitleLayoutKey,
   type HeroTitleHeadingLevel
 } from '../HeroSlideCopy'
 import {
@@ -197,7 +198,7 @@ const StaticHero: React.FC<StaticHeroProps> = ({
     scheduleMeasure()
   }, [slide.title, slide.body, slide.ctas?.length, textStyle, scheduleMeasure])
 
-  const textBlockScrollLayoutKey = `${tallestSlideTextPx ?? ''}|${slide.title}|${textStyle}|${titleHeadingLevel}`
+  const textBlockScrollLayoutKey = `${tallestSlideTextPx ?? ''}|${heroTitleLayoutKey(slide.title)}|${textStyle}|${titleHeadingLevel}`
   useLockedHeroTextBlockScroll(
     textBlockRef,
     tallestSlideTextPx != null,
@@ -219,7 +220,7 @@ const StaticHero: React.FC<StaticHeroProps> = ({
     return a ?? b
   }, [])
 
-  const scrollFadeLayoutBust = `${slide.title}|${tallestSlideTextPx ?? ''}|${tallestCtaRowPx ?? ''}|${textStyle}|${maxCtaCount}`
+  const scrollFadeLayoutBust = `${heroTitleLayoutKey(slide.title)}|${tallestSlideTextPx ?? ''}|${tallestCtaRowPx ?? ''}|${textStyle}|${maxCtaCount}`
 
   const scrollFadeVisible = useScrollDirectionFadeBounds(getScrollFadeUnionBounds, scrollFadeLayoutBust)
 

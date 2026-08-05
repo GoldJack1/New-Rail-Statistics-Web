@@ -6,19 +6,25 @@ import type { CarouselHeroSlide } from '@/components/models/heroCarouselSlideMod
 import { HOME_SQUARE_MEDIA_DEFAULTS, HOME_SQUARE_MEDIA_FIT } from '../homeHeroDefaults'
 import { HOME_TEST_MEDIA } from '../homeHeroMedia'
 
-export type Hero8ClosingDownloadProps = {
+export type HeroNotificationsProps = {
   onDownloadCta: (e: MouseEvent<HTMLButtonElement | HTMLAnchorElement>) => void
 }
 
-export default function Hero8ClosingDownload({ onDownloadCta }: Hero8ClosingDownloadProps) {
+export default function HeroNotifications({ onDownloadCta }: HeroNotificationsProps) {
   const slide = useMemo(
     (): CarouselHeroSlide => ({
-      title: 'The ultimate station-bashing app is here',
+      title: 'Get notified when new stations open',
       body: (
-        <p>
-          Live station and tram data for the UK & Ireland, visit tracking on the go, and deeper
-          detail on the website whenever you need it.
-        </p>
+        <>
+          <p>
+            When you download the app you&apos;ll be notified when new stations are added, so you
+            don&apos;t have to keep checking for the latest openings yourself.
+          </p>
+          <p>
+            Plus you have acess to in-app messages from us when new station openings are announced
+            and verifyed. So no-wondering if it true or not!
+          </p>
+        </>
       ),
       ctas: [{ label: 'Download Now', onClick: onDownloadCta }],
       media: HOME_TEST_MEDIA,
@@ -32,7 +38,7 @@ export default function Hero8ClosingDownload({ onDownloadCta }: Hero8ClosingDown
     <div className="home-page__hero-row">
       <StaticHero
         slide={slide}
-        ariaLabel="Download Rail Statistics"
+        ariaLabel="New station notifications"
         contentFill="heroTint"
         textStyle="splash"
         desktopContentVerticalAlign="center"
