@@ -13,9 +13,8 @@ const PRECACHE_URLS = [
   '/apple-touch-icon.png',
   '/pwa-192x192.png',
   '/images/south-yorkshire-peoples-network-logo.svg',
-  '/media/home/shared/hero.png',
-  '/media/home/shared/newherotoplight.png',
-  '/media/home/shared/newherotopdark.png',
+  '/media/home/hero1/slide1/light.webp',
+  '/media/home/hero1/slide1/dark.webp',
 ]
 
 function isStaticAsset(pathname) {

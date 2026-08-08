@@ -3,7 +3,7 @@
 import StaticHero from '@/components/heros/StaticHero/StaticHero'
 import type { CarouselHeroSlide } from '@/components/models/heroCarouselSlideModel'
 import { HOME_SQUARE_MEDIA_DEFAULTS, HOME_SQUARE_MEDIA_FIT } from '../homeHeroDefaults'
-import { HOME_TEST_MEDIA } from '../homeHeroMedia'
+import { HOME_HERO_11_MEDIA } from '../homeHeroMedia'
 
 const SLIDE: CarouselHeroSlide = {
   title: (
@@ -23,7 +23,7 @@ const SLIDE: CarouselHeroSlide = {
     </>
   ),
   ctas: [{ label: 'Migrate', href: '/migration', target: '_self' }],
-  media: HOME_TEST_MEDIA,
+  media: HOME_HERO_11_MEDIA,
   mediaFit: HOME_SQUARE_MEDIA_FIT,
   mobileTabletUncroppedSettings: HOME_SQUARE_MEDIA_DEFAULTS
 }

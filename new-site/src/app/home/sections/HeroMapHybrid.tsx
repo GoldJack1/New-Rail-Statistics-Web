@@ -4,7 +4,7 @@ import { useMemo, type MouseEvent } from 'react'
 import CarouselHero from '@/components/heros/CarouselHero/CarouselHero'
 import type { CarouselHeroSlide } from '@/components/models/heroCarouselSlideModel'
 import { HOME_SQUARE_MEDIA_DEFAULTS, HOME_SQUARE_MEDIA_FIT } from '../homeHeroDefaults'
-import { HOME_TEST_MEDIA } from '../homeHeroMedia'
+import { HOME_HERO_6_SLIDES } from '../homeHeroMedia'
 
 export type HeroMapHybridProps = {
   onDownloadCta: (e: MouseEvent<HTMLButtonElement | HTMLAnchorElement>) => void
@@ -28,7 +28,7 @@ export default function HeroMapHybrid({ onDownloadCta }: HeroMapHybridProps) {
           </p>
         ),
         ctas: [{ label: 'Download Now', onClick: onDownloadCta }],
-        media: HOME_TEST_MEDIA,
+        media: HOME_HERO_6_SLIDES[0],
         mediaFit: HOME_SQUARE_MEDIA_FIT,
         mobileTabletUncroppedSettings: HOME_SQUARE_MEDIA_DEFAULTS,
         autoPlayMs: 16_000
@@ -48,7 +48,7 @@ export default function HeroMapHybrid({ onDownloadCta }: HeroMapHybridProps) {
           </p>
         ),
         ctas: [{ label: 'Open Map', href: '/stations/map', target: '_self' }],
-        media: HOME_TEST_MEDIA,
+        media: HOME_HERO_6_SLIDES[1],
         mediaFit: HOME_SQUARE_MEDIA_FIT,
         mobileTabletUncroppedSettings: HOME_SQUARE_MEDIA_DEFAULTS,
         autoPlayMs: 16_000

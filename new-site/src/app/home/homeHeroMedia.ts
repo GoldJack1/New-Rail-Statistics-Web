@@ -26,7 +26,38 @@ export function homeHeroSharedImage(src: string): HeroMedia {
   return homeHeroImage({ light: src, dark: src })
 }
 
-/** Temporary square placeholder art standing in for every home hero while final media is produced. */
-export const HOME_TEST_MEDIA: HeroMedia = homeHeroSharedImage(
-  '/media/home/test/newtophometrial.webp'
-)
+function slidePair(hero: string, slide: number): HeroMedia {
+  return homeHeroImage({
+    light: `/media/home/${hero}/slide${slide}/light.webp`,
+    dark: `/media/home/${hero}/slide${slide}/dark.webp`
+  })
+}
+
+/** Hero 1 — top download splash. */
+export const HOME_HERO_1_MEDIA = slidePair('hero1', 1)
+
+/** Hero 4 — new-station notifications. */
+export const HOME_HERO_4_MEDIA = slidePair('hero4', 1)
+
+/** Hero 5 — station detail carousel (3 slides). */
+export const HOME_HERO_5_SLIDES = [slidePair('hero5', 1), slidePair('hero5', 2), slidePair('hero5', 3)] as const
+
+/** Hero 6 — map hybrid carousel (2 slides). */
+export const HOME_HERO_6_SLIDES = [slidePair('hero6', 1), slidePair('hero6', 2)] as const
+
+/** Hero 7 — search / filter carousel (3 slides). */
+export const HOME_HERO_7_SLIDES = [slidePair('hero7', 1), slidePair('hero7', 2), slidePair('hero7', 3)] as const
+
+/** Hero 8 — visits / favourites carousel (2 slides). */
+export const HOME_HERO_8_SLIDES = [slidePair('hero8', 1), slidePair('hero8', 2)] as const
+
+/** Hero 9 — subscription carousel (3 slides). */
+export const HOME_HERO_9_SLIDES = [slidePair('hero9', 1), slidePair('hero9', 2), slidePair('hero9', 3)] as const
+
+/**
+ * Closing download splash — no dedicated Final art yet; reuses Hero 1 until one is supplied.
+ */
+export const HOME_HERO_CLOSING_MEDIA = HOME_HERO_1_MEDIA
+
+/** Hero 11 — migrate splash. */
+export const HOME_HERO_11_MEDIA = slidePair('hero11', 1)

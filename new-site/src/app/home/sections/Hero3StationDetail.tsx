@@ -3,7 +3,7 @@
 import CarouselHero from '@/components/heros/CarouselHero/CarouselHero'
 import type { CarouselHeroSlide } from '@/components/models/heroCarouselSlideModel'
 import { HOME_SQUARE_MEDIA_DEFAULTS, HOME_SQUARE_MEDIA_FIT } from '../homeHeroDefaults'
-import { HOME_TEST_MEDIA } from '../homeHeroMedia'
+import { HOME_HERO_5_SLIDES } from '../homeHeroMedia'
 
 const browseStationsCta = {
   label: 'Browse Stations',
@@ -30,7 +30,7 @@ const SLIDES: CarouselHeroSlide[] = [
       </>
     ),
     ctas: [browseStationsCta],
-    media: HOME_TEST_MEDIA,
+    media: HOME_HERO_5_SLIDES[0],
     mediaFit: HOME_SQUARE_MEDIA_FIT,
     mobileTabletUncroppedSettings: HOME_SQUARE_MEDIA_DEFAULTS,
     autoPlayMs: 18_000
@@ -57,7 +57,7 @@ const SLIDES: CarouselHeroSlide[] = [
       </>
     ),
     ctas: [browseStationsCta],
-    media: HOME_TEST_MEDIA,
+    media: HOME_HERO_5_SLIDES[1],
     mediaFit: HOME_SQUARE_MEDIA_FIT,
     mobileTabletUncroppedSettings: HOME_SQUARE_MEDIA_DEFAULTS,
     autoPlayMs: 22_000
@@ -74,7 +74,7 @@ const SLIDES: CarouselHeroSlide[] = [
       </>
     ),
     ctas: [browseStationsCta],
-    media: HOME_TEST_MEDIA,
+    media: HOME_HERO_5_SLIDES[2],
     mediaFit: HOME_SQUARE_MEDIA_FIT,
     mobileTabletUncroppedSettings: HOME_SQUARE_MEDIA_DEFAULTS,
     autoPlayMs: 18_000

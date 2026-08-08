@@ -4,7 +4,7 @@ import { useMemo, type MouseEvent } from 'react'
 import CarouselHero from '@/components/heros/CarouselHero/CarouselHero'
 import type { CarouselHeroSlide } from '@/components/models/heroCarouselSlideModel'
 import { HOME_SQUARE_MEDIA_DEFAULTS, HOME_SQUARE_MEDIA_FIT } from '../homeHeroDefaults'
-import { HOME_TEST_MEDIA } from '../homeHeroMedia'
+import { HOME_HERO_8_SLIDES } from '../homeHeroMedia'
 
 export type HeroVisitsFavouritesProps = {
   onDownloadCta: (e: MouseEvent<HTMLButtonElement | HTMLAnchorElement>) => void
@@ -28,7 +28,7 @@ export default function HeroVisitsFavourites({ onDownloadCta }: HeroVisitsFavour
           </p>
         ),
         ctas: [{ label: 'Download Now', onClick: onDownloadCta }],
-        media: HOME_TEST_MEDIA,
+        media: HOME_HERO_8_SLIDES[0],
         mediaFit: HOME_SQUARE_MEDIA_FIT,
         mobileTabletUncroppedSettings: HOME_SQUARE_MEDIA_DEFAULTS,
         autoPlayMs: 15_000
@@ -41,7 +41,7 @@ export default function HeroVisitsFavourites({ onDownloadCta }: HeroVisitsFavour
           </p>
         ),
         ctas: [{ label: 'Download Now', onClick: onDownloadCta }],
-        media: HOME_TEST_MEDIA,
+        media: HOME_HERO_8_SLIDES[1],
         mediaFit: HOME_SQUARE_MEDIA_FIT,
         mobileTabletUncroppedSettings: HOME_SQUARE_MEDIA_DEFAULTS,
         autoPlayMs: 15_000

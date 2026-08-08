@@ -3,7 +3,7 @@
 import CarouselHero from '@/components/heros/CarouselHero/CarouselHero'
 import type { CarouselHeroSlide } from '@/components/models/heroCarouselSlideModel'
 import { HOME_SQUARE_MEDIA_DEFAULTS, HOME_SQUARE_MEDIA_FIT } from '../homeHeroDefaults'
-import { HOME_TEST_MEDIA } from '../homeHeroMedia'
+import { HOME_HERO_9_SLIDES } from '../homeHeroMedia'
 
 const SLIDES: CarouselHeroSlide[] = [
   {
@@ -14,7 +14,7 @@ const SLIDES: CarouselHeroSlide[] = [
         distractions.
       </p>
     ),
-    media: HOME_TEST_MEDIA,
+    media: HOME_HERO_9_SLIDES[0],
     mediaFit: HOME_SQUARE_MEDIA_FIT,
     mobileTabletUncroppedSettings: HOME_SQUARE_MEDIA_DEFAULTS,
     autoPlayMs: 15_000
@@ -27,7 +27,7 @@ const SLIDES: CarouselHeroSlide[] = [
         a glance.
       </p>
     ),
-    media: HOME_TEST_MEDIA,
+    media: HOME_HERO_9_SLIDES[1],
     mediaFit: HOME_SQUARE_MEDIA_FIT,
     mobileTabletUncroppedSettings: HOME_SQUARE_MEDIA_DEFAULTS,
     autoPlayMs: 15_000
@@ -46,7 +46,7 @@ const SLIDES: CarouselHeroSlide[] = [
         2027.
       </p>
     ),
-    media: HOME_TEST_MEDIA,
+    media: HOME_HERO_9_SLIDES[2],
     mediaFit: HOME_SQUARE_MEDIA_FIT,
     mobileTabletUncroppedSettings: HOME_SQUARE_MEDIA_DEFAULTS,
     autoPlayMs: 15_000
