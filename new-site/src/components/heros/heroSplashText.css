@@ -1,5 +1,6 @@
 /*
- * Shared “splash” typography: legacy home top hero scale (38px / 24px stacked; 45px title on wide split ≥1200px).
+ * Shared “splash” typography: legacy home top hero scale (38px / 24px through tablet/laptop;
+ * 45px title only on wide desktops ≥1550px — layout split stays at 1200px).
  * Layout for splash on StaticHero / CarouselHero is coordinated here and in StaticHero.css.
  */
 
@@ -47,7 +48,7 @@
   gap: 20px;
 }
 
-@media (min-width: 1200px) {
+@media (min-width: 1550px) {
   .rs-static-hero--text-splash .rs-static-hero__title,
   .rs-carousel-hero--text-splash .rs-carousel-hero__title {
     font-size: 45px;

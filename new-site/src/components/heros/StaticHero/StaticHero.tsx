@@ -71,7 +71,7 @@ export interface StaticHeroProps {
    */
   desktopContentVerticalAlign?: StaticHeroDesktopContentVerticalAlign
   /**
-   * Typography scale: `splash` uses large splash copy on desktop only (≥1200px).
+   * Typography scale: `splash` uses large splash copy on wide desktop only (≥1550px).
    * On desktop, splash also **vertically centers** the copy + CTA block; set `desktopContentVerticalAlign="top"` to pin it to the top instead.
    */
   textStyle?: HeroTextStyle

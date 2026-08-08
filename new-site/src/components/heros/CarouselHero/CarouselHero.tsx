@@ -108,7 +108,7 @@ export interface CarouselHeroProps {
   pauseOnHover?: boolean
   /** Pause autoplay while focus is inside the hero (keyboard users). */
   pauseOnFocusWithin?: boolean
-  /** Desktop splash typography (≥1200px); layout matches default carousel band. */
+  /** Wide-desktop splash typography (≥1550px); layout matches default carousel band. */
   textStyle?: HeroTextStyle
   /** Semantic level for the visible title (default `1` for a primary page carousel). */
   titleHeadingLevel?: HeroTitleHeadingLevel

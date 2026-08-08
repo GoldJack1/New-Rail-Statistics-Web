@@ -1,11 +1,14 @@
 'use client'
 
-import React from 'react'
+import React, { useRef } from 'react'
 import type { ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import StationCard from '../../cards/StationCard/StationCard'
 import LightRailStopCard from '../../cards/LightRailStopCard/LightRailStopCard'
 import type { HeroTitleHeadingLevel } from '../HeroSlideCopy'
+import { scrollFadeRevealClassNames } from '../../misc/ScrollFadeReveal/ScrollFadeReveal'
+import '../../misc/ScrollFadeReveal/ScrollFadeReveal.css'
+import { useScrollDirectionFade } from '../../../hooks/useScrollDirectionFade'
 import type { Station } from '../../../types'
 import { buildStationPath } from '../../../utils/stationAreaSlug'
 import { formatStationLocationDisplay } from '../../../utils/formatStationLocation'
@@ -52,12 +55,17 @@ const NewestStationsHero: React.FC<NewestStationsHeroProps> = ({
 }) => {
   const router = useRouter()
   const TitleTag = `h${titleHeadingLevel}` as const
+  const contentRef = useRef<HTMLDivElement>(null)
+  const scrollFadeVisible = useScrollDirectionFade(contentRef)
 
   if (items.length === 0) return null
 
   return (
     <section className="rs-newest-stations-hero" aria-label={ariaLabel}>
-      <div className="rs-newest-stations-hero__inner">
+      <div
+        ref={contentRef}
+        className={`rs-newest-stations-hero__inner ${scrollFadeRevealClassNames(scrollFadeVisible)}`}
+      >
         <div className="rs-newest-stations-hero__copy">
           <TitleTag className="rs-newest-stations-hero__title">{title}</TitleTag>
           {body ? <div className="rs-newest-stations-hero__body">{body}</div> : null}

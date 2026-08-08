@@ -145,5 +145,5 @@ export type HeroMobilePanelPosition = 'top' | 'bottom'
  */
 export type HeroPanelChromeAlign = 'start' | 'end'
 
-/** `hero` (default): hero band title/body sizes. `splash`: large splash copy on desktop only (≥1200px). */
+/** `hero` (default): hero band title/body sizes. `splash`: large splash copy on wide desktop only (≥1550px). */
 export type HeroTextStyle = 'hero' | 'splash'

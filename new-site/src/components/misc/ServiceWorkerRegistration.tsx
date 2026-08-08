@@ -3,10 +3,12 @@
 import { useEffect } from 'react'
 
 const BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID ?? 'dev'
+const SW_RELOAD_GUARD_KEY = 'rs-sw-controller-reload'
 
 /**
  * Registers the PWA service worker in production only (matches old Vite PWA behaviour).
- * Checks for updates on each load and reloads once when a new deploy activates.
+ * Reloads once when a *new* deploy takes over an already-controlled page — not on the first
+ * time a worker claims the tab (that was causing a visible load → instant reload flash).
  */
 export default function ServiceWorkerRegistration() {
   useEffect(() => {
@@ -18,11 +20,21 @@ export default function ServiceWorkerRegistration() {
 
     const onControllerChange = () => {
       if (refreshing) return
+      try {
+        if (sessionStorage.getItem(SW_RELOAD_GUARD_KEY) === BUILD_ID) return
+        sessionStorage.setItem(SW_RELOAD_GUARD_KEY, BUILD_ID)
+      } catch {
+        // sessionStorage may be blocked; still allow a single in-memory reload.
+      }
       refreshing = true
       window.location.reload()
     }
 
-    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange)
+    // Only listen when this page was already controlled — update path, not first install.
+    const hadController = Boolean(navigator.serviceWorker.controller)
+    if (hadController) {
+      navigator.serviceWorker.addEventListener('controllerchange', onControllerChange)
+    }
 
     const swUrl = `/sw.js?v=${encodeURIComponent(BUILD_ID)}`
 
@@ -39,7 +51,9 @@ export default function ServiceWorkerRegistration() {
       })
 
     return () => {
-      navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange)
+      if (hadController) {
+        navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange)
+      }
       if (intervalId !== undefined) window.clearInterval(intervalId)
     }
   }, [])

@@ -14,6 +14,25 @@
     width: 100%;
 }
 
+/*
+ * Hero 1 — tablet + desktop: fill the viewport below the fixed header when there’s room,
+ * without shrinking below the existing band floors (content / square-fit).
+ */
+@media (min-width: 768px) {
+    .home-page__top-static-hero .rs-static-hero {
+        min-height: max(
+            var(--hero-band-base-min-height, 708px),
+            var(--hero-band-min-square-fit, 0px),
+            calc(100svh - var(--app-header-offset))
+        );
+        min-height: max(
+            var(--hero-band-base-min-height, 708px),
+            var(--hero-band-min-square-fit, 0px),
+            calc(100dvh - var(--app-header-offset))
+        );
+    }
+}
+
 /* Top hero only, mobile / tablet: StaticHero min-heights −25px (desktop uses default StaticHero). */
 @media (max-width: 1199px) {
     .home-page__top-static-hero .rs-static-hero {
@@ -39,12 +58,35 @@
 
 /* Desktop: keep opening/closing splash heroes aligned with other hero band heights. */
 @media (min-width: 1200px) {
-    .home-page__top-static-hero .rs-static-hero.rs-static-hero--text-splash,
+    .home-page__top-static-hero .rs-static-hero.rs-static-hero--text-splash {
+        /* 2-CTA splash (Hero 1): at least the StaticHero 2-CTA floor, or the viewport under the header. */
+        --hero-band-base-min-height: 708px;
+        min-height: max(
+            var(--hero-band-base-min-height),
+            calc(100svh - var(--app-header-offset))
+        );
+        min-height: max(
+            var(--hero-band-base-min-height),
+            calc(100dvh - var(--app-header-offset))
+        );
+    }
+
+    .home-page__top-static-hero .rs-static-hero.rs-static-hero--text-splash .rs-static-hero__content {
+        min-height: max(
+            var(--hero-band-base-min-height, 708px),
+            calc(100svh - var(--app-header-offset))
+        );
+        min-height: max(
+            var(--hero-band-base-min-height, 708px),
+            calc(100dvh - var(--app-header-offset))
+        );
+    }
+
+    /* Other splash heroes (e.g. closing download) keep the shared 600px band. */
     .home-page__hero-row .rs-static-hero.rs-static-hero--text-splash {
         min-height: 600px;
     }
 
-    .home-page__top-static-hero .rs-static-hero.rs-static-hero--text-splash .rs-static-hero__content,
     .home-page__hero-row .rs-static-hero.rs-static-hero--text-splash .rs-static-hero__content {
         min-height: 600px;
     }

@@ -253,13 +253,10 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
   }, [])
 
   const markImageReady = (img: HTMLImageElement | null) => {
+    // Avoid HTMLImageElement.decode() — on iOS Safari it can force large decoded bitmaps and
+    // contribute to tab Jetsam when many heroes become ready in sequence.
     if (!img || !(img.complete && img.naturalWidth > 0)) return
-    const finish = () => setMediaReady(true)
-    if (typeof img.decode === 'function') {
-      void img.decode().then(finish).catch(finish)
-      return
-    }
-    finish()
+    setMediaReady(true)
   }
 
   const onThemeImageLoad = (imgTheme: 'light' | 'dark') => (
