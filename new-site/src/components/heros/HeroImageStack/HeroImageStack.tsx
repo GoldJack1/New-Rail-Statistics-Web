@@ -170,9 +170,17 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
    * all compete for bandwidth with the first hero on page load.
    */
   const [hasApproachedViewport, setHasApproachedViewport] = useState(false)
+  /** Stack has intersected the viewport (fade still waits for decoded media). */
+  const [hasEnteredViewport, setHasEnteredViewport] = useState(false)
+  /** Active theme image/video has pixels ready to paint. */
+  const [mediaReady, setMediaReady] = useState(false)
+  /** Sticky: viewport + decoded media — starts the CSS fade once, then stays on. */
+  const [hasAppeared, setHasAppeared] = useState(false)
   const [isMobileTabletViewport, setIsMobileTabletViewport] = useState(false)
   const [theme, setTheme] = useState<'light' | 'dark'>(() => readDocumentTheme())
   const [supportsWebM] = useState(() => browserSupportsWebM())
+  const lightImgRef = useRef<HTMLImageElement | null>(null)
+  const darkImgRef = useRef<HTMLImageElement | null>(null)
 
   const resolvedApproachMargin =
     approachRootMargin ?? (loading === 'eager' ? '400px 0px' : '120px 0px')
@@ -182,18 +190,27 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
     !useContainFit && mobileTabletMediaMode === 'uncropped'
 
   useEffect(() => {
+    if (hasAppeared) return
+    if (hasEnteredViewport && mediaReady) setHasAppeared(true)
+  }, [hasAppeared, hasEnteredViewport, mediaReady])
+
+  useEffect(() => {
     const root = rootRef.current
     if (!root) return
     if (typeof window === 'undefined' || !('IntersectionObserver' in window)) {
       setIsInViewport(true)
       setHasApproachedViewport(true)
+      setHasEnteredViewport(true)
       return
     }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         setIsInViewport(entry.isIntersecting)
-        if (entry.isIntersecting) setHasApproachedViewport(true)
+        if (entry.isIntersecting) {
+          setHasApproachedViewport(true)
+          setHasEnteredViewport(true)
+        }
       },
       { threshold: 0.2 }
     )
@@ -235,6 +252,42 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
     return () => mq.removeListener(onChange)
   }, [])
 
+  const markImageReady = (img: HTMLImageElement | null) => {
+    if (!img || !(img.complete && img.naturalWidth > 0)) return
+    const finish = () => setMediaReady(true)
+    if (typeof img.decode === 'function') {
+      void img.decode().then(finish).catch(finish)
+      return
+    }
+    finish()
+  }
+
+  const onThemeImageLoad = (imgTheme: 'light' | 'dark') => (
+    event: React.SyntheticEvent<HTMLImageElement>
+  ) => {
+    if (imgTheme !== theme) return
+    markImageReady(event.currentTarget)
+  }
+
+  // Sync ready state for the visible theme image (cache hits / theme changes before first fade).
+  useEffect(() => {
+    if (isVideo || hasAppeared) return
+    const img = theme === 'dark' ? darkImgRef.current : lightImgRef.current
+    if (img && img.complete && img.naturalWidth > 0) {
+      markImageReady(img)
+      return
+    }
+    setMediaReady(false)
+  }, [
+    theme,
+    isVideo,
+    hasAppeared,
+    resolvedMedia.light,
+    resolvedMedia.dark,
+    resolvedMedia.lightMobile,
+    resolvedMedia.darkMobile
+  ])
+
   const eagerVideoPreload = loading === 'eager' ? 'auto' : 'metadata'
   const resolvedVideoPreload = videoPreload ?? (hasApproachedViewport ? eagerVideoPreload : 'none')
 
@@ -262,6 +315,23 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
     if (!el || el.readyState > 0 || !el.querySelector('source')) return
     el.load()
   }, [shouldMountVideo, isVideo, activeVideoSrc])
+
+  useEffect(() => {
+    if (!isVideo || hasAppeared) return
+    if (!shouldMountVideo) {
+      setMediaReady(false)
+      return
+    }
+    const el = videoRef.current
+    if (!el) return
+    if (el.readyState >= 2) {
+      setMediaReady(true)
+      return
+    }
+    const onReady = () => setMediaReady(true)
+    el.addEventListener('loadeddata', onReady)
+    return () => el.removeEventListener('loadeddata', onReady)
+  }, [isVideo, shouldMountVideo, activeVideoSrc, hasAppeared])
 
   useEffect(() => {
     if (!isVideo) return
@@ -292,7 +362,8 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
         'rs-home-hero-image-stack',
         VARIANT_MODIFIER[variant],
         useContainFit ? 'rs-home-hero-image-stack--media-fit-contain' : '',
-        useUncroppedMobile ? 'rs-home-hero-image-stack--mobile-tablet-uncropped' : ''
+        useUncroppedMobile ? 'rs-home-hero-image-stack--mobile-tablet-uncropped' : '',
+        hasAppeared ? 'rs-home-hero-image-stack--appeared' : ''
       ]
         .filter(Boolean)
         .join(' ')}
@@ -384,11 +455,13 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
                 <source media={MOBILE_TABLET_PICTURE_MEDIA} srcSet={resolvedMedia.darkMobile} />
               ) : null}
               <img
+                ref={darkImgRef}
                 className="rs-home-hero-image-stack__media"
                 src={resolvedMedia.dark}
                 alt={alt}
                 loading={loading}
                 decoding="async"
+                onLoad={onThemeImageLoad('dark')}
               />
             </picture>
             <picture className="rs-home-hero-image-stack__picture rs-home-hero-image-stack__picture--light">
@@ -396,11 +469,13 @@ const HeroImageStack: React.FC<HeroImageStackProps> = ({
                 <source media={MOBILE_TABLET_PICTURE_MEDIA} srcSet={resolvedMedia.lightMobile} />
               ) : null}
               <img
+                ref={lightImgRef}
                 className="rs-home-hero-image-stack__media"
                 src={resolvedMedia.light}
                 alt={alt}
                 loading={loading}
                 decoding="async"
+                onLoad={onThemeImageLoad('light')}
               />
             </picture>
           </>

@@ -40,23 +40,27 @@
     scale(var(--hero-image-scale));
   transform-origin: center top;
   opacity: 0;
-  animation: rs-home-hero-image-stack-fade-in 1100ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  /* Fade starts when the stack is in view and the active media has decoded (--appeared). */
+  animation: none;
   height: 105%;
   width: auto;
   max-width: none;
 }
 
-/* Opacity + blur only: transform stays on `.rs-home-hero-image-stack__media` so
- * `--hero-image-scale` updates on scroll (keyframes with `forwards` can pin transform in WebKit). */
+/* Soft hero ease; longer than copy mount so the art eases in behind the text. */
+.rs-home-hero-image-stack--appeared .rs-home-hero-image-stack__media {
+  animation: rs-home-hero-image-stack-fade-in 1700ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: 500ms;
+}
+
+/* Opacity only (same character as hero copy mount). Transform stays on the element for scroll zoom. */
 @keyframes rs-home-hero-image-stack-fade-in {
   from {
     opacity: 0;
-    filter: blur(6px);
   }
 
   to {
     opacity: 1;
-    filter: blur(0);
   }
 }
 
@@ -120,10 +124,8 @@
     )
     scale(var(--hero-image-contain-scale));
   transform-origin: center center;
-  animation: none;
-  opacity: 1;
-  filter: none;
-  will-change: transform;
+  /* Keep the mount fade-in (opacity only — transform stays live for scroll zoom). */
+  will-change: transform, opacity;
   backface-visibility: hidden;
 }
 
@@ -216,9 +218,6 @@
         )
       );
     transform-origin: center center;
-    animation: none;
-    opacity: 1;
-    filter: none;
   }
 
   .rs-home-hero-image-stack--mobile-tablet-uncropped

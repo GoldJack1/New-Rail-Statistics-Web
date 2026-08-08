@@ -61,3 +61,27 @@ export const HOME_HERO_CLOSING_MEDIA = HOME_HERO_1_MEDIA
 
 /** Hero 11 — migrate splash. */
 export const HOME_HERO_11_MEDIA = slidePair('hero11', 1)
+
+function imageUrlsFromMedia(media: HeroMedia): string[] {
+  if (media.type !== 'image') return []
+  return [media.light, media.dark, media.lightMobile, media.darkMobile].filter(
+    (url): url is string => Boolean(url)
+  )
+}
+
+/** Every unique homepage hero image URL (light + dark, all slides). Used to warm the cache after hero 1 loads. */
+export const HOME_HERO_IMAGE_URLS: readonly string[] = Array.from(
+  new Set(
+    [
+      HOME_HERO_1_MEDIA,
+      HOME_HERO_4_MEDIA,
+      ...HOME_HERO_5_SLIDES,
+      ...HOME_HERO_6_SLIDES,
+      ...HOME_HERO_7_SLIDES,
+      ...HOME_HERO_8_SLIDES,
+      ...HOME_HERO_9_SLIDES,
+      HOME_HERO_CLOSING_MEDIA,
+      HOME_HERO_11_MEDIA
+    ].flatMap(imageUrlsFromMedia)
+  )
+)

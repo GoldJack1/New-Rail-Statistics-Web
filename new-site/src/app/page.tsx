@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react'
 import './home.css'
 import HomeDownloadPlatformModal from '@/components/models/HomeDownloadPlatformModal/HomeDownloadPlatformModal'
 import { resolveAppDownloadAction } from '@/utils/appDownload'
+import HomeHeroImagePreloader from './home/HomeHeroImagePreloader'
 import Hero1DownloadSplash from './home/sections/Hero1DownloadSplash'
 import HeroNewestStations from './home/sections/HeroNewestStations'
 import HeroUpcomingStations from './home/sections/HeroUpcomingStations'
@@ -32,6 +33,7 @@ export default function HomePage() {
     <div className="container">
       <div className="main">
         <Hero1DownloadSplash onDownloadCta={onDownloadCta} />
+        <HomeHeroImagePreloader />
 
         <HomeDownloadPlatformModal open={downloadModalOpen} onClose={() => setDownloadModalOpen(false)} />
 
