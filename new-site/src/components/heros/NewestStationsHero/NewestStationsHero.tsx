@@ -73,7 +73,8 @@ const NewestStationsHero: React.FC<NewestStationsHeroProps> = ({
               locationDisplay: formatStationLocationDisplay(station),
               onCardClick: openStation,
               onInfoClick: openStation,
-              actionsDisabled: !interactive,
+              // Keep full visual weight when non-interactive; navigation is gated above.
+              actionsDisabled: false,
             }
             const openedOn = formatOpenedOn(station.dateOpened)
             const labelText = label?.trim() ?? ''

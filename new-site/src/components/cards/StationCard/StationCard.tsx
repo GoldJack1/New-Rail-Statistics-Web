@@ -12,6 +12,8 @@ interface StationCardProps {
   onInfoClick: () => void
   /** Reserve SuperTram line-strip height so mixed All-tab grids align. */
   reserveLineStripSpace?: boolean
+  /** When Show Date Opened is on, grow the line-strip spacer by 10px to match light-rail cards. */
+  reserveOpenedOnSpace?: boolean
   /** Disable detail actions when a card is displaying placeholder data. */
   actionsDisabled?: boolean
 }
@@ -22,6 +24,7 @@ const StationCard: React.FC<StationCardProps> = ({
   onCardClick,
   onInfoClick,
   reserveLineStripSpace = false,
+  reserveOpenedOnSpace = false,
   actionsDisabled = false,
 }) => {
   return (
@@ -39,7 +42,15 @@ const StationCard: React.FC<StationCardProps> = ({
         <h2 className="rs-station-name">{station.stationName || 'Unknown Station'}</h2>
         <p className="rs-station-location">{locationDisplay}</p>
         {reserveLineStripSpace ? (
-          <div className="rs-station-line-strip-spacer" aria-hidden="true" />
+          <div
+            className={[
+              'rs-station-line-strip-spacer',
+              reserveOpenedOnSpace ? 'rs-station-line-strip-spacer--with-opened-on' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            aria-hidden="true"
+          />
         ) : null}
       </section>
       <StationCardActionBar onInfoClick={onInfoClick} disabled={actionsDisabled} />

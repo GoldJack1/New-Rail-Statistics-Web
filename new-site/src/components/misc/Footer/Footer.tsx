@@ -92,17 +92,17 @@ const Footer: React.FC = () => {
             <BUTFooterLink to="/eula">
               EULA
             </BUTFooterLink>
-            <BUTFooterLink onActivate={toggleTheme} className="site-footer-theme-toggle" ariaLabel="Toggle theme">
-              <span className="site-footer-theme-toggle__icon site-footer-theme-toggle__icon--sun" aria-hidden>
-                <Sun className="site-footer-theme-toggle__glyph site-footer-theme-toggle__glyph--bold" size={16} weight="bold" />
-                <Sun className="site-footer-theme-toggle__glyph site-footer-theme-toggle__glyph--fill" size={16} weight="fill" />
-              </span>
-              <span className="site-footer-theme-toggle__icon site-footer-theme-toggle__icon--moon" aria-hidden>
-                <Moon className="site-footer-theme-toggle__glyph site-footer-theme-toggle__glyph--bold" size={16} weight="bold" />
-                <Moon className="site-footer-theme-toggle__glyph site-footer-theme-toggle__glyph--fill" size={16} weight="fill" />
-              </span>
-            </BUTFooterLink>
           </div>
+          <BUTFooterLink onActivate={toggleTheme} className="site-footer-theme-toggle" ariaLabel="Toggle theme">
+            <span className="site-footer-theme-toggle__icon site-footer-theme-toggle__icon--sun" aria-hidden>
+              <Sun className="site-footer-theme-toggle__glyph site-footer-theme-toggle__glyph--bold" size={16} weight="bold" />
+              <Sun className="site-footer-theme-toggle__glyph site-footer-theme-toggle__glyph--fill" size={16} weight="fill" />
+            </span>
+            <span className="site-footer-theme-toggle__icon site-footer-theme-toggle__icon--moon" aria-hidden>
+              <Moon className="site-footer-theme-toggle__glyph site-footer-theme-toggle__glyph--bold" size={16} weight="bold" />
+              <Moon className="site-footer-theme-toggle__glyph site-footer-theme-toggle__glyph--fill" size={16} weight="fill" />
+            </span>
+          </BUTFooterLink>
         </div>
         {user ? (
           <div className="site-footer-secondary-row">

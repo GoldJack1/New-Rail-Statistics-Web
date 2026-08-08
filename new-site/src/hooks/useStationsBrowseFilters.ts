@@ -23,10 +23,8 @@ import {
 } from '@/utils/stationSearchFiltering'
 import {
   writeStationsListFiltersState,
-  readStationsListFiltersState,
   peekStationsListFiltersStateForRestore,
   finishStationsListFiltersRestore,
-  shouldRestoreStationsListFilters,
   type SupertramLineFilter,
 } from '@/utils/stationsListFiltersStorage'
 import {
@@ -130,9 +128,9 @@ export function useStationsBrowseFilters({
   const skipInitialPageResetRef = useRef(false)
 
   useEffect(() => {
-    const restored = shouldRestoreStationsListFilters()
-      ? peekStationsListFiltersStateForRestore()
-      : readStationsListFiltersState()
+    // Only restore after returning from station details (one-shot flag).
+    // Refresh / fresh visits start from defaults and drop any stale session snapshot.
+    const restored = peekStationsListFiltersStateForRestore()
 
     if (restored) {
       setSearchTerm(restored.searchTerm)
@@ -287,9 +285,15 @@ export function useStationsBrowseFilters({
 
   const handleNetworkViewChange = useCallback(
     (view: NetworkViewFilter) => {
+      setSearchTerm('')
+      setSearchMode('name')
       setHasUserInteractedWithFilters(false)
       setFilterSelections({ ...EMPTY_FILTER_SELECTIONS })
       setSupertramLineFilter([])
+      setSortOption('name-asc')
+      setPassengerSortYear('latest')
+      setTableSort(sortOptionToTableSort('name-asc'))
+      setCurrentPage(1)
       setNetworkView(view)
     },
     [setNetworkView]

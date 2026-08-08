@@ -90,3 +90,8 @@
   height: 10px;
   margin-top: auto;
 }
+
+/* Line-strip (10px) + light-rail opened-on gap (10px). */
+.rs-station-line-strip-spacer--with-opened-on {
+  height: 20px;
+}

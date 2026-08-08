@@ -49,7 +49,9 @@ const LightRailStopCard: React.FC<LightRailStopCardProps> = ({
           >
             {operatorLabel}
           </p>
-        ) : null}
+        ) : (
+          <div className="rs-station-light-rail-opened-on-spacer" aria-hidden="true" />
+        )}
         <LightRailLineStrip linesServed={station.linesServed} />
       </section>
       <StationCardActionBar onInfoClick={onInfoClick} disabled={actionsDisabled} />

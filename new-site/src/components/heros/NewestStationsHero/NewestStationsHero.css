@@ -80,10 +80,6 @@
     cursor: default;
 }
 
-.rs-newest-stations-hero__card--non-interactive .rs-station-card-action-bar {
-    opacity: 0.6;
-}
-
 .rs-newest-stations-hero__card-label {
     display: flex;
     flex-wrap: wrap;

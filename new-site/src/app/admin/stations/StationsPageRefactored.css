@@ -73,8 +73,17 @@
 
 @media (min-width: 1024px) {
     .stations-page .stations-content {
+        --stations-sidebar-width: 360px;
+        --stations-sidebar-motion-duration: 280ms;
+        --stations-sidebar-motion-easing: cubic-bezier(0.4, 0, 0.2, 1);
         padding: 0 var(--stations-content-inset);
         gap: var(--stations-content-inset);
+        grid-template-columns: var(--stations-sidebar-width) minmax(0, 1fr);
+        overflow: hidden;
+        transition:
+            grid-template-columns var(--stations-sidebar-motion-duration)
+                var(--stations-sidebar-motion-easing),
+            gap var(--stations-sidebar-motion-duration) var(--stations-sidebar-motion-easing);
     }
 
     .stations-toolbar-band {
@@ -108,12 +117,39 @@
         align-self: stretch;
     }
 
+    .stations-page .stations-sidebar {
+        width: var(--stations-sidebar-width);
+        max-width: none;
+        box-sizing: border-box;
+        transform: translateX(0);
+        visibility: visible;
+        transition:
+            transform var(--stations-sidebar-motion-duration) var(--stations-sidebar-motion-easing),
+            visibility 0s linear 0s;
+    }
+
     .stations-page .stations-content--sidebar-collapsed {
-        grid-template-columns: 1fr;
+        grid-template-columns: 0 minmax(0, 1fr);
+        gap: 0;
     }
 
     .stations-page .stations-content--sidebar-collapsed .stations-sidebar {
-        display: none;
+        /* Keep layout so the slide-out can animate (same approach as the maps page). */
+        display: flex;
+        transform: translateX(-100%);
+        visibility: hidden;
+        pointer-events: none;
+        transition:
+            transform var(--stations-sidebar-motion-duration) var(--stations-sidebar-motion-easing),
+            visibility 0s linear var(--stations-sidebar-motion-duration);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .stations-page .stations-content,
+        .stations-page .stations-sidebar,
+        .stations-page .stations-content--sidebar-collapsed .stations-sidebar {
+            transition: none;
+        }
     }
 
     /* Page-specific: top pad + content inset; shared chrome lives on .sidebar-panel */

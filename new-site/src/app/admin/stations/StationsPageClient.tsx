@@ -576,6 +576,7 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
                     key={getStationMapKey(station)}
                     {...cardProps}
                     reserveLineStripSpace={effectiveNetworkView === 'all'}
+                    reserveOpenedOnSpace={effectiveNetworkView === 'all' && showOpenedOn}
                   />
                 )
               })}
