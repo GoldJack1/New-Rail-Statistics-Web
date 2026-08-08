@@ -119,6 +119,9 @@ const Footer: React.FC = () => {
               <BUTFooterLink to="/admin/messages">
                 Messages
               </BUTFooterLink>
+              <BUTFooterLink to="/admin/network-messages">
+                Network Messages
+              </BUTFooterLink>
               <BUTFooterLink to="/admin/api-status">
                 API Status
               </BUTFooterLink>

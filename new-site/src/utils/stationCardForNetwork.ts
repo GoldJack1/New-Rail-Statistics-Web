@@ -16,3 +16,19 @@ export function getStationTocForDisplay(
   if (isLightRailStop(station)) return SUPERTRAM_TOC_LABEL
   return (station.toc ?? '').trim()
 }
+
+/** Unique TOC chip labels from stations (comma-split, sorted). */
+export function collectUniqueStationTocNames(
+  stations: ReadonlyArray<Pick<Station, 'sourceCollectionId' | 'stnarea' | 'toc'>>
+): string[] {
+  const tocs = new Set<string>()
+  for (const station of stations) {
+    const raw = getStationTocForDisplay(station)
+    if (!raw) continue
+    for (const part of raw.split(',')) {
+      const trimmed = part.trim()
+      if (trimmed) tocs.add(trimmed)
+    }
+  }
+  return [...tocs].sort((a, b) => a.localeCompare(b))
+}

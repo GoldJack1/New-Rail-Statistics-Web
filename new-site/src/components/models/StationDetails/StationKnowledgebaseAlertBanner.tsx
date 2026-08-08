@@ -18,6 +18,7 @@ export function StationKnowledgebaseAlertBanner({ alertText }: StationKnowledgeb
   return (
     <div className="kb-station-alert-banner" role="status" aria-label="Station alert">
       <TextCard
+        static
         title="Station alert"
         description={trimmed}
         state="default"

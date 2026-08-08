@@ -14,6 +14,12 @@ export interface TocOperator {
 
 export const TOC_OPERATOR_FALLBACK_COLORS = { bg: '#64748b', text: '#ffffff' }
 
+/** Explicit chip colour overrides (lookup key = normalizeTocLookupKey). */
+const TOC_CHIP_COLOR_OVERRIDES: Record<string, string> = {
+  'keighley & worth valley railway': '#952530',
+  'keighley & worth valley': '#952530',
+}
+
 function readString(data: Record<string, unknown>, ...keys: string[]): string | null {
   for (const key of keys) {
     const value = data[key]
@@ -84,8 +90,9 @@ export function getTocOperatorChipColors(
   operators: TocOperator[],
   tocName: string
 ): { bg: string; text: string } {
+  const override = TOC_CHIP_COLOR_OVERRIDES[normalizeTocLookupKey(tocName)]
   const match = findTocOperator(operators, tocName)
-  const bg = match?.colorHex ?? TOC_OPERATOR_FALLBACK_COLORS.bg
+  const bg = override ?? match?.colorHex ?? TOC_OPERATOR_FALLBACK_COLORS.bg
   return { bg, text: getContrastingTextColor(bg) }
 }
 
@@ -95,6 +102,22 @@ export function resolveTocOperatorDisplayName(
   tocName: string
 ): string {
   return findTocOperator(operators, tocName)?.name ?? tocName.trim()
+}
+
+/**
+ * Resolve station TOC labels to catalog display names for a network chip picker.
+ * Prefers catalog names when a match exists; keeps unknown station TOC strings.
+ */
+export function resolveTocChipNamesForNetwork(
+  stationTocNames: readonly string[],
+  operators: TocOperator[]
+): string[] {
+  const names = new Set<string>()
+  for (const raw of stationTocNames) {
+    const resolved = resolveTocOperatorDisplayName(operators, raw)
+    if (resolved) names.add(resolved)
+  }
+  return [...names].sort((a, b) => a.localeCompare(b))
 }
 
 /** Resolve NRE two-letter TOC codes (e.g. SE) to a full operator name. */

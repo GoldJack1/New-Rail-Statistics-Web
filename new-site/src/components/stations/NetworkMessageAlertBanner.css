@@ -1,0 +1,168 @@
+.network-message-alert-banner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md, 0.75rem);
+  margin: 0 0 var(--space-lg, 1rem);
+  width: 100%;
+}
+
+/* Match Knowledgebase station alert TextCard chrome, with a bit more room for multi-paragraph copy. */
+.network-message-alert-banner__card {
+  --network-message-alert-padding: 16px;
+  cursor: default;
+  padding: var(--network-message-alert-padding) 20px 12px
+    var(--network-message-alert-padding);
+}
+
+.network-message-alert-banner__card .rs-text-card__chevron {
+  display: none;
+}
+
+.network-message-alert-banner__card .rs-text-card__content {
+  padding-right: 0;
+  gap: 6px;
+}
+
+.network-message-alert-banner__card .rs-text-card__title {
+  margin-bottom: 4px;
+}
+
+.network-message-alert-banner__description {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.network-message-alert-banner__paragraphs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85em;
+  width: 100%;
+}
+
+.network-message-alert-banner__paragraph {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45em;
+  white-space: normal;
+  line-height: 1.4;
+}
+
+.network-message-alert-banner__paragraph-text {
+  display: block;
+  white-space: pre-line;
+}
+
+.network-message-alert-banner__paragraph:has(.network-message-alert-banner__bullets) {
+  gap: 0.85em;
+}
+
+.network-message-alert-banner__bullets {
+  margin: 0 0 0.35em;
+  padding-left: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55em;
+}
+
+.network-message-alert-banner__bullet {
+  margin: 0;
+  padding-left: 0;
+  line-height: 1.4;
+}
+
+/* Light rail: chip beside text, equal width for line labels. */
+.network-message-alert-banner__bullet--line {
+  display: grid;
+  /* Match longest chip label (“Tram-Train”) so Blue / Yellow / Purple share that width. */
+  grid-template-columns: var(--network-message-line-chip-width, 6.75rem) minmax(0, 1fr);
+  align-items: center;
+  column-gap: 0.5em;
+  row-gap: 0.25em;
+}
+
+/* TOC networks: chip above text; text padded to match chip height. */
+.network-message-alert-banner__bullet--toc {
+  --network-message-toc-chip-height: 35px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35em;
+}
+
+.network-message-alert-banner__bullet-text {
+  min-width: 0;
+}
+
+.network-message-alert-banner__bullet--toc .network-message-alert-banner__bullet-text {
+  box-sizing: border-box;
+  min-height: var(--network-message-toc-chip-height);
+  display: flex;
+  align-items: center;
+  padding-block: 8px;
+}
+
+.network-message-alert-banner__line-chip.rs-button,
+.network-message-alert-banner__line-chip {
+  min-width: 0;
+  justify-content: center;
+  font-weight: 600;
+  cursor: default;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.network-message-alert-banner__bullet--line .network-message-alert-banner__line-chip.rs-button,
+.network-message-alert-banner__bullet--line .network-message-alert-banner__line-chip {
+  width: 100%;
+}
+
+.network-message-alert-banner__line-chip--toc.rs-button,
+.network-message-alert-banner__line-chip--toc {
+  width: auto;
+  max-width: 100%;
+}
+
+.network-message-alert-banner__link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-word;
+}
+
+.network-message-alert-banner__link:hover {
+  opacity: 0.85;
+}
+
+.network-message-alert-banner__toggle {
+  appearance: none;
+  /* Tighter than card padding — enough separation without a large empty band. */
+  margin: 8px 0 0;
+  padding: 0;
+  border: none;
+  background: none;
+  align-self: flex-start;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.25;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.network-message-alert-banner__toggle:hover {
+  opacity: 0.85;
+}
+
+.network-message-alert-banner__toggle:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* Browse list: sit above the grid/table without colliding with sidebar padding. */
+.stations-main > .network-message-alert-banner {
+  margin-top: 0;
+}

@@ -22,6 +22,7 @@ export {
   mapTocOperatorDoc,
   resolveTocOperatorDisplayName,
   resolveNreTocCodeDisplayName,
+  resolveTocChipNamesForNetwork,
   type TocOperator,
 } from '@/utils/tocOperatorMap'
 

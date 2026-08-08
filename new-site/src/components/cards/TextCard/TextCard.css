@@ -111,6 +111,10 @@ a.rs-text-card {
   box-shadow: var(--text-card-inner-shadow-pressed);
 }
 
+.rs-text-card--static {
+  cursor: default;
+}
+
 .rs-text-card--state-accent {
   --text-card-bg-active: hsl(353 57% 48%);
   --text-card-bg-pressed: hsl(353 57% 38%);
@@ -154,6 +158,22 @@ a.rs-text-card {
 [data-theme="dark"] .rs-text-card--state-greenAction {
   --text-card-bg-active: hsl(141 100% 19%);
   --text-card-bg-pressed: hsl(141 100% 12%);
+  --text-card-text-active: hsl(0 0% 100%);
+  --text-card-text-pressed: hsl(0 0% 100%);
+  --text-card-text-disabled: hsl(0 0% 40%);
+}
+
+.rs-text-card--state-favAction {
+  --text-card-bg-active: hsl(53 59% 60%);
+  --text-card-bg-pressed: hsl(53 55% 50%);
+  --text-card-text-active: hsl(0 0% 0%);
+  --text-card-text-pressed: hsl(0 0% 0%);
+  --text-card-text-disabled: hsl(0 0% 35%);
+}
+
+[data-theme="dark"] .rs-text-card--state-favAction {
+  --text-card-bg-active: hsl(53 100% 24%);
+  --text-card-bg-pressed: hsl(53 100% 12%);
   --text-card-text-active: hsl(0 0% 100%);
   --text-card-text-pressed: hsl(0 0% 100%);
   --text-card-text-disabled: hsl(0 0% 40%);

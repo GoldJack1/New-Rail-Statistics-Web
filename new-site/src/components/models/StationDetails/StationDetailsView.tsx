@@ -18,6 +18,8 @@ import { StationDetailsSubsection } from './StationDetailsSubsection'
 import { StationPendingChangesBanner } from './StationPendingChangesBanner'
 import { StationDetailsFieldGridSkeleton } from './StationDetailsSkeleton'
 import StationKnowledgebaseAlertBanner from './StationKnowledgebaseAlertBanner'
+import NetworkMessageAlertBanner from '@/components/stations/NetworkMessageAlertBanner'
+import { useNetworkMessages } from '@/hooks/useNetworkMessages'
 import { StationUsageAreaChart } from './StationUsageAreaChart'
 import { StationOdmFlowsSection } from './StationOdmFlowsSection'
 import type { StationFieldChange } from '../../../utils/stationFieldDiffs'
@@ -248,6 +250,11 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
 }) => {
   const { fieldSchema } = useStationFieldSchema(station, fieldSchemaProp)
   const { collectionId: contextCollectionId } = useStationCollection()
+  const stationNetworkId = useMemo(() => {
+    const id = getStationNetworkCollectionId(station, contextCollectionId ?? undefined)
+    return id && isNetworkCollection(id) ? id : null
+  }, [station, contextCollectionId])
+  const { messages: networkMessages } = useNetworkMessages(stationNetworkId)
   const [gbnrUsageMetric, setGbnrUsageMetric] = useState<GbnrUsageMetric>('entriesExits')
   const showAdditionalFields = stationDetailsShowsAdditionalTab(fieldSchema)
   const hasCoordinates = station.latitude !== 0 && station.longitude !== 0
@@ -441,6 +448,7 @@ const StationDetailsView: React.FC<StationDetailsViewProps> = ({
 
   return (
     <>
+      {showDetails ? <NetworkMessageAlertBanner messages={networkMessages} /> : null}
       {showDetails && knowledgebaseStationAlert ? (
         <StationKnowledgebaseAlertBanner alertText={knowledgebaseStationAlert} />
       ) : null}

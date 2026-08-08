@@ -4,6 +4,11 @@ import { getStationDetailLayoutProfile } from '../constants/stationDetailLayoutP
 
 export const LIGHTRAIL_COLLECTION_ID = 'lightrail_GBSHEFFSUPERTRAM' as const satisfies StationCollectionId
 
+/** True for light-rail network collection ids (chip options = lines, not TOCs). */
+export function isLightRailNetworkCollection(networkId: string): boolean {
+  return networkId === LIGHTRAIL_COLLECTION_ID || networkId.startsWith('lightrail_')
+}
+
 /** Firestore field names for South Yorkshire SuperTram (CSV headers except mapped core fields). */
 export const LIGHT_RAIL_DOC_FIELDS = {
   stopName: 'StopName',

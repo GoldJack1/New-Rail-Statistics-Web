@@ -5,17 +5,21 @@ import Link from 'next/link'
 import { ChevronRightIcon } from '@/components/icons'
 import './TextCard.css'
 
-export type TextCardState = 'default' | 'accent' | 'redAction' | 'greenAction'
+export type TextCardState = 'default' | 'accent' | 'redAction' | 'greenAction' | 'favAction'
 
 export interface TextCardProps {
   title: string
-  description: string
+  description?: React.ReactNode
   state?: TextCardState
   to?: string
   onClick?: () => void
   trailingIcon?: React.ReactNode
   disabled?: boolean
   pressed?: boolean
+  /**
+   * Non-interactive surface (e.g. alert banners). Renders a `div` so nested links stay valid/clickable.
+   */
+  static?: boolean
   className?: string
   ariaLabel?: string
 }
@@ -33,6 +37,7 @@ const TextCard: React.FC<TextCardProps> = ({
   trailingIcon,
   disabled = false,
   pressed = false,
+  static: isStatic = false,
   className = '',
   ariaLabel
 }) => {
@@ -55,27 +60,28 @@ const TextCard: React.FC<TextCardProps> = ({
   }
 
   const handlePressStart = () => {
-    if (disabled) return
+    if (disabled || isStatic) return
     clearReleaseTimer()
     setIsPressed(true)
   }
 
   const handlePressEnd = () => {
-    if (disabled) return
+    if (disabled || isStatic) return
     scheduleRelease()
   }
 
   const handleClick = () => {
-    if (disabled) return
+    if (disabled || isStatic) return
     onClick?.()
   }
 
   useEffect(() => () => clearReleaseTimer(), [])
 
-  const actualPressed = !disabled && (pressed || isPressed)
+  const actualPressed = !isStatic && !disabled && (pressed || isPressed)
   const classes = [
     'rs-text-card',
     `rs-text-card--state-${state}`,
+    isStatic ? 'rs-text-card--static' : '',
     actualPressed ? 'rs-text-card--pressed' : 'rs-text-card--active',
     disabled ? 'rs-text-card--disabled' : '',
     className
@@ -85,12 +91,22 @@ const TextCard: React.FC<TextCardProps> = ({
     <>
       <span className="rs-text-card__content">
         <span className="rs-text-card__title">{title}</span>
-        <span className="rs-text-card__description">{description}</span>
+        {description != null && description !== '' ? (
+          <span className="rs-text-card__description">{description}</span>
+        ) : null}
       </span>
       <span className="rs-text-card__chevron">{trailingIcon ?? <DefaultChevron />}</span>
       <span className="rs-text-card__inner-shadow" aria-hidden="true" />
     </>
   )
+
+  if (isStatic) {
+    return (
+      <div className={classes} role="status" aria-label={ariaLabel ?? title}>
+        {content}
+      </div>
+    )
+  }
 
   const pressHandlers = {
     onPointerDown: handlePressStart,

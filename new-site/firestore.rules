@@ -126,6 +126,12 @@ service cloud.firestore {
       allow read, create, update, delete: if isSignedIn();
     }
 
+    // Network-wide browse/detail alert banners (Admin SDK or station editors write).
+    match /networkmessages/{messageId} {
+      allow read: if true;
+      allow create, update, delete: if isStationEditor();
+    }
+
     // ORR Table 1415 station usage time series (Admin SDK writes only).
     match /GBNR-PASS-USAGE-DATA/{docId} {
       allow read: if true;

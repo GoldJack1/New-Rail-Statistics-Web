@@ -15,7 +15,9 @@ import {
   BUTWideButton,
 } from '@/components/buttons'
 import PageTopHeader from '@/components/misc/PageTopHeader/PageTopHeader'
+import NetworkMessageAlertBanner from '@/components/stations/NetworkMessageAlertBanner'
 import StationsBrowseSidebar from '@/components/stations/StationsBrowseSidebar'
+import { useNetworkMessages } from '@/hooks/useNetworkMessages'
 import StationCard from '@/components/cards/StationCard/StationCard'
 import LightRailStopCard from '@/components/cards/LightRailStopCard/LightRailStopCard'
 import StationsCardGridSkeleton from '@/components/cards/StationsCardGridSkeleton/StationsCardGridSkeleton'
@@ -411,6 +413,7 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
     !error && (loading || !minSkeletonElapsed || networkTabSkeletonActive)
   const showMainError = Boolean(error)
   const showMainContent = !showMainSkeleton && !showMainError
+  const { messages: networkMessages } = useNetworkMessages(effectiveNetworkView)
 
   return (
     <div
@@ -516,6 +519,7 @@ const StationsPageClient: React.FC<StationsPageProps> = ({
 
         {/* Main Content */}
         <main className="stations-main" aria-busy={showMainSkeleton}>
+          <NetworkMessageAlertBanner messages={networkMessages} />
           {showMainError ? (
             <div className="stations-main-error" role="alert">
               <WarningCircle className="stations-main-error__icon" aria-hidden />
